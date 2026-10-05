@@ -17,7 +17,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufHop, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -91,6 +91,13 @@ public final class Movement {
 				s.bufJump += 2;
 				if (s.bufJump >= 2 && hit == null) hit = String.format("jump dy %.3f", dy);
 			} else s.bufJump = Math.max(0, s.bufJump - 1);
+			// Micro hop: leaving the ground by less than a jump (0.42) with nothing under the new spot. Criticals (packet and mini jump) and MaceDMG do this on every hit.
+			if (s.ground && dy > 0.005 && dy < 0.30 && !pl.isInWater() && !pl.onClimbable() && !pl.isPassenger() && !pl.getAbilities().flying) {
+				AABB mb = pl.getBoundingBox().move(dx, dy, dz);
+				boolean unsupported = pl.level().noCollision(pl, new AABB(mb.minX, mb.minY - 0.03, mb.minZ, mb.maxX, mb.minY, mb.maxZ));
+				s.bufHop = unsupported ? s.bufHop + 2 : Math.max(0, s.bufHop - 1);
+				if (s.bufHop >= 4 && hit == null) { hit = String.format("microhop dy %.3f", dy); s.bufHop = 0; }
+			} else s.bufHop = Math.max(0, s.bufHop - 1);
 		}
 		// Timer: each move packet is worth 50 ms. Packets running ahead of the real clock = game speed hack.
 		long now = arrived != null ? arrived : System.nanoTime();
@@ -112,7 +119,7 @@ public final class Movement {
 			String[] ch = hit.split(" ", 2);
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : 1); // a block climbed in a few ticks is never an accident
 			s.ownTp = true;
-			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = 0; s.balMs = 0; s.grace = 2; s.dy = 0;
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.grace = 2; s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			if (step == Verdict.Step.HOLD) s.freezeUntil = System.currentTimeMillis() + 1500;
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};

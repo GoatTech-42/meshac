@@ -13,3 +13,9 @@ Honest status. "Bot" = scripted mineflayer packet sender on the isolated rig (MC
 Open issue: the legit bot sometimes hovers in the air before chunks load and trips the fly check (4 signals in one run, 0 in others). A real client behaves differently; to be re-tested with a real client.
 
 Not yet tested: real hacked clients, other latencies, lag spikes, 1.21.11, Via-translated clients.
+
+## Real client results (Wurst v7.56 for MC 26.1.2, built from the official repo, run headless on the isolated rig)
+| Date | Hack | Signals | Outcome |
+|---|---|---|---|
+| 2026-10-05 | Flight | 9 (8 speed, 1 fly) in the first seconds | meshac signalled and set back, then vanilla kicked the client ("Flying is not enabled"). meshac's setback alone did not stop the flight yet. |
+| pending | speedhack, nofall, timer, highjump, step, jesus, killaura | - | needs a fresh client session per hack (the flight run ended the session) |

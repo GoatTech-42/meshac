@@ -16,7 +16,7 @@ public final class Movement {
 
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
-		boolean ground, cground, init;
+		boolean ground, cground, init, ownTp;
 		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
@@ -37,7 +37,7 @@ public final class Movement {
 		double sx = pl.getX(), sy = pl.getY(), sz = pl.getZ();
 		boolean atStart = near(sx, sy, sz, s.px, s.py, s.pz), atClaim = near(sx, sy, sz, s.cx, s.cy, s.cz);
 		if (!s.init || !(atStart || atClaim)) {
-			s.init = true; s.grace = SKIP_TICKS; s.dy = 0; s.ground = ground; s.bufSpeed = s.bufFly = s.bufJump = 0;
+			s.init = true; s.grace = s.ownTp ? 3 : SKIP_TICKS; s.ownTp = false; // our own setback needs only a short grace s.dy = 0; s.ground = ground; s.bufSpeed = s.bufFly = s.bufJump = 0;
 			s.goodX = sx; s.goodY = sy; s.goodZ = sz;
 			s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
 			return null;
@@ -69,7 +69,7 @@ public final class Movement {
 			boolean web = pl.level().getBlockState(pl.blockPosition()).is(net.minecraft.world.level.block.Blocks.COBWEB)
 				|| pl.level().getBlockState(pl.blockPosition().above()).is(net.minecraft.world.level.block.Blocks.COBWEB);
 			s.slowTicks = slow < 1.0 ? s.slowTicks + 1 : 0; // the first ticks on a slow block still carry normal momentum
-			double cap = (s.ground && ground ? 0.34 : 0.62) * (pl.getSpeed() / 0.13) * (fr > 0.61 ? 3 : 1) * (s.slowTicks >= 5 ? slow : 1.0);
+			double cap = (s.ground && ground ? 0.34 : 0.62) * (pl.getSpeed() / 0.13) * (fr > 0.61 ? 3 : 1) * (s.slowTicks >= 5 ? Math.max(slow, 0.65) : 1.0);
 			if (web) cap = 0.10; // vanilla cobweb scales motion by 0.25 or less
 			double h = Math.hypot(dx, dz);
 			if (h > cap) { s.bufSpeed += h > cap * 1.25 ? 3 : 1; s.clean = 0; } // a big overshoot counts triple
@@ -111,6 +111,7 @@ public final class Movement {
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "");
+			s.ownTp = true;
 			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = 0; s.balMs = 0; s.grace = 2; s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			if (step == Verdict.Step.HOLD) s.freezeUntil = System.currentTimeMillis() + 1500;

@@ -25,13 +25,15 @@ public final class Verdict {
 	}
 
 	/** A check fired. Returns the step to take; REMOVE has already created the case and disconnected the player. */
-	public static Step signal(ServerPlayer pl, String check, String detail) {
+	public static Step signal(ServerPlayer pl, String check, String detail) { return signal(pl, check, detail, 1); }
+	/** Weight 2 is for hits: a landed attack is worth more heat than one odd move packet. */
+	public static Step signal(ServerPlayer pl, String check, String detail, int weight) {
 		H h = HEAT.computeIfAbsent(pl.getUUID(), k -> new H());
 		long ms = System.currentTimeMillis();
 		Step step;
 		List<String> ev;
 		synchronized (h) {
-			h.heat = ms - h.at > 10_000 ? 1 : h.heat + 1; // heat cools after 10 s clean
+			h.heat = ms - h.at > 10_000 ? weight : h.heat + weight; // heat cools after 10 s clean
 			h.at = ms;
 			step = h.heat >= 5 ? Step.REMOVE : h.heat >= 3 ? Step.HOLD : Step.SETBACK;
 			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + h.heat);

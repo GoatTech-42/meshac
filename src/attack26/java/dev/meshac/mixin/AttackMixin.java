@@ -25,7 +25,7 @@ public abstract class AttackMixin {
 		String hit = Combat.check(player, e);
 		if (hit == null) return;
 		String[] ch = hit.split(" ", 2);
-		Verdict.signal(player, "combat", hit);
+		Verdict.signal(player, "combat", hit, 2);
 		ci.cancel(); // the hit is denied
 	}
 }

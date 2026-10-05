@@ -11,7 +11,7 @@ import net.minecraft.world.phys.AABB;
 /** Movement checks: speed, fly (hover/ascend), high jump. Runs on every position packet, before vanilla. */
 public final class Movement {
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
-	private static final int FLAG_AT = 6;      // buffered violations before a setback
+	private static final int SIGNAL_AT = 6;      // buffered violations before a setback
 	private static final int SKIP_TICKS = 20;  // grace after teleport, damage, effects
 
 	private static final class S {
@@ -56,12 +56,12 @@ public final class Movement {
 			double cap = 0.75 * (pl.getSpeed() / 0.1);
 			double h = Math.hypot(dx, dz);
 			if (h > cap) { s.bufSpeed++; s.clean = 0; } else if (++s.clean >= 10) { s.bufSpeed = Math.max(0, s.bufSpeed - 1); s.clean = 0; }
-			if (s.bufSpeed >= FLAG_AT) hit = String.format("speed %.2f>%.2f", h, cap);
+			if (s.bufSpeed >= SIGNAL_AT) hit = String.format("speed %.2f>%.2f", h, cap);
 			// Fly: in the air, vanilla gravity gives dy = (lastDy - 0.08) * 0.98. Going above that is not vanilla.
 			if (!s.ground && !ground) {
 				double expect = (s.dy - 0.08) * 0.98;
 				s.bufFly = dy > expect + 0.03 ? s.bufFly + 1 : Math.max(0, s.bufFly - 1);
-				if (s.bufFly >= FLAG_AT && hit == null) hit = String.format("fly dy %.3f expect %.3f", dy, expect);
+				if (s.bufFly >= SIGNAL_AT && hit == null) hit = String.format("fly dy %.3f expect %.3f", dy, expect);
 			} else s.bufFly = 0;
 			// High jump / step: leaving the ground higher than a jump (0.42 + jump boost) or a step (0.6).
 			if (s.ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0)) {
@@ -86,7 +86,7 @@ public final class Movement {
 			if (s.bufGround >= 3 && hit == null) hit = "nofall ground spoof";
 		} else s.bufGround = 0;
 		if (hit != null) {
-			Meshac.LOG.warn("[meshac] FLAG {} {}", pl.getGameProfile().name(), hit);
+			Meshac.LOG.warn("[meshac] SIGNAL {} {}", pl.getGameProfile().name(), hit);
 			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = 0; s.balMs = 0; s.grace = 5; s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			return new double[] {s.goodX, s.goodY, s.goodZ};

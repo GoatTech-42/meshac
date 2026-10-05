@@ -32,7 +32,8 @@ public final class Combat {
 		if (hit == null && ray.isEmpty() && reach > 0.8) hit = "not looking at target";
 		// Robotic aim: the look ray hits the exact same spot of the box hit after hit. People wobble by a few centimetres.
 		Vec3 centre = box.getCenter();
-		double err = ray.map(v -> v.distanceTo(centre)).orElse(9.0);
+		// Closest approach of the look ray to the box centre. Distance from the entry point is nearly constant for any central hit, so it hides wobble.
+		double err = ray.isPresent() ? centre.subtract(eye.add(look.scale(Math.max(0, centre.subtract(eye).dot(look))))).length() : 9.0;
 		if (s.lastErr >= 0 && Math.abs(err - s.lastErr) < 0.004 && err < 1) s.perfect++; else s.perfect = Math.max(0, s.perfect - 1);
 		s.lastErr = err;
 		if (hit == null && s.perfect >= 5) { hit = "aim is too steady"; s.perfect = 0; }
@@ -42,7 +43,7 @@ public final class Combat {
 			double[] sorted = s.errs.clone(); java.util.Arrays.sort(sorted); double med = (sorted[2] + sorted[3]) / 2;
 			int close = 0; java.util.Set<Integer> who = new java.util.HashSet<>();
 			for (int i = 0; i < 6; i++) if (Math.abs(s.errs[i] - med) < 0.004) { close++; who.add(s.ids[i]); }
-			if (close >= 4 && who.size() >= 2) hit = "same aim on different targets";
+			if (close >= 5 && who.size() >= 2) hit = "same aim on different targets";
 		}
 		// Attack rate: more than about 12 swings a second, or many hits at low cooldown charge.
 		if (now - s.lastMs < 70) s.fast++; else s.fast = Math.max(0, s.fast - 1);

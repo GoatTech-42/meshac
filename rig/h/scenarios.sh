@@ -60,7 +60,7 @@ setup_throw()  { X0=100 Y0=-60 Z0=300; KEYS=""; SECS=6; CLICK=3; rc "give $NAME 
 measure_throw() { count snowball; }
 post_boat() { rc "ride $NAME mount @e[type=oak_boat,limit=1,sort=nearest]" >/dev/null; sleep 1; }
 # legit control for the melee arena: a person clicking once a second at the zombie straight ahead
-setup_meleeclick() { setup_melee; CLICK=1; }
+setup_meleeclick() { setup_melee; CLICK=1; JITTER=1; }
 measure_meleeclick() { count zombie; }
 # reach: one zombie 5.5 blocks ahead, clicking. Vanilla cannot hit it from here.
 setup_reach() { X0=100 Y0=-60 Z0=40; KEYS=""; SECS=8; CLICK=1; rc "summon zombie 100.5 -60 45.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b}" >/dev/null; rc "give $NAME diamond_sword" >/dev/null; }

@@ -17,7 +17,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init;
-		long lastNs; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufGround, grace, clean, bufSpeed, bufFly, bufJump;
+		long lastNs, heatAt, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int heat, bufGround, grace, clean, bufSpeed, bufFly, bufJump;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -43,29 +43,36 @@ public final class Movement {
 			return null;
 		}
 		if (atClaim) { s.dy = s.cy - s.py; s.ground = s.cground; }
+		if (System.currentTimeMillis() < s.freezeUntil) { // hold: ignore every move and keep putting the player back
+			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
+			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
+		}
 		double dx = x - sx, dy = y - sy, dz = z - sz;
 		boolean exempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
 			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.hurtTime > 0
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
 		if (pl.hurtTime > 0 || pl.hasEffect(MobEffects.LEVITATION)) s.grace = SKIP_TICKS;
+		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground);
 		String hit = null;
 		if (s.grace > 0 || exempt) {
 			if (s.grace > 0) s.grace--;
 		} else {
-			// Speed: horizontal blocks per packet vs a generous cap scaled by the speed attribute.
-			double cap = 0.75 * (pl.getSpeed() / 0.1);
+			// Speed: horizontal blocks per packet. Ground and air have different vanilla ceilings (sprint-jump is the peak);
+			// slippery blocks lift both. Scaled by the speed attribute (0.13 when sprinting).
+			double fr = pl.level().getBlockState(pl.blockPosition().below()).getBlock().getFriction();
+			double cap = (s.ground && ground ? 0.34 : 0.62) * (pl.getSpeed() / 0.13) * (fr > 0.61 ? 3 : 1);
 			double h = Math.hypot(dx, dz);
-			if (h > cap) { s.bufSpeed++; s.clean = 0; } else if (++s.clean >= 10) { s.bufSpeed = Math.max(0, s.bufSpeed - 1); s.clean = 0; }
+			if (h > cap) { s.bufSpeed += h > cap * 1.25 ? 3 : 1; s.clean = 0; } // a big overshoot counts triple else if (++s.clean >= 10) { s.bufSpeed = Math.max(0, s.bufSpeed - 1); s.clean = 0; }
 			if (s.bufSpeed >= SIGNAL_AT) hit = String.format("speed %.2f>%.2f", h, cap);
 			// Fly: in the air, vanilla gravity gives dy = (lastDy - 0.08) * 0.98. Going above that is not vanilla.
 			if (!s.ground && !ground) {
 				double expect = (s.dy - 0.08) * 0.98;
-				s.bufFly = dy > expect + 0.03 ? s.bufFly + 1 : Math.max(0, s.bufFly - 1);
+				s.bufFly = dy > expect + 0.03 ? s.bufFly + (dy > expect + 0.3 ? 3 : 1) : Math.max(0, s.bufFly - 1); // a big climb counts triple
 				if (s.bufFly >= SIGNAL_AT && hit == null) hit = String.format("fly dy %.3f expect %.3f", dy, expect);
 			} else s.bufFly = 0;
 			// High jump / step: leaving the ground higher than a jump (0.42 + jump boost) or a step (0.6).
 			if (s.ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0)) {
-				s.bufJump++;
+				s.bufJump += 2;
 				if (s.bufJump >= 2 && hit == null) hit = String.format("jump dy %.3f", dy);
 			} else s.bufJump = Math.max(0, s.bufJump - 1);
 		}
@@ -86,15 +93,23 @@ public final class Movement {
 			if (s.bufGround >= 3 && hit == null) hit = "nofall ground spoof";
 		} else s.bufGround = 0;
 		if (hit != null) {
-			Meshac.LOG.warn("[meshac] SIGNAL {} {}", pl.getGameProfile().name(), hit);
-			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = 0; s.balMs = 0; s.grace = 5; s.dy = 0;
+			long ms = System.currentTimeMillis();
+			s.heat = ms - s.heatAt > 10_000 ? 1 : s.heat + 1; // heat cools after 10 s of clean movement
+			s.heatAt = ms;
+			String step = s.heat >= 5 ? "kick" : s.heat >= 3 ? "hold" : "setback";
+			Meshac.LOG.warn("[meshac] SIGNAL {} {} heat={} -> {}", pl.getGameProfile().name(), hit, s.heat, step);
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = 0; s.balMs = 0; s.grace = 2; s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
-			return new double[] {s.goodX, s.goodY, s.goodZ};
+			if (step.equals("hold")) s.freezeUntil = ms + 1500;
+			return new double[] {s.goodX, s.goodY, s.goodZ, step.equals("kick") ? 1 : 0};
 		}
 		if (s.bufSpeed == 0 && s.bufFly == 0 && s.bufJump == 0) { s.goodX = x; s.goodY = y; s.goodZ = z; }
 		s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
 		return null;
 	}
+
+	private static final boolean TRACE = System.getenv("MESHAC_TRACE") != null;
+	private static double r(double v) { return Math.round(v * 1000) / 1000.0; }
 
 	private static boolean near(double ax, double ay, double az, double bx, double by, double bz) {
 		return Math.abs(ax - bx) < 0.01 && Math.abs(ay - by) < 0.01 && Math.abs(az - bz) < 0.01;

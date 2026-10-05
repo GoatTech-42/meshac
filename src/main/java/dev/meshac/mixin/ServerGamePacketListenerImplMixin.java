@@ -21,6 +21,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 		double[] back = Movement.check(player, p);
 		if (back != null) {
 			teleport(back[0], back[1], back[2], player.getYRot(), player.getXRot());
+			if (back[3] == 1) ((net.minecraft.server.network.ServerCommonPacketListenerImpl) (Object) this).disconnect(net.minecraft.network.chat.Component.literal("meshac: impossible movement"));
 			ci.cancel();
 		}
 	}

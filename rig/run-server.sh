@@ -5,4 +5,4 @@
 NET=meshac-net; [ "$BOOTSTRAP" = 1 ] && NET=bridge
 docker network inspect meshac-net >/dev/null 2>&1 || docker network create --internal meshac-net
 docker rm -f meshac-rig >/dev/null 2>&1
-docker run -d --name meshac-rig --network $NET --memory 2g --cpus 2 -v "$1":/srv -w /srv eclipse-temurin:25-jre java -Xmx1400M -jar fabric-server.jar nogui
+docker run -d ${MESHAC_TRACE:+-e MESHAC_TRACE=1} --name meshac-rig --network $NET --memory 2g --cpus 2 -v "$1":/srv -w /srv eclipse-temurin:25-jre java -Xmx1400M -jar fabric-server.jar nogui

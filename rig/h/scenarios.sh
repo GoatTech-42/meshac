@@ -68,3 +68,8 @@ measure_reach() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o 
 # mine: a block of stone around the player, with a pickaxe. After the run, count what is left.
 setup_mine() { X0=100 Y0=-60 Z0=60; KEYS=""; SECS=10; rc "fill 96 -61 56 104 -56 64 stone" >/dev/null; rc "fill 100 -60 60 100 -59 60 air" >/dev/null; rc "give $NAME diamond_pickaxe" >/dev/null; }
 measure_mine() { if [ "$PHASE" = after ]; then rc "fill 96 -60 56 104 -56 64 air replace stone" | grep -o "[0-9]*" | head -1; else echo -; fi; }
+# melee against one very tanky zombie in the crosshair: the clicker keeps landing hits for the whole run (Criticals, AntiKnockback, TriggerBot, AutoSword need hits to happen)
+setup_meleetank()   { X0=100 Y0=-60 Z0=20; KEYS=""; SECS=12; CLICK=1; JITTER=1
+  rc "summon zombie 100.5 -60 23.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null
+  rc "give $NAME diamond_sword" >/dev/null; rc "give $NAME stone_axe" >/dev/null; rc "give $NAME mace" >/dev/null; }
+measure_meleetank() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f\?$" | head -1; }

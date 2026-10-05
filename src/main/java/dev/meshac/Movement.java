@@ -72,7 +72,8 @@ public final class Movement {
 		// Timer: each move packet is worth 50 ms. Packets running ahead of the real clock = game speed hack.
 		long now = arrived != null ? arrived : System.nanoTime();
 		if (s.lastNs != 0) {
-			s.balMs += 50 - (now - s.lastNs) / 1e6;
+			// Teleports make the client send extra confirm packets, so no timing while in grace.
+			s.balMs = s.grace > 0 ? 0 : s.balMs + 50 - (now - s.lastNs) / 1e6;
 			s.balMs = Math.max(-300, Math.min(s.balMs, 600)); // lag may bank up to 300 ms of catch-up
 			if (s.balMs > 450 && hit == null) hit = String.format("timer ahead %.0f ms", s.balMs);
 		}

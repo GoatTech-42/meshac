@@ -7,7 +7,7 @@ RES=${RES:-$HOME/meshac-work/results.csv}
 run_case() {
   S=$1; H=$2; KEYS=""; SECS=8; CLICK=0; YAW=0; PITCH=0
   ensure || { echo "$S,$H,,,,,,,,,client lost" >> $RES; return; }
-  rc "difficulty easy" >/dev/null; rc "gamerule spawn_mobs false" >/dev/null; rc "gamerule natural_health_regeneration false" >/dev/null
+  rc "difficulty easy" >/dev/null; rc "time set midnight" >/dev/null; rc "gamerule spawn_mobs false" >/dev/null; rc "gamerule natural_health_regeneration false" >/dev/null
   rc "gamemode survival $NAME" >/dev/null; rc "effect clear $NAME" >/dev/null; rc "clear $NAME" >/dev/null
   rc "kill @e[type=!player]" >/dev/null; rc "effect give $NAME instant_health 1 10 true" >/dev/null
   setup_$S

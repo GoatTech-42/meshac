@@ -1,5 +1,5 @@
 # Scenario setups. Standing height on the flat world is y=-60. Lanes for the movement course are built by world.sh.
-count() { rc "execute if entity @e[type=$1]" | grep -o 'count: [0-9]*' | grep -o '[0-9]*' || echo 0; }
+count() { rc "execute if entity @e[type=$1]" | grep -o "ount: [0-9]*" | grep -o "[0-9]*" || echo 0; }
 setup_walk()     { X0=100 Y0=-60 Z0=0; KEYS="w space"; SECS=8; }
 setup_fall()     { X0=110 Y0=-52 Z0=0; KEYS="w"; SECS=5; }
 setup_water()    { X0=120 Y0=-60 Z0=0; KEYS="w"; SECS=8; }
@@ -58,3 +58,13 @@ measure_ranged() { rc "data get entity @e[type=zombie,limit=1,sort=nearest] Heal
 # throw: snowballs
 setup_throw()  { X0=100 Y0=-60 Z0=300; KEYS=""; SECS=6; CLICK=3; rc "give $NAME snowball 16" >/dev/null; }
 measure_throw() { count snowball; }
+post_boat() { rc "ride $NAME mount @e[type=oak_boat,limit=1,sort=nearest]" >/dev/null; sleep 1; }
+# legit control for the melee arena: a person clicking once a second at the zombie straight ahead
+setup_meleeclick() { setup_melee; CLICK=1; }
+measure_meleeclick() { count zombie; }
+# reach: one zombie 5.5 blocks ahead, clicking. Vanilla cannot hit it from here.
+setup_reach() { X0=100 Y0=-60 Z0=40; KEYS=""; SECS=8; CLICK=1; rc "summon zombie 100.5 -60 45.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b}" >/dev/null; rc "give $NAME diamond_sword" >/dev/null; }
+measure_reach() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f" | tr -d "f\n"; }
+# mine: a block of stone around the player, with a pickaxe. After the run, count what is left.
+setup_mine() { X0=100 Y0=-60 Z0=60; KEYS=""; SECS=10; rc "fill 96 -61 56 104 -56 64 stone" >/dev/null; rc "fill 100 -60 60 100 -59 60 air" >/dev/null; rc "give $NAME diamond_pickaxe" >/dev/null; }
+measure_mine() { if [ "$PHASE" = after ]; then rc "fill 96 -60 56 104 -56 64 air replace stone" | grep -o "[0-9]*" | head -1; else echo -; fi; }

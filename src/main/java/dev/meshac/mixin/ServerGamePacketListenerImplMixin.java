@@ -17,7 +17,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleMovePlayer", at = @At("HEAD"), cancellable = true)
 	private void meshac$move(ServerboundMovePlayerPacket p, CallbackInfo ci) {
-		if (!player.level().getServer().isSameThread()) return; // vanilla re-queues this packet onto the main thread
+		if (!player.level().getServer().isSameThread()) { Movement.arrive(player, p); return; } // vanilla re-queues this packet onto the main thread
 		double[] back = Movement.check(player, p);
 		if (back != null) {
 			teleport(back[0], back[1], back[2], player.getYRot(), player.getXRot());

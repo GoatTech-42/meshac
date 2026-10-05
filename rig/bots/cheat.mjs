@@ -18,9 +18,11 @@ b.once("spawn",async()=>{
     let {x,y,z}=p0;
     for(let t=0;t<200;t++){
       if(mode==="speed"){x+=0.9;send(x,y,z,true);}
+      if(mode==="nofall"){y-=0.3;x+=0.0;send(x,y,z,true);}
+      if(mode==="timer"){x+=(t%2?0.02:-0.02);send(x,y,z,true);}
       if(mode==="fly"){send(x,y+(t<5?0.3*t:0.0),z,false);y+=(t<5?0.3*t:0);}
-      if(mode==="highjump"){ if(t%30===0){y+=1.2;send(x,y,z,false);} else send(x,y,z,t%30>3&&false);}
-      await sleep(50);
+      if(mode==="highjump"){ if(t%30===0){y+=1.2;send(x,y,z,true);} else send(x,y,z,t%30>3&&false);}
+      await sleep(mode==="timer"?20:50);
     }
   }
   console.log(mode,"end",b.entity.position.toString());

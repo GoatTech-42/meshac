@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.phys.AABB;
 
 /** Movement checks: speed, fly (hover/ascend), high jump. Runs on every position packet, before vanilla. */
 public final class Movement {
@@ -16,7 +17,12 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init;
-		int grace, clean, bufSpeed, bufFly, bufJump;
+		long lastNs; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufGround, grace, clean, bufSpeed, bufFly, bufJump;
+	}
+
+	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
+	public static void arrive(ServerPlayer pl, ServerboundMovePlayerPacket p) {
+		if (p.hasPosition()) STATE.computeIfAbsent(pl.getUUID(), k -> new S()).arrivals.add(System.nanoTime());
 	}
 
 	/** Returns a setback position, or null if the packet is fine. */
@@ -25,6 +31,7 @@ public final class Movement {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());
 		boolean ground = p.isOnGround();
+		Long arrived = s.arrivals.poll(); // pairs 1:1 with the stamp from arrive()
 		// The server position is the last accepted one (vanilla has already handled the previous packet).
 		// If it is neither where the previous packet started nor where it claimed, the server moved the player.
 		double sx = pl.getX(), sy = pl.getY(), sz = pl.getZ();
@@ -62,9 +69,24 @@ public final class Movement {
 				if (s.bufJump >= 2 && hit == null) hit = String.format("jump dy %.3f", dy);
 			} else s.bufJump = Math.max(0, s.bufJump - 1);
 		}
+		// Timer: each move packet is worth 50 ms. Packets running ahead of the real clock = game speed hack.
+		long now = arrived != null ? arrived : System.nanoTime();
+		if (s.lastNs != 0) {
+			s.balMs += 50 - (now - s.lastNs) / 1e6;
+			s.balMs = Math.max(-300, Math.min(s.balMs, 600)); // lag may bank up to 300 ms of catch-up
+			if (s.balMs > 450 && hit == null) hit = String.format("timer ahead %.0f ms", s.balMs);
+		}
+		s.lastNs = now;
+		// NoFall / ground spoof: claims to stand on something with only air below.
+		if (ground && !exempt && s.grace <= 0) {
+			AABB b = pl.getBoundingBox().move(dx, dy, dz);
+			boolean air = pl.level().noCollision(pl, new AABB(b.minX, b.minY - 0.1, b.minZ, b.maxX, b.minY, b.maxZ));
+			s.bufGround = air ? s.bufGround + 1 : 0;
+			if (s.bufGround >= 3 && hit == null) hit = "nofall ground spoof";
+		} else s.bufGround = 0;
 		if (hit != null) {
 			Meshac.LOG.warn("[meshac] FLAG {} {}", pl.getGameProfile().name(), hit);
-			s.bufSpeed = s.bufFly = s.bufJump = 0; s.grace = 5; s.dy = 0;
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = 0; s.balMs = 0; s.grace = 5; s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			return new double[] {s.goodX, s.goodY, s.goodZ};
 		}

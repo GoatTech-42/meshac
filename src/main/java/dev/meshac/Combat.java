@@ -44,6 +44,10 @@ public final class Combat {
 			int close = 0; java.util.Set<Integer> who = new java.util.HashSet<>();
 			for (int i = 0; i < 6; i++) if (Math.abs(s.errs[i] - med) < 0.004) { close++; who.add(s.ids[i]); }
 			if (close >= 5 && who.size() >= 2) hit = "same aim on different targets";
+			// Dead-centre aim: nearly every recent hit lands within 15 cm of the box centre, across more than one target. A person drifts.
+			int centred = 0; java.util.Set<Integer> cwho = new java.util.HashSet<>();
+			for (int i = 0; i < 6; i++) if (s.errs[i] < 0.15) { centred++; cwho.add(s.ids[i]); }
+			if (hit == null && centred >= 4 && cwho.size() >= 2) hit = "aim locked to the centre";
 		}
 		// Attack rate: more than about 12 swings a second, or many hits at low cooldown charge.
 		if (now - s.lastMs < 70) s.fast++; else s.fast = Math.max(0, s.fast - 1);

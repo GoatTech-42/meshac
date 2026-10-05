@@ -17,7 +17,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufHop, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -36,8 +36,11 @@ public final class Movement {
 		// If it is neither where the previous packet started nor where it claimed, the server moved the player.
 		double sx = pl.getX(), sy = pl.getY(), sz = pl.getZ();
 		boolean atStart = near(sx, sy, sz, s.px, s.py, s.pz), atClaim = near(sx, sy, sz, s.cx, s.cy, s.cz);
-		if (!s.init || !(atStart || atClaim)) {
-			s.init = true; s.grace = s.ownTp ? 3 : SKIP_TICKS; s.ownTp = false; // our own setback needs only a short grace s.dy = 0; s.ground = ground; s.bufSpeed = s.bufFly = s.bufJump = 0;
+		// A real teleport moves the player a long way. Hacks that send several tiny fake positions in one tick (Criticals, MaceDMG) must not be able to open the grace window.
+		double offBy = Math.min(Math.sqrt((sx - s.px) * (sx - s.px) + (sy - s.py) * (sy - s.py) + (sz - s.pz) * (sz - s.pz)), Math.sqrt((sx - s.cx) * (sx - s.cx) + (sy - s.cy) * (sy - s.cy) + (sz - s.cz) * (sz - s.cz)));
+		if (!s.init || (!(atStart || atClaim) && offBy > 0.75)) {
+			s.init = true; s.grace = s.ownTp ? 3 : SKIP_TICKS; s.ownTp = false; // our own setback needs only a short grace
+			s.dy = 0; s.ground = ground; s.bufSpeed = s.bufFly = s.bufJump = 0;
 			s.goodX = sx; s.goodY = sy; s.goodZ = sz;
 			s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
 			return null;
@@ -52,7 +55,7 @@ public final class Movement {
 			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.hurtTime > 0
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
 		if (pl.hurtTime > 0 || pl.hasEffect(MobEffects.LEVITATION)) s.grace = SKIP_TICKS;
-		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground);
+		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime);
 		String hit = null;
 		if (pl.onClimbable() && s.grace <= 0 && !pl.isCreative() && !pl.isSpectator()) { // vanilla climbs at most 0.15 per tick
 			s.bufClimb = dy > 0.21 ? s.bufClimb + 2 : Math.max(0, s.bufClimb - 1);
@@ -95,9 +98,11 @@ public final class Movement {
 			if (s.ground && dy > 0.005 && dy < 0.30 && !pl.isInWater() && !pl.onClimbable() && !pl.isPassenger() && !pl.getAbilities().flying) {
 				AABB mb = pl.getBoundingBox().move(dx, dy, dz);
 				boolean unsupported = pl.level().noCollision(pl, new AABB(mb.minX, mb.minY - 0.03, mb.minZ, mb.maxX, mb.minY, mb.maxZ));
-				s.bufHop = unsupported ? s.bufHop + 2 : Math.max(0, s.bufHop - 1);
-				if (s.bufHop >= 4 && hit == null) { hit = String.format("microhop dy %.3f", dy); s.bufHop = 0; }
-			} else s.bufHop = Math.max(0, s.bufHop - 1);
+				if (TRACE) Meshac.LOG.info("[trace] microhop dy={} unsupported={} buf={}", r(dy), unsupported, s.bufHop);
+				if (unsupported) s.bufHop += 2;
+				if (s.bufHop >= 3 && hit == null) { hit = String.format("microhop dy %.3f", dy); s.bufHop = 0; }
+			}
+			if (++s.hopClock >= 30) { s.hopClock = 0; s.bufHop = Math.max(0, s.bufHop - 1); } // one hop is forgiven, two inside about 1.5 s are not
 		}
 		// Timer: each move packet is worth 50 ms. Packets running ahead of the real clock = game speed hack.
 		long now = arrived != null ? arrived : System.nanoTime();

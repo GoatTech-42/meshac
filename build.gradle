@@ -10,7 +10,7 @@ dependencies {
 
 processResources {
 	inputs.property "version", project.version
-	filesMatching("fabric.mod.json") { expand "version": project.version }
+	filesMatching("fabric.mod.json") { expand "version": project.version, "mc": project.mc_range, "java": project.java_min }
 }
 
 tasks.withType(JavaCompile).configureEach { it.options.release = 25 }

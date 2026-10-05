@@ -34,3 +34,7 @@ The plan is a `/mesh` command and a small config file with three presets (calm, 
 ## License
 
 MIT.
+
+## Versions
+
+One source tree builds for 1.21.11, 26.1.x, 26.2 and 26.3. Run build-all.sh with JDK 25 and the jars land in dist/. The 1.21.11 jar uses the older obfuscated toolchain and runs on Java 21; the rest need Java 25. rig/smoke.sh boots each jar on a real server of its version and checks that meshac loads. So far that is a boot test only; the movement checks have been exercised on 26.1.2.

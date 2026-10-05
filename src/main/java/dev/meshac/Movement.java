@@ -17,7 +17,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init;
-		long lastNs, heatAt, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int heat, bufGround, grace, clean, bufSpeed, bufFly, bufJump;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -27,8 +27,8 @@ public final class Movement {
 
 	/** Returns a setback position, or null if the packet is fine. */
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
-		if (!p.hasPosition()) return null;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		if (!p.hasPosition()) return statusOnly(pl, p, s);
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());
 		boolean ground = p.isOnGround();
 		Long arrived = s.arrivals.poll(); // pairs 1:1 with the stamp from arrive()
@@ -54,15 +54,26 @@ public final class Movement {
 		if (pl.hurtTime > 0 || pl.hasEffect(MobEffects.LEVITATION)) s.grace = SKIP_TICKS;
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground);
 		String hit = null;
+		if (pl.onClimbable() && s.grace <= 0 && !pl.isCreative() && !pl.isSpectator()) { // vanilla climbs at most 0.15 per tick
+			s.bufClimb = dy > 0.21 ? s.bufClimb + 2 : Math.max(0, s.bufClimb - 1);
+			if (s.bufClimb >= 4) hit = String.format("ladder dy %.3f", dy);
+		} else s.bufClimb = 0;
 		if (s.grace > 0 || exempt) {
 			if (s.grace > 0) s.grace--;
 		} else {
 			// Speed: horizontal blocks per packet. Ground and air have different vanilla ceilings (sprint-jump is the peak);
 			// slippery blocks lift both. Scaled by the speed attribute (0.13 when sprinting).
 			double fr = pl.level().getBlockState(pl.blockPosition().below()).getBlock().getFriction();
-			double cap = (s.ground && ground ? 0.34 : 0.62) * (pl.getSpeed() / 0.13) * (fr > 0.61 ? 3 : 1);
+			double slow = Math.min(pl.level().getBlockState(pl.blockPosition().below()).getBlock().getSpeedFactor(),
+				pl.level().getBlockState(pl.blockPosition()).getBlock().getSpeedFactor()); // soul sand is a short block: the player sinks into its cell
+			boolean web = pl.level().getBlockState(pl.blockPosition()).is(net.minecraft.world.level.block.Blocks.COBWEB)
+				|| pl.level().getBlockState(pl.blockPosition().above()).is(net.minecraft.world.level.block.Blocks.COBWEB);
+			s.slowTicks = slow < 1.0 ? s.slowTicks + 1 : 0; // the first ticks on a slow block still carry normal momentum
+			double cap = (s.ground && ground ? 0.34 : 0.62) * (pl.getSpeed() / 0.13) * (fr > 0.61 ? 3 : 1) * (s.slowTicks >= 5 ? slow : 1.0);
+			if (web) cap = 0.10; // vanilla cobweb scales motion by 0.25 or less
 			double h = Math.hypot(dx, dz);
-			if (h > cap) { s.bufSpeed += h > cap * 1.25 ? 3 : 1; s.clean = 0; } // a big overshoot counts triple else if (++s.clean >= 10) { s.bufSpeed = Math.max(0, s.bufSpeed - 1); s.clean = 0; }
+			if (h > cap) { s.bufSpeed += h > cap * 1.25 ? 3 : 1; s.clean = 0; } // a big overshoot counts triple
+			else if (++s.clean >= 10) { s.bufSpeed = Math.max(0, s.bufSpeed - 1); s.clean = 0; }
 			if (s.bufSpeed >= SIGNAL_AT) hit = String.format("speed %.2f>%.2f", h, cap);
 			// Fly: in the air, vanilla gravity gives dy = (lastDy - 0.08) * 0.98. Going above that is not vanilla.
 			if (!s.ground && !ground) {
@@ -70,6 +81,11 @@ public final class Movement {
 				s.bufFly = dy > expect + 0.03 ? s.bufFly + (dy > expect + 0.3 ? 3 : 1) : Math.max(0, s.bufFly - 1); // a big climb counts triple
 				if (s.bufFly >= SIGNAL_AT && hit == null) hit = String.format("fly dy %.3f expect %.3f", dy, expect);
 			} else s.bufFly = 0;
+			// Step: a hack can climb a block with several small rises that all claim ground. Add them up.
+			if (ground && dy > 0.05) { s.rise += dy; s.riseT = 4; } else if (--s.riseT <= 0) { s.rise = 0; s.riseT = 0; }
+			if (s.rise > 0.65 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && hit == null) { hit = String.format("step rose %.2f on the ground", s.rise); s.rise = 0; }
+			// Step: claiming ground while rising more than a half block. Vanilla only auto-steps 0.6.
+			if (ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && hit == null) hit = String.format("step dy %.3f onGround", dy);
 			// High jump / step: leaving the ground higher than a jump (0.42 + jump boost) or a step (0.6).
 			if (s.ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0)) {
 				s.bufJump += 2;
@@ -93,19 +109,30 @@ public final class Movement {
 			if (s.bufGround >= 3 && hit == null) hit = "nofall ground spoof";
 		} else s.bufGround = 0;
 		if (hit != null) {
-			long ms = System.currentTimeMillis();
-			s.heat = ms - s.heatAt > 10_000 ? 1 : s.heat + 1; // heat cools after 10 s of clean movement
-			s.heatAt = ms;
-			String step = s.heat >= 5 ? "kick" : s.heat >= 3 ? "hold" : "setback";
-			Meshac.LOG.warn("[meshac] SIGNAL {} {} heat={} -> {}", pl.getGameProfile().name(), hit, s.heat, step);
-			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = 0; s.balMs = 0; s.grace = 2; s.dy = 0;
+			String[] ch = hit.split(" ", 2);
+			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "");
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = 0; s.balMs = 0; s.grace = 2; s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
-			if (step.equals("hold")) s.freezeUntil = ms + 1500;
-			return new double[] {s.goodX, s.goodY, s.goodZ, step.equals("kick") ? 1 : 0};
+			if (step == Verdict.Step.HOLD) s.freezeUntil = System.currentTimeMillis() + 1500;
+			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
 		}
 		if (s.bufSpeed == 0 && s.bufFly == 0 && s.bufJump == 0) { s.goodX = x; s.goodY = y; s.goodZ = z; }
 		s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
 		return null;
+	}
+
+	/** Packets that carry only the on-ground flag. A NoFall hack sends these while falling to reset fall damage. */
+	private static double[] statusOnly(ServerPlayer pl, ServerboundMovePlayerPacket p, S s) {
+		if (!p.isOnGround() || !s.init || s.grace > 0 || pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
+			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable()) { s.bufStatus = 0; return null; }
+		AABB b = pl.getBoundingBox();
+		boolean air = pl.level().noCollision(pl, new AABB(b.minX, b.minY - 0.1, b.minZ, b.maxX, b.minY, b.maxZ));
+		s.bufStatus = air ? s.bufStatus + 1 : 0;
+		if (s.bufStatus < 3) return null;
+		s.bufStatus = 0;
+		Verdict.Step step = Verdict.signal(pl, "nofall", "ground flag in mid-air");
+		if (step == Verdict.Step.HOLD) s.freezeUntil = System.currentTimeMillis() + 1500;
+		return new double[] {pl.getX(), pl.getY(), pl.getZ(), 0};
 	}
 
 	private static final boolean TRACE = System.getenv("MESHAC_TRACE") != null;

@@ -17,6 +17,8 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
 
+sourceSets.main.java.srcDir "src/${project.attack_src}/java"
+
 java {
 	withSourcesJar()
 	sourceCompatibility = JavaVersion.VERSION_21

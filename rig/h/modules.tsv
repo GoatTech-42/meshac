@@ -1,0 +1,146 @@
+AimAssist|COMBAT|melee|Helps you aim at nearby entities.
+AirPlace|BLOCKS|build|Allows you to place blocks in mid-air.
+AnchorAura|COMBAT|anchor|Automatically places (optional), charges, and detonates respawn anchors to kill entities around you.
+AntiAFK|OTHER|walk|Walks around randomly to hide you from AFK detectors.
+AntiBlind|RENDER|client-only|Prevents blindness and darkness effects. Incompatible with OptiFine.
+AntiCactus|BLOCKS|build|Protects you from cactus damage.
+AntiEntityPush|MOVEMENT|push|Prevents you from getting pushed by players and mobs.
+AntiHunger|MOVEMENT|walk|Slows down your hunger when you are walking.  WARNING: There have been reports of this hack causing you to tak
+AntiKnockback|COMBAT|melee|Prevents you from taking knockback from players and mobs.
+AntiSpam|CHAT|chat|Blocks chat spam by adding a counter to repeated messages.
+AntiWaterPush|MOVEMENT|water|Prevents you from getting pushed by water.
+AntiWobble|RENDER|client-only|Disables the wobble effect caused by nausea and portals.
+ArrowDMG|COMBAT|ranged|Massively increases arrow damage, but also consumes a lot of hunger and reduces accuracy.  Does not work with
+AttributeSwap|COMBAT|melee|Swaps main-hand item attributes with the target slot.
+AutoArmor|COMBAT|lowhp|Manages your armor automatically.
+AutoBuild|BLOCKS|build|Builds things automatically. Place a single block to start building.
+AutoComplete|CHAT|chat|Auto-completes your chat messages using large language models. Requires an OpenAI account with API access or a
+AutoDrop|ITEMS|junk|Automatically drops unwanted items.
+AutoEat|ITEMS|food|Automatically eats food when necessary.
+AutoFarm|BLOCKS|farm|Harvests and replants crops automatically.
+AutoFish|OTHER|fish|Automatically catches fish using your best fishing rod. If it finds a better rod while fishing, it will automa
+AutoLeave|COMBAT|lowhp|Automatically leaves the server when your health is low.
+AutoLibrarian|OTHER|fish|Automatically trains a villager to become a librarian that sells a specific enchanted book. You can set up an
+AutoMine|BLOCKS|mine|Automatically mines any block that you look at.
+AutoPotion|COMBAT|lowhp|Automatically throws splash potions of instant health when your health is low.
+AutoReconnect|OTHER|death|Automatically reconnects when you get kicked from the server.
+AutoRespawn|COMBAT|death|Automatically respawns you whenever you die.
+AutoSign|BLOCKS|sign|Instantly writes whatever text you want on every sign you place or edit. Once activated, you can write normall
+AutoSoup|COMBAT|lowhp|Automatically eats soup when your health is low.  Note: This hack ignores hunger and assumes that eating soup
+AutoSprint|MOVEMENT|walk|Makes you sprint automatically.
+AutoSteal|ITEMS|chest|Automatically steals everything from all chests and shulker boxes that you open.
+AutoSwim|MOVEMENT|water|Triggers the swimming animation automatically.
+AutoSwitch|ITEMS|junk|Switches the item in your hand all the time.  ProTip: Use this in combination with BuildRandom while having a
+AutoSword|COMBAT|melee|Automatically uses the best weapon in your hotbar to attack entities. Tip: This works with Killaura.
+AutoTool|BLOCKS|mine|Automatically equips the fastest applicable tool in your hotbar when you try to break a block.
+AutoTotem|COMBAT|lowhp|Automatically moves totems of undying to your off-hand.
+AutoWalk|MOVEMENT|walk|Makes you walk automatically.
+BarrierESP|RENDER|client-only|Allows you to see nearby barrier blocks.
+BaseFinder|RENDER|client-only|Finds player bases by searching for man-made blocks. The blocks that it finds will be highlighted in the selec
+Blink|MOVEMENT|walk|Suspends all motion updates while enabled.
+BoatFly|MOVEMENT|boat|Allows you to fly with boats and other vehicles. Press the sprint key to go down faster.
+BonemealAura|BLOCKS|farm|Automatically uses bone meal on specific types of plants. Use the checkboxes to specify the types of plants.
+BowAimbot|COMBAT|ranged|Automatically aims your bow or crossbow.
+BuildRandom|BLOCKS|build|Randomly places blocks around you.
+BunnyHop|MOVEMENT|walk|Makes you jump automatically.
+CameraDistance|RENDER|client-only|Allows you to change the camera distance in 3rd person.
+CameraNoClip|RENDER|client-only|Allows the camera in 3rd person to go through walls.
+CaveFinder|RENDER|client-only|Helps you to find caves by highlighting them in the selected color.
+ChestESP|RENDER|client-only|Highlights nearby chests.
+ClickAura|COMBAT|melee|Automatically attacks the closest valid entity whenever you click.  WARNING: ClickAuras generally look more su
+CrashChest|ITEMS|chest|Generates a chest that essentially bans people from the server if they have too many copies of it in their inv
+CreativeFlight|MOVEMENT|walk|Allows you to fly like in Creative Mode.  WARNING: You will take fall damage if you don't use NoFall.
+Criticals|COMBAT|melee|Changes all your hits to critical hits.
+CrystalAura|COMBAT|crystal|Automatically places (optional) and detonates end crystals to kill entities around you.
+Derp|FUN|walk|Randomly moves your head around. Only visible to other players.
+Dolphin|MOVEMENT|water|Makes you bob up in water automatically. (just like a dolphin)
+Excavator|BLOCKS|mine|Automatically breaks all blocks in the selected area.
+ExtraElytra|MOVEMENT|elytra|Makes the Elytra easier to use.
+FancyChat|CHAT|chat|Replaces ASCII characters in sent chat messages with fancier unicode characters. Can be used to bypass curse w
+FastBreak|BLOCKS|mine|Allows you to break blocks faster. Tip: This works with Nuker.
+FastLadder|MOVEMENT|ladder|Allows you to climb up ladders faster.
+FastPlace|BLOCKS|build|Allows you to place blocks 5 times faster. Tip: This can speed up other hacks like AutoBuild.
+FeedAura|OTHER|farm|Automatically feeds animals around you.
+FightBot|COMBAT|melee|A bot that automatically walks around and kills everything. Good for MobArena.
+Fish|MOVEMENT|water|Disables underwater gravity so you can swim like a fish.
+Flight|MOVEMENT|walk|Allows you to fly.  WARNING: You will take fall damage if you don't use NoFall.
+Follow|MOVEMENT|walk|A bot that follows the closest entity. Very annoying.  Use .follow to follow a specific entity.
+ForceOP|CHAT|chat|Cracks AuthMe passwords. Can be used to get OP.
+Freecam|RENDER|client-only|Allows you to move the camera without moving your character.
+Fullbright|RENDER|client-only|Allows you to see in the dark.
+Glide|MOVEMENT|walk|Makes you glide down slowly when falling.  WARNING: You will take fall damage if you don't use NoFall.
+HandNoClip|BLOCKS|wall|Allows you to reach specific blocks through walls.
+HeadRoll|FUN|walk|Makes you nod all the time. Only visible to other players.
+HealthTags|RENDER|client-only|Shows the health of players in their nametags.
+HighJump|MOVEMENT|walk|Allows you to jump higher.  WARNING: You will take fall damage if you don't use NoFall.
+InfiniChat|CHAT|chat|Removes the 256 character limit from the chat. Useful for long commands that modify NBT data.  NOTICE: Not rec
+InstaBuild|BLOCKS|build|Similar to AutoBuild, but tries to build the entire template in one tick. Only works with very simple template
+InstantBunker|BLOCKS|build|Builds a small bunker around you. Needs 57 blocks.
+InvWalk|MOVEMENT|walk|Allows you to move around while the inventory is open.
+ItemESP|RENDER|client-only|Highlights nearby items.
+ItemGenerator|ITEMS|creative|Generates random items and drops them on the ground. Creative mode only.
+Jesus|MOVEMENT|water|Allows you to walk on water. Jesus used this hack ~2000 years ago.
+Jetpack|MOVEMENT|walk|Allows you to fly as if you had a jetpack.  WARNING: You will take fall damage if you don't use NoFall.
+Kaboom|BLOCKS|mine|Breaks blocks around you like an explosion.  Can be a lot faster than Nuker if the server doesn't have an anti
+Killaura|COMBAT|melee|Automatically attacks entities around you.
+KillauraLegit|COMBAT|melee|Slower Killaura that is harder to detect. Not required on normal NoCheat+ servers!
+KillPotion|ITEMS|creative|Generates a potion that can kill almost anything, including players in Creative mode. Does not work on undead
+Liquids|BLOCKS|build|Allows you to place blocks in liquids.
+LSD|FUN|UNASSIGNED|Causes hallucinations.
+MaceDMG|COMBAT|melee|Increases your damage when attacking with a mace.
+MassTPA|CHAT|chat|Sends a TPA request to all players.
+MileyCyrus|FUN|walk|Makes you twerk.
+MobESP|RENDER|client-only|Highlights nearby mobs.
+MobSpawnESP|RENDER|client-only|Highlights areas where mobs can spawn.
+MultiAura|COMBAT|melee|Faster Killaura that attacks multiple entities at once.
+NameProtect|RENDER|client-only|Hides all player names.
+NameTags|RENDER|client-only|Changes the scale of the nametags so you can always read them. Also allows you to see the nametags of sneaking
+NewChunks|RENDER|client-only|Highlights newly generated chunks around you.
+NoBackground|RENDER|client-only|Removes the dark background behind inventories.
+NoClip|MOVEMENT|wall|Allows you to teleport through up to 21 blocks (or 37 with elytra equipped).  You must be at least partially i
+NoFall|MOVEMENT|fall|Protects you from fall damage.
+NoFireOverlay|RENDER|client-only|Blocks the overlay when you are on fire.  WARNING: This can cause you to burn to death without noticing.
+NoFog|RENDER|client-only|Removes distance fog from the world.
+NoHurtcam|RENDER|client-only|Disables the shaking effect when you get hurt.
+NoLevitation|MOVEMENT|levitate|Disables the levitation effect when you get hit by a Shulker.  WARNING: You will fall if you activate this whi
+NoOverlay|RENDER|client-only|Blocks the overlays of water, lava, and powder snow.
+NoPumpkin|RENDER|client-only|Blocks the overlay when wearing a pumpkin on your head.
+NoShieldOverlay|RENDER|client-only|Lowers the shield so it covers less of your screen.
+NoSlowdown|MOVEMENT|soulsand|Cancels slowness effects caused by honey, soul sand and using items.
+NoVignette|RENDER|client-only|Removes the vignette effect (darkening of the screen edges).
+NoWeather|RENDER|client-only|Allows you to alter the client-side weather, time and moon phase.
+NoWeb|MOVEMENT|web|Prevents you from getting slowed down by cobwebs.
+Nuker|BLOCKS|mine|Automatically breaks blocks around you.
+NukerLegit|BLOCKS|mine|Slower Nuker that's much harder for anti-cheat plugins to detect. Not required on normal NoCheat+ servers!
+OpenWaterESP|RENDER|client-only|Shows whether or not you are fishing in "open water" and draws a box around the area used for the open water c
+Parkour|MOVEMENT|fall|Makes you jump automatically when reaching the edge of a block. Useful for parkours and jump'n'runs.
+PlayerESP|RENDER|client-only|Highlights nearby players, including mannequins. ESP boxes of friends will appear in blue.
+PortalESP|RENDER|client-only|Highlights nearby portals.
+ProphuntESP|RENDER|client-only|Allows you to see fake blocks in Prophunt. Made for Mineplex Prophunt. Might not work on other servers.
+Protect|COMBAT|melee|A bot that follows the closest entity and protects it from other entities. Use .protect to protect a specific
+Radar|RENDER|client-only|Shows the location of nearby entities. blue - friends red - players/mannequins orange - hostile mobs yellow -
+RainbowUI|FUN|UNASSIGNED|Makes everything colorful.
+Reach|OTHER|melee|Allows you to reach further.
+RemoteView|RENDER|client-only|Allows you to see the world as someone else. Use the .rv command to make it target a specific entity.
+Restock|ITEMS|junk|Automatically restocks your hand with the selected items from your inventory. Works better with FastPlace.
+SafeWalk|MOVEMENT|fall|Prevents you from falling off edges.
+ScaffoldWalk|BLOCKS|build|Automatically places blocks below your feet.
+Search|RENDER|client-only|Helps you to find specific blocks by highlighting them in rainbow color.
+SkinDerp|FUN|walk|Randomly toggles parts of your skin.
+Sneak|MOVEMENT|walk|Makes you sneak automatically.
+SnowShoe|MOVEMENT|snow|Allows you to walk on powder snow without freezing. Does not prevent freezing when submerged.
+SpeedHack|MOVEMENT|walk|Allows you to run ~2.5x faster than you would by sprinting and jumping.  WARNING: Patched in NoCheat+ version
+SpeedNuker|BLOCKS|mine|Faster version of Nuker that cannot bypass NoCheat+.
+Spider|MOVEMENT|wall|Allows you to climb up walls like a spider.
+Step|MOVEMENT|step|Allows you to step up full blocks.
+Throw|OTHER|throw|Uses an item multiple times. Can be used to throw snowballs and eggs, spawn mobs, place minecarts, etc. in ver
+Tillaura|BLOCKS|farm|Automatically turns dirt, grass, etc. into farmland. Not to be confused with Killaura.
+Timer|OTHER|walk|Changes the speed of almost everything.
+Tired|FUN|walk|Makes you look like Alexander back in April 2015. Only visible to other players.
+Trajectories|RENDER|client-only|Predicts the flight path of arrows and throwable items.
+TreeBot|BLOCKS|tree|An experimental bot that automatically walks around and chops down trees. Limited to small trees for now.
+TriggerBot|COMBAT|melee|Automatically attacks the entity you're looking at.
+TrollPotion|ITEMS|creative|Generates a potion with many annoying effects on it.
+TrueSight|RENDER|client-only|Allows you to see invisible entities.
+Tunneller|BLOCKS|mine|Automatically digs a tunnel.  WARNING: Although this bot will try to avoid lava and other dangers, there is no
+VeinMiner|BLOCKS|mine|Automatically mines ore veins for you.

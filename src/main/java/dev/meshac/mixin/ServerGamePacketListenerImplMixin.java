@@ -26,11 +26,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class ServerGamePacketListenerImplMixin {
 	@Shadow public ServerPlayer player;
+	@Shadow private net.minecraft.world.phys.Vec3 awaitingPositionFromClient;
 	@Shadow public abstract void teleport(double x, double y, double z, float yRot, float xRot);
 
 	@Inject(method = "handleMovePlayer", at = @At("HEAD"), cancellable = true)
 	private void meshac$move(ServerboundMovePlayerPacket p, CallbackInfo ci) {
 		if (!player.level().getServer().isSameThread()) { Movement.arrive(player, p); return; } // vanilla re-queues this packet onto the main thread
+		Movement.awaiting(player, awaitingPositionFromClient != null);
 		double[] back = Glide.check(player, p);
 		if (back == null) back = Movement.check(player, p);
 		if (back != null) {

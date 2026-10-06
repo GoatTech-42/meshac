@@ -91,7 +91,23 @@ Blocks broken that the crosshair is not on are refused, and four breaks more tha
 
 ### Other unproven or partial rows (11 AM batch)
 
-AutoEat 1 signal at 0.9 s and AutoSteal 1 signal at 4 s (both partial, no kick). NoClip, CreativeFlight, BunnyHop, AirPlace, AutoSign, FeedAura: 0 signals but the scenario did not show the hack acting, so these are unproven, not passes. AutoPotion scenario fixed, rerun pending. AutoSword and AimAssist: 0 signals, still misses.
+AutoEat 1 signal at 0.9 s and AutoSteal 1 signal at 4 s (both partial, no kick). AirPlace, AutoSign, FeedAura: 0 signals but the scenario did not show the hack acting, so these are unproven, not passes. AutoPotion scenario fixed, rerun pending. AutoSword and AimAssist: 0 signals, still misses.
+
+### NoClip (caught, stopped)
+
+Wurst NoClip needs the body partly inside a block and then teleports it up to 21 blocks through the wall. Two rules: a single move packet of more than 10 blocks is refused and set back unless the server itself ordered a teleport, and ten packets in a row with the body inside solid blocks are a signal. Before the rule the hack walked 42 blocks through stone with no signal, because the jump arrived straight after suffocation damage and every movement check skipped it. After: 1 signal, the jump was refused (42 blocks became 1). Control without the hack is clean. Rig, 26.1.2 only.
+
+### CreativeFlight (caught)
+
+Double-tap jump scenario: 4 signals, kicked. Control clean.
+
+### BunnyHop (not server-detectable)
+
+Travels the same distance as a player holding jump while walking (35.7 against 35.9 blocks in 8 s).
+
+### AutoFish (not caught yet)
+
+Runs fine: 2 fish in 45 s, zero signals. The tell is the time from bite to reel; a hook mixin could measure it. Not built.
 
 ### AutoSwitch (caught)
 

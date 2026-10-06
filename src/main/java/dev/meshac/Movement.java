@@ -17,13 +17,16 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; long graceAt; long kbAt; double kbX, kbZ; int noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt; long kbAt; double kbX, kbZ; int noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
 	public static void arrive(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		if (p.hasPosition()) STATE.computeIfAbsent(pl.getUUID(), k -> new S()).arrivals.add(System.nanoTime());
 	}
+
+	/** Whether the server is waiting for the client to confirm a teleport. Set by the packet handler before check(). */
+	public static void awaiting(ServerPlayer pl, boolean waiting) { STATE.computeIfAbsent(pl.getUUID(), k -> new S()).pending = waiting; }
 
 	/** Returns a setback position, or null if the packet is fine. */
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
@@ -52,7 +55,17 @@ public final class Movement {
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
 		}
+		// NoClip: the body sits inside solid blocks. Vanilla only refuses moves that newly collide, so a player who starts inside a wall walks on through it.
+		if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && s.grace == 0 && !pl.level().noCollision(pl, pl.getBoundingBox().deflate(0.1))) {
+			if (++s.inBlock >= 10) { s.inBlock = 0; Verdict.signal(pl, "noclip", "moving inside solid blocks", 1); s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ; return new double[] {s.goodX, s.goodY, s.goodZ, 0}; }
+		} else s.inBlock = 0;
 		double dx = x - sx, dy = y - sy, dz = z - sz;
+		// NoClip, Teleport, Blink: a single packet that jumps more than 10 blocks. No exemption (damage, grace) covers it; only a teleport the server itself ordered does.
+		if (!s.pending && !pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && dx * dx + dy * dy + dz * dz > 100) {
+			Verdict.signal(pl, "noclip", String.format("jumped %.0f blocks in one packet", Math.sqrt(dx * dx + dy * dy + dz * dz)), 2);
+			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
+			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
+		}
 		boolean exempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
 			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.hurtTime > 0
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
@@ -150,7 +163,7 @@ public final class Movement {
 			if (step == Verdict.Step.HOLD) s.freezeUntil = System.currentTimeMillis() + 1500;
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
 		}
-		if (s.bufSpeed == 0 && s.bufFly == 0 && s.bufJump == 0) { s.goodX = x; s.goodY = y; s.goodZ = z; }
+		if (s.bufSpeed == 0 && s.bufFly == 0 && s.bufJump == 0 && s.inBlock == 0) { s.goodX = x; s.goodY = y; s.goodZ = z; }
 		s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
 		return null;
 	}

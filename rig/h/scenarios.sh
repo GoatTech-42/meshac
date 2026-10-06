@@ -150,3 +150,12 @@ measure_fish() { rc "data get entity $NAME Inventory" | grep -o "cod\|salmon\|pu
 # nuke: standing in a pocket inside a stone block, no mouse. Nuker clears every block around it. A hand breaks only what it points at.
 setup_nuke() { X0=100 Y0=-60 Z0=640; KEYS=""; SECS=8; rc "forceload add 100 640" >/dev/null; rc "fill 96 -61 636 104 -55 644 stone" >/dev/null; rc "fill 99 -60 639 101 -59 641 air" >/dev/null; rc "give $NAME diamond_pickaxe" >/dev/null; }
 measure_nuke() { echo 0; }
+# flyw: walking forward with jump held, for the flight and hop modules.
+setup_flyw() { X0=100 Y0=-60 Z0=0; KEYS="w space"; SECS=8; }
+measure_flyw() { echo 0; }
+# flydt: forward walk, then a double tap of jump with the second press held. The double tap is how a creative player starts flying.
+setup_flydt() { X0=100 Y0=-60 Z0=0; KEYS="w"; SECS=8; PRE="X key space; sleep 0.12; X keydown space; (sleep 8; X keyup space) &"; }
+measure_flydt() { echo 0; }
+# noclip: standing inside a solid block with more stone ahead. NoClip teleports the player through it.
+setup_noclip() { X0=100 Y0=-60 Z0=700; KEYS="w"; SECS=6; PRE='rc "tp $NAME 100.5 -60 699.8" >/dev/null'; rc "forceload add 100 700" >/dev/null; rc "fill 98 -61 700 102 -58 712 stone" >/dev/null; }
+measure_noclip() { echo 0; }

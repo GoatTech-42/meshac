@@ -93,6 +93,18 @@ Blocks broken that the crosshair is not on are refused, and four breaks more tha
 
 AutoEat 1 signal at 0.9 s and AutoSteal 1 signal at 4 s (both partial, no kick). AirPlace, AutoSign, FeedAura: 0 signals but the scenario did not show the hack acting, so these are unproven, not passes. AutoPotion scenario fixed, rerun pending. AutoSword and AimAssist: 0 signals, still misses.
 
+### AirPlace (caught, stopped)
+
+Wurst AirPlace sends a block placement against thin air and vanilla accepts it. A hand can only click a face of a block that exists, so a placement against an air block is refused and counts as a signal. Before: one block placed in the open air. After: nothing placed, 5 signals, kicked at 5.6 s. Control without the hack places nothing. Rig, 26.1.2 only.
+
+### FeedAura (caught, stopped)
+
+Wurst FeedAura picks a random animal every tick and feeds it, so it hits a new animal 50 ms after the last. A hand needs time to turn to the next animal. An interaction with a different entity less than 250 ms after the previous one is refused, and a second one inside three seconds is a signal. Before: all four cows fed (wheat 32 to 28), 0 signals. After: 5 signals, kicked, the player is out before the herd is fed. Control is clean. Rig, 26.1.2 only (the 1.21.11 jar has no entity-interact hook yet).
+
+### AutoSign (unproven)
+
+AutoSign copies the text of the first sign onto every later one. meshac refuses sign text that arrives under a second after the click (a hand needs longer to type), but the rig client never sent a sign-update packet, so the check has not been seen firing. The scenario needs the sign editor to open on the real client. Not counted as caught.
+
 ### NoClip (caught, stopped)
 
 Wurst NoClip needs the body partly inside a block and then teleports it up to 21 blocks through the wall. Three rules: any move packet over 1.5 blocks is refused and set back when the body, slid along the path in half-block steps, overlaps a solid block (vanilla only tests where the packet ends, so a thin wall did not stop it); a move of more than 10 blocks is refused whatever lies between; and ten packets in a row with the body inside solid blocks are a signal. None of them applies while the server itself has ordered a teleport. Before the rule the hack walked 42 blocks through stone with no signal, because the jump arrived straight after suffocation damage and every movement check skipped it. After: 1 signal, the jump was refused (42 blocks became 1). Control without the hack is clean. A 3-block-thick wall scenario: 3.7-block move through it refused, control clean. Legit knockback (TNT and wind charges at the feet, wall beside) stays at 0 signals. Rig, 26.1.2 only.

@@ -161,9 +161,18 @@ setup_noclip() { X0=100 Y0=-60 Z0=700; KEYS="w"; SECS=6; PRE='rc "tp $NAME 100.5
 measure_noclip() { echo 0; }
 # airp: facing open air with stone in hand, right clicking. A hand places nothing; AirPlace puts blocks into the air at the crosshair.
 setup_airp() { X0=100 Y0=-60 Z0=760; KEYS=""; SECS=6; CLICK=3; YAW=0; PITCH=0; rc "forceload add 100 760" >/dev/null; rc "fill 94 -60 756 106 -52 774 air" >/dev/null; rc "give $NAME stone 64" >/dev/null; }
-measure_airp() { n=$(rc "fill 94 -60 756 106 -52 774 stone replace stone" | grep -o "[0-9]\+" | head -1); echo ${n:-0}; }
+measure_airp() { n=$(rc "fill 94 -60 756 106 -52 774 glass replace stone" | grep -o "[0-9]\+" | head -1); echo ${n:-0}; }
 # kbl: legit big knockback. TNT and wind charges go off at the feet; the launch is the largest vanilla gives a survival player. A wall stands beside the landing area.
 setup_kbl() { X0=100 Y0=-60 Z0=800; KEYS=""; SECS=10; rc "forceload add 100 800" >/dev/null; rc "fill 96 -60 796 108 -50 812 air" >/dev/null; rc "fill 96 -61 796 108 -61 812 stone" >/dev/null; rc "fill 103 -60 796 103 -55 812 stone" >/dev/null; rc "effect give $NAME resistance 60 4 true" >/dev/null; PRE='for i in 1 2 3 4; do rc "summon tnt 100.5 -60 800.5 {fuse:0}" >/dev/null; rc "summon wind_charge 100.5 -61 800.5" >/dev/null; sleep 2; done'; }
 # noclipw: buried in a 3-block-thick wall with open air behind it. The move through is short, well under the 10-block backstop.
 setup_noclipw() { X0=100 Y0=-60 Z0=860; KEYS="w"; SECS=6; PRE='rc "tp $NAME 100.5 -60 859.8" >/dev/null'; rc "forceload add 100 860" >/dev/null; rc "fill 96 -61 856 106 -52 872 air" >/dev/null; rc "fill 96 -61 860 106 -52 862 stone" >/dev/null; rc "fill 96 -62 856 106 -62 872 stone" >/dev/null; }
 measure_noclipw() { echo 0; }
+# sign (fixed): signs are clicked onto the floor ahead; measure counts the standing signs. AutoSign fills the text the moment the editor opens.
+setup_sign()   { X0=100 Y0=-60 Z0=140; KEYS=""; SECS=6; CLICK=3; PITCH=30; rc "forceload add 100 140" >/dev/null; rc "give $NAME oak_sign 4" >/dev/null; }
+measure_sign() { n=$(rc "fill 94 -60 134 106 -58 150 air replace oak_sign" | grep -o "[0-9]\+" | head -1); echo ${n:-0}; }
+# feed (fixed): measure is the wheat left in the inventory; cows stand still (NoAI) 3-4 blocks ahead.
+setup_feed() { X0=100 Y0=-60 Z0=350; KEYS=""; SECS=8; rc "forceload add 100 354" >/dev/null; sleep 2; rc "kill @e[type=cow]" >/dev/null; for i in 1 2 3 4; do rc "summon cow $((98+i)).5 -60 353.5 {NoAI:1b}" >/dev/null; done; rc "give $NAME wheat 32" >/dev/null; }
+measure_feed() { rc "clear $NAME wheat 0" | grep -o "[0-9]\+" | head -1; }
+# sign2: AutoSign copies the first sign's text onto later signs. A hand types the first one (2 s after the click), the second goes down at once.
+setup_sign2() { setup_sign; CLICK=0; SECS=4; PRE='X click 3; sleep 2.5; X type hello; sleep 0.5; X key Escape; sleep 1; X mousemove_relative -- 0 140; sleep 0.5; X click 3; sleep 1.5; X key Escape'; }
+measure_sign2() { measure_sign; }

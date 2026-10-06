@@ -28,4 +28,9 @@ public abstract class AttackMixin {
 		Verdict.signal(player, "combat", hit, 2);
 		ci.cancel(); // the hit is denied
 	}
+
+	@Inject(method = "handleInteract", at = @At("HEAD"), cancellable = true)
+	private void meshac$interact(net.minecraft.network.protocol.game.ServerboundInteractPacket p, CallbackInfo ci) {
+		if (player.level().getServer().isSameThread() && dev.meshac.Interact.entity(player, p.entityId())) ci.cancel();
+	}
 }

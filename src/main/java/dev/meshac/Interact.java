@@ -10,7 +10,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Scaffold, AirPlace, AutoBuild, Throw: using blocks and items faster, or somewhere else, than a hand does. */
 public final class Interact {
-	private static final class S { long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; }
+	private static final class S { long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; long clickAt, entAt, entWin; int entId = -1, entStrikes; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 16; // fast bridging is about 8 a second
 
@@ -34,8 +34,34 @@ public final class Interact {
 
 	/** A use-item-on-block packet (placing). */
 	/** Returns true when the click must be refused: it hit a block the player is not looking at. */
+	/** FeedAura and other entity auras: a new target every tick. A hand needs time to turn to another animal; an interaction with a different entity inside a quarter second of the last one is refused, and repeats inside three seconds are a signal. */
+	public static boolean entity(ServerPlayer pl, int id) {
+		if (pl.isCreative() || pl.isSpectator()) return false;
+		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		long now = System.currentTimeMillis();
+		if (s.entId != -1 && s.entId != id && now - s.entAt < 250) {
+			if (now - s.entWin > 3000) { s.entWin = now; s.entStrikes = 0; }
+			if (++s.entStrikes >= 2) Verdict.signal(pl, "interact", "new target " + (now - s.entAt) + " ms after the last one", 1);
+			return true;
+		}
+		s.entId = id; s.entAt = now;
+		return false;
+	}
+
+	/** AutoSign: the editor opens when the sign is clicked or placed. Typing a line and pressing Done takes a hand longer than a second; the hack answers in the same tick. Text that arrives sooner is refused. */
+	public static boolean sign(ServerPlayer pl, String[] lines) {
+		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		boolean typed = false;
+		for (String l : lines) typed |= !l.isEmpty();
+		if (!typed || System.currentTimeMillis() - s.clickAt > 1000) return false;
+		Verdict.signal(pl, "interact", "sign text filled in " + (System.currentTimeMillis() - s.clickAt) + " ms after the click", 1);
+		return true;
+	}
+
 	public static boolean place(ServerPlayer pl, ServerboundUseItemOnPacket p) {
 		if (pl.isCreative() || pl.isSpectator()) return false;
+		// AirPlace: a hand can only click a face of a block that is there. Vanilla places against thin air if the packet says so.
+		if (pl.level().getBlockState(Packets.hit(p).getBlockPos()).isAir()) { Verdict.signal(pl, "interact", "placed against air", 1); rate(pl); return true; }
 		AABB box = new AABB(Packets.hit(p).getBlockPos()).inflate(0.3);
 		Vec3 eye = pl.getEyePosition();
 		if (box.clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) { Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1); rate(pl); return true; }
@@ -55,6 +81,7 @@ public final class Interact {
 			if (speed > 4.0) Verdict.signal(pl, "interact", String.format("bridging at %.1f blocks a second", speed), 1);
 			s.fwd = 0; s.chainDist = 0; s.chainMs = 0;
 		}
+		s.clickAt = now;
 		rate(pl);
 		return false;
 	}

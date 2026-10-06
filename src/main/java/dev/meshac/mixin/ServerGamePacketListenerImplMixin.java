@@ -67,6 +67,15 @@ public abstract class ServerGamePacketListenerImplMixin {
 		}
 	}
 
+	@Inject(method = "handleSignUpdate", at = @At("HEAD"), cancellable = true)
+	private void meshac$sign(net.minecraft.network.protocol.game.ServerboundSignUpdatePacket p, CallbackInfo ci) {
+		if (player.level().getServer().isSameThread()) {
+			boolean refused = Interact.sign(player, p.getLines());
+			Trace.t(player, "sign text" + (refused ? " REFUSED" : "") + " lines=" + String.join("|", p.getLines()));
+			if (refused) ci.cancel();
+		}
+	}
+
 	@Inject(method = "handleUseItem", at = @At("HEAD"))
 	private void meshac$use(ServerboundUseItemPacket p, CallbackInfo ci) {
 		if (player.level().getServer().isSameThread()) { Interact.use(player); Trace.t(player, "use item=" + player.getMainHandItem().getItem()); }

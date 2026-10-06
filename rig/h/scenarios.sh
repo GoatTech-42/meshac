@@ -108,3 +108,7 @@ measure_bowshot() { rc "data get entity @e[type=zombie,limit=1,sort=nearest] Hea
 setup_scaffold() { X0=100 Y0=-41 Z0=800; KEYS="w"; SECS=8; PITCH=20; CLICK=3; rc "forceload add 90 790 110 860" >/dev/null; sleep 2; rc "fill 90 -45 790 110 -38 860 air" >/dev/null; rc "fill 98 -42 799 102 -42 801 stone" >/dev/null; rc "give $NAME stone 64" >/dev/null; rc "effect give $NAME resistance 60 255 true" >/dev/null; }
 setup_fastplace() { X0=100 Y0=-60 Z0=84; KEYS=""; SECS=8; PITCH=45; rc "give $NAME stone 64" >/dev/null; rc "fill 96 -60 80 104 -55 92 air" >/dev/null; PRE='X mousedown 3; (n=0; while [ $n -lt 30 ]; do sleep 0.25; rc "fill 98 -60 85 102 -59 89 air replace stone" >/dev/null; n=$((n+1)); done; X mouseup 3) &'; }
 measure_fastplace() { rc "give $NAME stone 0" | grep -o "[0-9]\+" | head -1; }
+setup_bonemeal() { X0=100 Y0=-60 Z0=330; KEYS=""; SECS=8; rc "fill 98 -61 332 102 -61 336 farmland" >/dev/null; rc "fill 98 -60 332 102 -60 336 wheat[age=0]" >/dev/null; rc "give $NAME bone_meal 64" >/dev/null; }
+measure_bonemeal() { rc "execute if block 100 -60 334 wheat[age=7]" | grep -o "passed\|failed"; }
+setup_feed() { X0=100 Y0=-60 Z0=350; KEYS=""; SECS=8; rc "kill @e[type=cow]" >/dev/null; for i in 1 2 3 4; do rc "summon cow $((98+i)) -60 354" >/dev/null; done; rc "give $NAME wheat 32" >/dev/null; }
+measure_feed() { rc "execute if entity @e[type=cow,nbt={InLove:1}]" | grep -o "passed\|failed" ; rc "data get entity @e[type=cow,limit=1] InLove" | grep -o "[0-9]*$"; }

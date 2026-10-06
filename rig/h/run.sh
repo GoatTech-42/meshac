@@ -10,7 +10,7 @@ run_case() {
   rc "difficulty easy" >/dev/null; rc "time set midnight" >/dev/null; rc "gamerule spawn_mobs false" >/dev/null; rc "gamerule natural_health_regeneration false" >/dev/null
   rc "gamemode survival $NAME" >/dev/null; rc "effect clear $NAME" >/dev/null; rc "clear $NAME" >/dev/null
   rc "kill @e[type=!player]" >/dev/null; rc "effect give $NAME instant_health 1 10 true" >/dev/null
-  setup_$S
+  setup_$S; rc "forceload add $((X0-8)) $((Z0-8)) $((X0+8)) $((Z0+12))" >/dev/null; sleep 2; rc "clear $NAME" >/dev/null; setup_$S
   rc "tp $NAME $X0.5 $Y0 $Z0.5 $YAW $PITCH" >/dev/null; sleep 2
   p0=$(pos); h0=$(hp); m0=$(measure_$S 2>/dev/null)
   [ "$H" != none ] && say ".t $H"

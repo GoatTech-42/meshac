@@ -49,9 +49,8 @@ setup_death()  { X0=100 Y0=-60 Z0=240; KEYS=""; SECS=8; }
 post_death()   { rc "kill $NAME" >/dev/null; }
 measure_death() { hp; }
 # creative: item generators and potion makers only work in creative
-setup_creative() { X0=100 Y0=-60 Z0=260; KEYS=""; SECS=8; }
+setup_creative() { X0=100 Y0=-60 Z0=260; KEYS=""; SECS=8; rc "clear $NAME" >/dev/null; }
 post_creative()  { rc "gamemode creative $NAME" >/dev/null; }
-measure_creative() { count item; }
 # ranged: a bow, arrows, and two zombies 12 blocks away
 setup_ranged() { X0=100 Y0=-60 Z0=280; KEYS=""; SECS=10; CLICK=3; rc "give $NAME bow" >/dev/null; rc "give $NAME arrow 32" >/dev/null; rc "summon zombie 100.5 -60 292.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b}" >/dev/null; rc "summon zombie 104.5 -60 292.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b}" >/dev/null; }
 measure_ranged() { rc "data get entity @e[type=zombie,limit=1,sort=nearest] Health" | grep -o "[0-9.]*f" | tr -d "f\n"; }
@@ -112,3 +111,4 @@ setup_bonemeal() { X0=100 Y0=-60 Z0=330; KEYS=""; SECS=8; rc "fill 98 -61 332 10
 measure_bonemeal() { rc "execute if block 100 -60 334 wheat[age=7]" | grep -o "passed\|failed"; }
 setup_feed() { X0=100 Y0=-60 Z0=350; KEYS=""; SECS=8; rc "kill @e[type=cow]" >/dev/null; for i in 1 2 3 4; do rc "summon cow $((98+i)) -60 354" >/dev/null; done; rc "give $NAME wheat 32" >/dev/null; }
 measure_feed() { rc "execute if entity @e[type=cow,nbt={InLove:1}]" | grep -o "passed\|failed" ; rc "data get entity @e[type=cow,limit=1] InLove" | grep -o "[0-9]*$"; }
+measure_creative() { rc "clear $NAME * 0" | sed -n "s/^Found \([0-9]*\) .*/\1/p;s/^No items.*/0/p" | head -1; }

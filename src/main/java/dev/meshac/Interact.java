@@ -10,7 +10,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Scaffold, AirPlace, AutoBuild, Throw: using blocks and items faster, or somewhere else, than a hand does. */
 public final class Interact {
-	private static final class S { long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; }
+	private static final class S { long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 16; // fast bridging is about 8 a second
 
@@ -18,6 +18,15 @@ public final class Interact {
 	public static void look(ServerPlayer pl, float yaw, float pitch) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		s.prevPitch = s.pitch; s.prevYaw = s.yaw; s.pitch = pitch; s.yaw = yaw;
+		if (Math.max(Math.abs(pitch - s.prevPitch), Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - s.prevYaw))) > 25) s.flickAt = System.currentTimeMillis();
+	}
+
+	/** A bow or crossbow let go. Aimbots swing onto the target in one packet while the bow is drawn. */
+	public static void release(ServerPlayer pl) {
+		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		long now = System.currentTimeMillis();
+		if (now - s.shotWin > 30000) { s.shotWin = now; s.shots = 0; }
+		if (now - s.flickAt < 1500 && ++s.shots >= 3) { s.shots = 0; Verdict.signal(pl, "interact", "view snaps onto a target as the bow is let go", 1); }
 	}
 
 	/** A use-item packet (throw, eat, bow). */

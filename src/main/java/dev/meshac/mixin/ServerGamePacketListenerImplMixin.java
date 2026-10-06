@@ -3,6 +3,7 @@ package dev.meshac.mixin;
 import dev.meshac.Movement;
 import dev.meshac.Combat;
 import dev.meshac.Interact;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import dev.meshac.Vehicle;
@@ -50,5 +51,10 @@ public abstract class ServerGamePacketListenerImplMixin {
 	@Inject(method = "handleUseItem", at = @At("HEAD"))
 	private void meshac$use(ServerboundUseItemPacket p, CallbackInfo ci) {
 		if (player.level().getServer().isSameThread()) Interact.use(player);
+	}
+
+	@Inject(method = "handlePlayerAction", at = @At("HEAD"))
+	private void meshac$release(ServerboundPlayerActionPacket p, CallbackInfo ci) {
+		if (p.getAction() == ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM && player.getUseItem().is(net.minecraft.tags.ItemTags.BOW_ENCHANTABLE) && player.level().getServer().isSameThread()) Interact.release(player);
 	}
 }

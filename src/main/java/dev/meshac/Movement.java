@@ -17,7 +17,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -54,9 +54,15 @@ public final class Movement {
 		boolean exempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
 			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.hurtTime > 0
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
-		if (pl.hurtTime > 0 || pl.hasEffect(MobEffects.LEVITATION)) s.grace = SKIP_TICKS;
+		if (pl.hurtTime > 0) s.grace = SKIP_TICKS;
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime);
 		String hit = null;
+		// Levitation (NoLevitation): the effect lifts the player every tick. Not rising for a while, with open air above, means the client ignores it.
+		if (pl.hasEffect(MobEffects.LEVITATION) && !pl.isCreative() && !pl.isSpectator() && !pl.isPassenger()) {
+			boolean open = pl.level().noCollision(pl, pl.getBoundingBox().move(0, 0.3, 0));
+			if (++s.levT > 8 && open && dy < 0.01) s.bufLev++; else s.bufLev = Math.max(0, s.bufLev - 1);
+			if (s.bufLev >= 6) { hit = String.format("levitation dy %.3f", dy); s.bufLev = 0; }
+		} else { s.levT = 0; s.bufLev = 0; }
 		if (pl.onClimbable() && s.grace <= 0 && !pl.isCreative() && !pl.isSpectator()) { // vanilla climbs at most 0.15 per tick
 			s.bufClimb = dy > 0.21 ? s.bufClimb + 2 : Math.max(0, s.bufClimb - 1);
 			if (s.bufClimb >= 4) hit = String.format("ladder dy %.3f", dy);

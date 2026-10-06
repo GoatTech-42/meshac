@@ -131,3 +131,7 @@ measure_totemz() { measure_totem; }
 setup_totem1() { X0=100 Y0=-60 Z0=420; KEYS=""; SECS=8; rc "forceload add 100 420" >/dev/null; rc "item replace entity $NAME weapon.offhand with totem_of_undying" >/dev/null; rc "item replace entity $NAME hotbar.1 with totem_of_undying 1" >/dev/null
   PRE='rc "damage $NAME 40 generic" >/dev/null'; }
 measure_totem1() { rc "data get entity $NAME equipment.offhand" | grep -o "totem_of_undying" | wc -l; }
+setup_totemd2() { setup_totem1; PRE="say \".setslider AutoTotem Delay 2\"; sleep 1; rc \"damage \$NAME 40 generic\" >/dev/null"; }
+measure_totemd2() { measure_totem1; }
+setup_totemd3() { setup_totem1; PRE="say \".setslider AutoTotem Delay 3\"; sleep 1; rc \"damage \$NAME 40 generic\" >/dev/null"; }
+measure_totemd3() { measure_totem1; }

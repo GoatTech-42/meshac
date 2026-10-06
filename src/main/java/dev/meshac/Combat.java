@@ -38,6 +38,7 @@ public final class Combat {
 		s.lastErr = err;
 		if (hit == null && s.perfect >= 5) { hit = "aim is too steady"; s.perfect = 0; }
 		// Same aim error on different targets: the look ray lands at the same spot of every box. People are never that even across targets.
+		if (s.lastMs != 0 && now - s.lastMs > 3000) s.en = 0; // an old fight does not count towards this one
 		s.errs[s.en % 6] = err; s.ids[s.en % 6] = target.getId(); s.en++;
 		if (hit == null && s.en >= 6 && err < 1) {
 			double[] sorted = s.errs.clone(); java.util.Arrays.sort(sorted); double med = (sorted[2] + sorted[3]) / 2;

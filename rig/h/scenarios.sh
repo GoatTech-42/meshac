@@ -112,3 +112,6 @@ measure_bonemeal() { rc "execute if block 100 -60 334 wheat[age=7]" | grep -o "p
 setup_feed() { X0=100 Y0=-60 Z0=350; KEYS=""; SECS=8; rc "forceload add 100 354" >/dev/null; sleep 2; rc "kill @e[type=cow]" >/dev/null; for i in 1 2 3 4; do rc "summon cow $((98+i)) -60 354" >/dev/null; done; rc "give $NAME wheat 32" >/dev/null; }
 measure_feed() { rc "execute as @e[type=cow] if data entity @s {InLove:0}" | grep -o "[0-9]*" | tail -1; rc "execute if entity @e[type=cow,nbt={InLove:0}]" | grep -o "passed\|failed"; }
 measure_creative() { rc "clear $NAME * 0" | sed -n "s/^Found \([0-9]*\) .*/\1/p;s/^No items.*/0/p" | head -1; }
+# crystal: three end crystals on obsidian around the player, crystals in hand. CrystalAura breaks them.
+setup_crystal()  { X0=100 Y0=-60 Z0=400; KEYS=""; SECS=8; rc "forceload add 100 400" >/dev/null; sleep 2; rc "kill @e[type=end_crystal]" >/dev/null; for d in "3 0" "-3 0" "0 3"; do set -- $d; rc "setblock $((100+$1)) -61 $((400+$2)) obsidian" >/dev/null; rc "summon end_crystal $((100+$1)).5 -60 $((400+$2)).5 {ShowBottom:0b}" >/dev/null; done; rc "give $NAME end_crystal 8" >/dev/null; }
+measure_crystal() { count end_crystal; }

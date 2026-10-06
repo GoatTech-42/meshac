@@ -116,7 +116,7 @@ measure_creative() { rc "clear $NAME * 0" | sed -n "s/^Found \([0-9]*\) .*/\1/p;
 setup_crystal()  { X0=100 Y0=-60 Z0=400; KEYS=""; SECS=8; rc "forceload add 100 400" >/dev/null; sleep 2; rc "kill @e[type=end_crystal]" >/dev/null; for d in "3 0" "-3 0" "0 3"; do set -- $d; rc "setblock $((100+$1)) -61 $((400+$2)) obsidian" >/dev/null; rc "summon end_crystal $((100+$1)).5 -60 $((400+$2)).5 {ShowBottom:0b}" >/dev/null; done; rc "give $NAME end_crystal 8" >/dev/null; }
 measure_crystal() { count end_crystal; }
 # totem: a totem in the off hand and three more in the inventory, killing blows every 3 s. A hack refills the off hand; the control does nothing.
-setup_totem() { X0=100 Y0=-60 Z0=420; KEYS=""; SECS=10; rc "forceload add 100 420" >/dev/null; rc "item replace entity $NAME weapon.offhand with totem_of_undying" >/dev/null; rc "give $NAME totem_of_undying 3" >/dev/null; rc "give $NAME stone 1" >/dev/null
+setup_totem() { X0=100 Y0=-60 Z0=420; KEYS=""; SECS=10; rc "forceload add 100 420" >/dev/null; rc "item replace entity $NAME weapon.offhand with totem_of_undying" >/dev/null; rc "item replace entity $NAME hotbar.1 with totem_of_undying 3" >/dev/null; rc "give $NAME stone 1" >/dev/null
   ( for i in 1 2 3; do sleep 3; rc "damage $NAME 40 generic" >/dev/null; done ) & }
 measure_totem() { rc "data get entity $NAME Inventory" | grep -o "totem_of_undying" | wc -l; }
 # totemf: the human version. After each pop a person reaches for the F key about 0.4 s later and swaps in a totem.
@@ -124,10 +124,10 @@ setup_totemf() { setup_totem; SECS=11; rc "item replace entity $NAME hotbar.0 wi
   ( for i in 1 2 3; do sleep 3.4; X key f; sleep 0.1; done ) & }
 measure_totemf() { measure_totem; }
 # totemz: the fastest human. The F key about 0.12 s after each pop, which is at the edge of what a person can see and react to.
-setup_totemz() { setup_totem; SECS=11; rc "item replace entity \$NAME hotbar.0 with totem_of_undying" >/dev/null
+setup_totemz() { setup_totem; SECS=11; rc "item replace entity $NAME hotbar.0 with totem_of_undying" >/dev/null
   ( for i in 1 2 3; do sleep 3.12; X key f; sleep 0.1; done ) & }
 measure_totemz() { measure_totem; }
 # totem1: one totem in the off hand, one spare, one killing blow. The hack refills at once and the first fill must already be refused.
-setup_totem1() { X0=100 Y0=-60 Z0=420; KEYS=""; SECS=8; rc "forceload add 100 420" >/dev/null; rc "item replace entity \$NAME weapon.offhand with totem_of_undying" >/dev/null; rc "give \$NAME totem_of_undying 1" >/dev/null
-  ( sleep 3; rc "damage \$NAME 40 generic" >/dev/null ) & }
-measure_totem1() { rc "data get entity \$NAME equipment.offhand" | grep -o "totem_of_undying" | wc -l; }
+setup_totem1() { X0=100 Y0=-60 Z0=420; KEYS=""; SECS=8; rc "forceload add 100 420" >/dev/null; rc "item replace entity $NAME weapon.offhand with totem_of_undying" >/dev/null; rc "item replace entity $NAME hotbar.1 with totem_of_undying 1" >/dev/null
+  PRE='rc "damage $NAME 40 generic" >/dev/null'; }
+measure_totem1() { rc "data get entity $NAME equipment.offhand" | grep -o "totem_of_undying" | wc -l; }

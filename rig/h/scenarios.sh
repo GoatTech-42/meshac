@@ -42,7 +42,7 @@ measure_junk() { count item; }
 setup_food()   { X0=100 Y0=-60 Z0=200; KEYS=""; SECS=10; rc "give $NAME bread 16" >/dev/null; rc "effect give $NAME hunger 8 60 true" >/dev/null; }
 measure_food() { rc "data get entity $NAME foodLevel" | grep -o "[0-9]*$"; }
 # lowhp: 5 hearts left, armor, a totem, healing potions and soup in the inventory
-setup_lowhp()  { X0=100 Y0=-60 Z0=220; KEYS=""; SECS=8; rc "give $NAME diamond_chestplate" >/dev/null; rc "give $NAME diamond_helmet" >/dev/null; rc "give $NAME diamond_leggings" >/dev/null; rc "give $NAME diamond_boots" >/dev/null; rc "give $NAME totem_of_undying" >/dev/null; rc "give $NAME splash_potion[potion_contents={potion:\"minecraft:strong_healing\"}] 3" >/dev/null; rc "give $NAME mushroom_stew 3" >/dev/null; rc "damage $NAME 15 generic" >/dev/null; }
+setup_lowhp()  { X0=100 Y0=-60 Z0=220; KEYS=""; SECS=8; rc "give $NAME diamond_chestplate" >/dev/null; rc "give $NAME diamond_helmet" >/dev/null; rc "give $NAME diamond_leggings" >/dev/null; rc "give $NAME diamond_boots" >/dev/null; rc "give $NAME totem_of_undying" >/dev/null; rc "give $NAME splash_potion[potion_contents={potion:\"minecraft:strong_healing\"}] 3" >/dev/null; rc "give $NAME mushroom_stew 3" >/dev/null; PRE='rc "damage $NAME 15 generic" >/dev/null'; }
 measure_lowhp() { echo "$(hp)hp"; }
 # death: the player dies and the hack has to press respawn
 setup_death()  { X0=100 Y0=-60 Z0=240; KEYS=""; SECS=8; }
@@ -144,3 +144,9 @@ measure_elytra() { rc "data get entity $NAME FallFlying" | grep -o "1b\|0b" | he
 # anchorl: a hand charging an anchor it is looking at, three right clicks with glowstone. Must stay clean.
 setup_anchorl() { X0=100 Y0=-60 Z0=490; KEYS=""; SECS=3; CLICK=3; YAW=-149; PITCH=21; rc "forceload add 100 490" >/dev/null; rc "setblock 102 -60 488 respawn_anchor" >/dev/null; rc "give $NAME glowstone 16" >/dev/null; }
 measure_anchorl() { echo 0; }
+# fish: a small pool in front of the player, a lure-3 rod in hand. AutoFish casts and reels in on every bite.
+setup_fish() { X0=100 Y0=-60 Z0=520; KEYS=""; SECS=45; rc "forceload add 100 520" >/dev/null; rc "fill 98 -62 523 102 -61 527 water" >/dev/null; rc "give $NAME fishing_rod[enchantments={lure:3}] 1" >/dev/null; YAW=0; PITCH=20; }
+measure_fish() { rc "data get entity $NAME Inventory" | grep -o "cod\|salmon\|pufferfish\|tropical_fish" | wc -l; }
+# nuke: standing in a pocket inside a stone block, no mouse. Nuker clears every block around it. A hand breaks only what it points at.
+setup_nuke() { X0=100 Y0=-60 Z0=640; KEYS=""; SECS=8; rc "forceload add 100 640" >/dev/null; rc "fill 96 -61 636 104 -55 644 stone" >/dev/null; rc "fill 99 -60 639 101 -59 641 air" >/dev/null; rc "give $NAME diamond_pickaxe" >/dev/null; }
+measure_nuke() { echo 0; }

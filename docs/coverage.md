@@ -85,6 +85,14 @@ Gliding only trades height for speed: v squared over 64 plus height cannot rise 
 
 Place, charge and detonate happen in one tick. Clicks at a block the player is not looking at are cancelled and the block is resynced, so the blast does not happen; the player is kicked after repeats. Rig, 26.1.2 only. Clean-world rerun and macro timing variants still to do.
 
+### Nuker (partial: stopped, not removed)
+
+Blocks broken that the crosshair is not on are refused, and four breaks more than 40 degrees apart inside 600 ms (in 3 s) are refused with a signal. Wurst Nuker faces each block first, so only the turn-rate rule sees it. Rig: 1 signal, one block broken, not kicked. Controls (mining straight ahead, no hack) gave zero signals.
+
+### Other unproven or partial rows (11 AM batch)
+
+AutoEat 1 signal at 0.9 s and AutoSteal 1 signal at 4 s (both partial, no kick). NoClip, CreativeFlight, BunnyHop, AirPlace, AutoSign, FeedAura: 0 signals but the scenario did not show the hack acting, so these are unproven, not passes. AutoPotion scenario fixed, rerun pending. AutoSword and AimAssist: 0 signals, still misses.
+
 ### AutoSwitch (caught)
 
 More than 15 hotbar slot changes in one second. Signal at 0.1 s, kicked at 2.3 s in the rig.

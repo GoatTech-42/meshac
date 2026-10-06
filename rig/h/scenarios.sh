@@ -56,8 +56,8 @@ measure_creative() { count item; }
 setup_ranged() { X0=100 Y0=-60 Z0=280; KEYS=""; SECS=10; CLICK=3; rc "give $NAME bow" >/dev/null; rc "give $NAME arrow 32" >/dev/null; rc "summon zombie 100.5 -60 292.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b}" >/dev/null; rc "summon zombie 104.5 -60 292.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b}" >/dev/null; }
 measure_ranged() { rc "data get entity @e[type=zombie,limit=1,sort=nearest] Health" | grep -o "[0-9.]*f" | tr -d "f\n"; }
 # throw: snowballs
-setup_throw()  { X0=100 Y0=-60 Z0=300; KEYS=""; SECS=6; CLICK=3; rc "give $NAME snowball 16" >/dev/null; }
-measure_throw() { count snowball; }
+setup_throw()  { X0=100 Y0=-60 Z0=300; KEYS=""; SECS=6; PITCH=-10; rc "give $NAME snowball 16" >/dev/null; PRE="X mousedown 3; (sleep 6; X mouseup 3) &"; }
+measure_throw() { rc "clear $NAME snowball 0" | grep -o "[0-9]\+ item" | head -1; }
 post_boat() { rc "ride $NAME mount @e[type=oak_boat,limit=1,sort=nearest]" >/dev/null; sleep 1; }
 # legit control for the melee arena: a person clicking once a second at the zombie straight ahead
 setup_meleeclick() { setup_melee; CLICK=1; JITTER=1; }

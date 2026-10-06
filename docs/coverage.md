@@ -95,7 +95,7 @@ AutoEat 1 signal at 0.9 s and AutoSteal 1 signal at 4 s (both partial, no kick).
 
 ### NoClip (caught, stopped)
 
-Wurst NoClip needs the body partly inside a block and then teleports it up to 21 blocks through the wall. Two rules: a single move packet of more than 10 blocks is refused and set back unless the server itself ordered a teleport, and ten packets in a row with the body inside solid blocks are a signal. Before the rule the hack walked 42 blocks through stone with no signal, because the jump arrived straight after suffocation damage and every movement check skipped it. After: 1 signal, the jump was refused (42 blocks became 1). Control without the hack is clean. Rig, 26.1.2 only.
+Wurst NoClip needs the body partly inside a block and then teleports it up to 21 blocks through the wall. Three rules: any move packet over 1.5 blocks is refused and set back when the body, slid along the path in half-block steps, overlaps a solid block (vanilla only tests where the packet ends, so a thin wall did not stop it); a move of more than 10 blocks is refused whatever lies between; and ten packets in a row with the body inside solid blocks are a signal. None of them applies while the server itself has ordered a teleport. Before the rule the hack walked 42 blocks through stone with no signal, because the jump arrived straight after suffocation damage and every movement check skipped it. After: 1 signal, the jump was refused (42 blocks became 1). Control without the hack is clean. A 3-block-thick wall scenario: 3.7-block move through it refused, control clean. Legit knockback (TNT and wind charges at the feet, wall beside) stays at 0 signals. Rig, 26.1.2 only.
 
 ### CreativeFlight (caught)
 

@@ -159,3 +159,11 @@ measure_flydt() { echo 0; }
 # noclip: standing inside a solid block with more stone ahead. NoClip teleports the player through it.
 setup_noclip() { X0=100 Y0=-60 Z0=700; KEYS="w"; SECS=6; PRE='rc "tp $NAME 100.5 -60 699.8" >/dev/null'; rc "forceload add 100 700" >/dev/null; rc "fill 98 -61 700 102 -58 712 stone" >/dev/null; }
 measure_noclip() { echo 0; }
+# airp: facing open air with stone in hand, right clicking. A hand places nothing; AirPlace puts blocks into the air at the crosshair.
+setup_airp() { X0=100 Y0=-60 Z0=760; KEYS=""; SECS=6; CLICK=3; YAW=0; PITCH=0; rc "forceload add 100 760" >/dev/null; rc "fill 94 -60 756 106 -52 774 air" >/dev/null; rc "give $NAME stone 64" >/dev/null; }
+measure_airp() { n=$(rc "fill 94 -60 756 106 -52 774 stone replace stone" | grep -o "[0-9]\+" | head -1); echo ${n:-0}; }
+# kbl: legit big knockback. TNT and wind charges go off at the feet; the launch is the largest vanilla gives a survival player. A wall stands beside the landing area.
+setup_kbl() { X0=100 Y0=-60 Z0=800; KEYS=""; SECS=10; rc "forceload add 100 800" >/dev/null; rc "fill 96 -60 796 108 -50 812 air" >/dev/null; rc "fill 96 -61 796 108 -61 812 stone" >/dev/null; rc "fill 103 -60 796 103 -55 812 stone" >/dev/null; rc "effect give $NAME resistance 60 4 true" >/dev/null; PRE='for i in 1 2 3 4; do rc "summon tnt 100.5 -60 800.5 {fuse:0}" >/dev/null; rc "summon wind_charge 100.5 -61 800.5" >/dev/null; sleep 2; done'; }
+# noclipw: buried in a 3-block-thick wall with open air behind it. The move through is short, well under the 10-block backstop.
+setup_noclipw() { X0=100 Y0=-60 Z0=860; KEYS="w"; SECS=6; PRE='rc "tp $NAME 100.5 -60 859.8" >/dev/null'; rc "forceload add 100 860" >/dev/null; rc "fill 96 -61 856 106 -52 872 air" >/dev/null; rc "fill 96 -61 860 106 -52 862 stone" >/dev/null; rc "fill 96 -62 856 106 -62 872 stone" >/dev/null; }
+measure_noclipw() { echo 0; }

@@ -66,8 +66,8 @@ measure_meleeclick() { count zombie; }
 setup_reach() { X0=100 Y0=-60 Z0=40; KEYS=""; SECS=8; CLICK=1; rc "summon zombie 100.5 -60 45.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b}" >/dev/null; rc "give $NAME diamond_sword" >/dev/null; }
 measure_reach() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f" | tr -d "f\n"; }
 # mine: a block of stone around the player, with a pickaxe. After the run, count what is left.
-setup_mine() { X0=100 Y0=-60 Z0=60; KEYS=""; SECS=10; rc "fill 96 -61 56 104 -56 64 stone" >/dev/null; rc "fill 100 -60 60 100 -59 60 air" >/dev/null; rc "give $NAME diamond_pickaxe" >/dev/null; }
-measure_mine() { if [ "$PHASE" = after ]; then rc "fill 96 -60 56 104 -56 64 air replace stone" | grep -o "[0-9]*" | head -1; else echo -; fi; }
+setup_mine() { X0=100 Y0=-60 Z0=58; KEYS=""; SECS=10; PITCH=0; YAW=180; rc "fill 96 -61 50 104 -55 57 stone" >/dev/null; rc "fill 96 -60 58 104 -55 62 air" >/dev/null; rc "give $NAME diamond_pickaxe" >/dev/null; PRE='X mousedown 1; (sleep 10; X mouseup 1) &'; }
+measure_mine() { rc "kill @e[type=item]" | grep -o "[0-9]\+" | head -1 | sed "s/^$/0/"; }
 # melee against one very tanky zombie in the crosshair: the clicker keeps landing hits for the whole run (Criticals, AntiKnockback, TriggerBot, AutoSword need hits to happen)
 setup_meleetank()   { X0=100 Y0=-60 Z0=20; KEYS=""; SECS=12; CLICK=1; JITTER=1
   rc "summon zombie 100.5 -60 23.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null
@@ -101,3 +101,6 @@ measure_swapback() { measure_swordswap; }
 # an awake zombie keeps hitting a standing player; AntiKnockback cancels the push
 setup_zombiehit() { X0=100 Y0=-60 Z0=700; KEYS=""; SECS=20; rc "effect give $NAME regeneration 60 4 true" >/dev/null; rc "effect give $NAME resistance 60 1 true" >/dev/null
   PRE='for o in "100.5 702.5" "98.5 700.5" "102.5 700.5"; do rc "summon zombie ${o% *} -60 ${o#* } {PersistenceRequired:1b}" >/dev/null; done'; }
+# draw and release a bow at standing zombies 12 blocks away (BowAimbot aims the shot for you)
+setup_bowshot() { setup_ranged; Z0=280; CLICK=0; SECS=2; PRE='for i in 1 2 3 4 5 6; do X mousedown 3; sleep 1.3; X mouseup 3; sleep 0.6; done'; }
+measure_bowshot() { rc "data get entity @e[type=zombie,limit=1,sort=nearest] Health" | grep -o "[0-9.]*f\?$" | head -1; }

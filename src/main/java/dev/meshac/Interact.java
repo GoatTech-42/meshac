@@ -26,7 +26,7 @@ public final class Interact {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.shotWin > 30000) { s.shotWin = now; s.shots = 0; }
-		if (now - s.flickAt < 1500 && ++s.shots >= 3) { s.shots = 0; Verdict.signal(pl, "interact", "view snaps onto a target as the bow is let go", 1); }
+		if (now - s.flickAt < 1500 && ++s.shots >= 3) { Verdict.signal(pl, "interact", "view snaps onto a target as the bow is let go", 1); }
 	}
 
 	/** A use-item packet (throw, eat, bow). */

@@ -17,7 +17,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; long graceAt; int levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; long graceAt; long kbAt; double kbX, kbZ; int noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -56,6 +56,19 @@ public final class Movement {
 			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.hurtTime > 0
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
 		if (pl.hurtTime > 0) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
+		// AntiKnockback: a hit pushes the player about half a block. Barely moving half a second after a hit, with open space behind, three times in a row, is not luck.
+		long nowMs = System.currentTimeMillis();
+		if (pl.hurtTime > 0 && s.kbAt == 0) { s.kbAt = nowMs; s.kbX = sx; s.kbZ = sz; }
+		else if (s.kbAt != 0 && nowMs - s.kbAt > 450) {
+			boolean open = pl.level().noCollision(pl, pl.getBoundingBox().inflate(0.8, -0.1, 0.8));
+			if (open && !exempt && !pl.isBlocking() && !pl.isShiftKeyDown() && pl.getHealth() > 0) {
+				double moved = Math.hypot(sx - s.kbX, sz - s.kbZ);
+				if (TRACE) Meshac.LOG.info("[trace] kb moved={}", r(moved));
+				s.noKb = moved < 0.3 ? s.noKb + 1 : 0;
+			}
+			s.kbAt = 0;
+			if (s.noKb >= 3) { s.noKb = 0; Verdict.signal(pl, "antiknockback", "no push after three hits", 2); }
+		}
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime);
 		String hit = null;
 		// Levitation (NoLevitation): the effect lifts the player every tick. Not rising for a while, with open air above, means the client ignores it.

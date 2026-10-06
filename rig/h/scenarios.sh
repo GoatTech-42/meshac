@@ -98,3 +98,6 @@ setup_attrswap() { setup_swordswap; Z0=600; CLICK=0; PRE='say ".t Killaura"'; }
 measure_attrswap() { measure_swordswap; }
 setup_swapback() { setup_swordswap; PRE='X key 2; sleep 0.5'; }
 measure_swapback() { measure_swordswap; }
+# an awake zombie keeps hitting a standing player; AntiKnockback cancels the push
+setup_zombiehit() { X0=100 Y0=-60 Z0=700; KEYS=""; SECS=20; rc "effect give $NAME regeneration 60 4 true" >/dev/null; rc "effect give $NAME resistance 60 1 true" >/dev/null
+  PRE='for o in "100.5 702.5" "98.5 700.5" "102.5 700.5"; do rc "summon zombie ${o% *} -60 ${o#* } {PersistenceRequired:1b}" >/dev/null; done'; }

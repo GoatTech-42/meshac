@@ -93,6 +93,10 @@ Blocks broken that the crosshair is not on are refused, and four breaks more tha
 
 AutoEat 1 signal at 0.9 s and AutoSteal 1 signal at 4 s (both partial, no kick). AirPlace, AutoSign, FeedAura: 0 signals but the scenario did not show the hack acting, so these are unproven, not passes. AutoPotion scenario fixed, rerun pending. AutoSword and AimAssist: 0 signals, still misses.
 
+### AutoPotion (caught, stopped)
+
+Wurst AutoPotion switches to a healing potion, throws it and switches back inside one tick. Before: it threw every 0.5 s with 0 signals. A hand needs over 40 ms between pressing a slot key and clicking, so an item used under 40 ms after a slot change is refused, and a second one inside ten seconds is a signal. After: 5 signals, kicked at 4.7 s. Rig, 26.1.2 only.
+
 ### AirPlace (caught, stopped)
 
 Wurst AirPlace sends a block placement against thin air and vanilla accepts it. A hand can only click a face of a block that exists, so a placement against an air block is refused and counts as a signal. Before: one block placed in the open air. After: nothing placed, 5 signals, kicked at 5.6 s. Control without the hack places nothing. Rig, 26.1.2 only.

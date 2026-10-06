@@ -48,7 +48,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleSetCarriedItem", at = @At("HEAD"))
 	private void meshac$swap(ServerboundSetCarriedItemPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) { Combat.swapped(player, p.getSlot()); Inventory.hotbar(player); Trace.t(player, "hotbar slot=" + p.getSlot()); }
+		if (player.level().getServer().isSameThread()) { Combat.swapped(player, p.getSlot()); Interact.swap(player); Inventory.hotbar(player); Trace.t(player, "hotbar slot=" + p.getSlot()); }
 	}
 
 	@Inject(method = "handleUseItemOn", at = @At("HEAD"), cancellable = true)
@@ -76,9 +76,13 @@ public abstract class ServerGamePacketListenerImplMixin {
 		}
 	}
 
-	@Inject(method = "handleUseItem", at = @At("HEAD"))
+	@Inject(method = "handleUseItem", at = @At("HEAD"), cancellable = true)
 	private void meshac$use(ServerboundUseItemPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) { Interact.use(player); Trace.t(player, "use item=" + player.getMainHandItem().getItem()); }
+		if (player.level().getServer().isSameThread()) {
+			boolean refused = Interact.use(player);
+			Trace.t(player, "use item=" + player.getMainHandItem().getItem() + (refused ? " REFUSED" : ""));
+			if (refused) { player.connection.ackBlockChangesUpTo(p.getSequence()); player.containerMenu.sendAllDataToRemote(); ci.cancel(); }
+		}
 	}
 
 	@Inject(method = "handlePlayerAction", at = @At("HEAD"), cancellable = true)

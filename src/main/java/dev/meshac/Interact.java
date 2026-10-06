@@ -10,7 +10,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Scaffold, AirPlace, AutoBuild, Throw: using blocks and items faster, or somewhere else, than a hand does. */
 public final class Interact {
-	private static final class S { long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; long clickAt, entAt, entWin; int entId = -1, entStrikes; }
+	private static final class S { long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; long clickAt, entAt, entWin, swapAt, useWin; int swapUses; int entId = -1, entStrikes; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 16; // fast bridging is about 8 a second
 
@@ -30,7 +30,20 @@ public final class Interact {
 	}
 
 	/** A use-item packet (throw, eat, bow). */
-	public static void use(ServerPlayer pl) { Glide.rocket(pl); rate(pl); }
+	/** A hotbar slot change. */
+	public static void swap(ServerPlayer pl) { STATE.computeIfAbsent(pl.getUUID(), k -> new S()).swapAt = System.currentTimeMillis(); }
+
+	/** AutoPotion and other swap-throw-swap hacks: the item is used in the same tick the slot changes. Pressing a number key and then clicking takes a hand over 40 ms. Returns true when the use must be refused; repeats inside ten seconds are a signal. */
+	public static boolean use(ServerPlayer pl) {
+		Glide.rocket(pl); rate(pl);
+		if (pl.isCreative() || pl.isSpectator()) return false;
+		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		long now = System.currentTimeMillis();
+		if (now - s.swapAt >= 40) return false;
+		if (now - s.useWin > 10000) { s.useWin = now; s.swapUses = 0; }
+		if (++s.swapUses >= 2) Verdict.signal(pl, "interact", "used an item " + (now - s.swapAt) + " ms after changing slot", 1);
+		return true;
+	}
 
 	/** A use-item-on-block packet (placing). */
 	/** Returns true when the click must be refused: it hit a block the player is not looking at. */

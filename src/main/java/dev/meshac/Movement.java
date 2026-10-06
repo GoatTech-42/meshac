@@ -17,7 +17,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt; long kbAt; double kbX, kbZ; int noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt; long kbAt; double kbX, kbY, kbZ; int noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -74,11 +74,11 @@ public final class Movement {
 		if (pl.hurtTime > 0) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
 		// AntiKnockback: a hit pushes the player about half a block. Barely moving half a second after a hit, with open space behind, three times in a row, is not luck.
 		long nowMs = System.currentTimeMillis();
-		if (pl.hurtTime > 0 && s.kbAt == 0) { s.kbAt = nowMs; s.kbX = sx; s.kbZ = sz; }
+		if (pl.hurtTime > 0 && s.kbAt == 0) { s.kbAt = nowMs; s.kbX = sx; s.kbY = sy; s.kbZ = sz; }
 		else if (s.kbAt != 0 && nowMs - s.kbAt > 450) {
 			boolean open = pl.level().noCollision(pl, pl.getBoundingBox().inflate(0.8, -0.1, 0.8));
 			if (open && !exempt && !pl.isBlocking() && !pl.isShiftKeyDown() && pl.getHealth() > 0) {
-				double moved = Math.hypot(sx - s.kbX, sz - s.kbZ);
+				double moved = Math.max(Math.hypot(sx - s.kbX, sz - s.kbZ), sy - s.kbY); // a blast from below throws a player up, not sideways
 				if (TRACE) Meshac.LOG.info("[trace] kb moved={}", r(moved));
 				s.noKb = moved < 0.3 ? s.noKb + 1 : 0;
 			}

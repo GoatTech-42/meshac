@@ -88,3 +88,4 @@ setup_flytoggle() { X0=100 Y0=-60 Z0=400; KEYS="space"; SECS=6; PRE='X keydown s
 setup_boatride()  { X0=200 Y0=-60 Z0=420; KEYS="w space"; SECS=6; rc "summon oak_boat 200.5 -60 420.5" >/dev/null; PRE='rc "ride $NAME mount @e[type=oak_boat,limit=1,sort=nearest]" >/dev/null; sleep 1'; }
 # the player starts buried inside a stone block; NoClip only acts when the player is inside a solid block
 setup_buried() { X0=160 Y0=-60 Z0=30; KEYS="w"; SECS=6; rc "fill 159 -61 30 161 -58 32 stone" >/dev/null; rc "effect give $NAME resistance 60 255 true" >/dev/null; }
+setup_bhop() { X0=100 Y0=-60 Z0=500; KEYS="w"; SECS=8; }

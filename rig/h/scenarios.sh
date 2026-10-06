@@ -109,6 +109,6 @@ setup_fastplace() { X0=100 Y0=-60 Z0=84; KEYS=""; SECS=8; PITCH=45; rc "give $NA
 measure_fastplace() { rc "give $NAME stone 0" | grep -o "[0-9]\+" | head -1; }
 setup_bonemeal() { X0=100 Y0=-60 Z0=330; KEYS=""; SECS=8; rc "fill 98 -61 332 102 -61 336 farmland" >/dev/null; rc "fill 98 -60 332 102 -60 336 wheat[age=0]" >/dev/null; rc "give $NAME bone_meal 64" >/dev/null; }
 measure_bonemeal() { rc "execute if block 100 -60 334 wheat[age=7]" | grep -o "passed\|failed"; }
-setup_feed() { X0=100 Y0=-60 Z0=350; KEYS=""; SECS=8; rc "kill @e[type=cow]" >/dev/null; for i in 1 2 3 4; do rc "summon cow $((98+i)) -60 354" >/dev/null; done; rc "give $NAME wheat 32" >/dev/null; }
-measure_feed() { rc "execute if entity @e[type=cow,nbt={InLove:1}]" | grep -o "passed\|failed" ; rc "data get entity @e[type=cow,limit=1] InLove" | grep -o "[0-9]*$"; }
+setup_feed() { X0=100 Y0=-60 Z0=350; KEYS=""; SECS=8; rc "forceload add 100 354" >/dev/null; sleep 2; rc "kill @e[type=cow]" >/dev/null; for i in 1 2 3 4; do rc "summon cow $((98+i)) -60 354" >/dev/null; done; rc "give $NAME wheat 32" >/dev/null; }
+measure_feed() { rc "execute as @e[type=cow] if data entity @s {InLove:0}" | grep -o "[0-9]*" | tail -1; rc "execute if entity @e[type=cow,nbt={InLove:0}]" | grep -o "passed\|failed"; }
 measure_creative() { rc "clear $NAME * 0" | sed -n "s/^Found \([0-9]*\) .*/\1/p;s/^No items.*/0/p" | head -1; }

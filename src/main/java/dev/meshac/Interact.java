@@ -33,11 +33,12 @@ public final class Interact {
 	public static void use(ServerPlayer pl) { rate(pl); }
 
 	/** A use-item-on-block packet (placing). */
-	public static void place(ServerPlayer pl, ServerboundUseItemOnPacket p) {
-		if (pl.isCreative() || pl.isSpectator()) return;
+	/** Returns true when the click must be refused: it hit a block the player is not looking at. */
+	public static boolean place(ServerPlayer pl, ServerboundUseItemOnPacket p) {
+		if (pl.isCreative() || pl.isSpectator()) return false;
 		AABB box = new AABB(Packets.hit(p).getBlockPos()).inflate(0.3);
 		Vec3 eye = pl.getEyePosition();
-		if (box.clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1);
+		if (box.clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) { Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1); rate(pl); return true; }
 		// Scaffold: the view jumps to the block just before each click. A hand turns over many packets.
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
@@ -55,6 +56,7 @@ public final class Interact {
 			s.fwd = 0; s.chainDist = 0; s.chainMs = 0;
 		}
 		rate(pl);
+		return false;
 	}
 
 	private static void rate(ServerPlayer pl) {

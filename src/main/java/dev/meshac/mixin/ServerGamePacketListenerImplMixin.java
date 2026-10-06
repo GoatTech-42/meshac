@@ -47,9 +47,20 @@ public abstract class ServerGamePacketListenerImplMixin {
 		if (player.level().getServer().isSameThread()) { Combat.swapped(player, p.getSlot()); Inventory.hotbar(player); Trace.t(player, "hotbar slot=" + p.getSlot()); }
 	}
 
-	@Inject(method = "handleUseItemOn", at = @At("HEAD"))
+	@Inject(method = "handleUseItemOn", at = @At("HEAD"), cancellable = true)
 	private void meshac$place(ServerboundUseItemOnPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) { Interact.place(player, p); Trace.t(player, "use-on pos=" + p.getHitResult().getBlockPos() + " item=" + player.getMainHandItem().getItem()); }
+		if (player.level().getServer().isSameThread()) {
+			boolean refused = Interact.place(player, p);
+			Trace.t(player, "use-on" + (refused ? " REFUSED" : "") + " pos=" + p.getHitResult().getBlockPos() + " item=" + player.getMainHandItem().getItem());
+			if (refused) {
+				net.minecraft.core.BlockPos at = p.getHitResult().getBlockPos();
+				player.connection.ackBlockChangesUpTo(p.getSequence());
+				player.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(player.level(), at));
+				player.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(player.level(), at.relative(p.getHitResult().getDirection())));
+				player.containerMenu.sendAllDataToRemote();
+				ci.cancel();
+			}
+		}
 	}
 
 	@Inject(method = "handleUseItem", at = @At("HEAD"))

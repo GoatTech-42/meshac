@@ -136,8 +136,11 @@ measure_totemd2() { measure_totem1; }
 setup_totemd3() { setup_totem1; PRE="say \".setslider AutoTotem Delay 3\"; sleep 1; rc \"damage \$NAME 40 generic\" >/dev/null"; }
 measure_totemd3() { measure_totem1; }
 # anchor: two zombies close by, respawn anchors and glowstone in the inventory. AnchorAura places, charges and detonates.
-setup_anchor() { X0=100 Y0=-60 Z0=440; KEYS=""; SECS=10; rc "forceload add 100 440" >/dev/null; sleep 2; rc "kill @e[type=zombie]" >/dev/null; for d in "3 0" "-3 0"; do set -- $d; rc "summon zombie $((100+$1)).5 -60 $((440+$2)).5 {NoAI:1b,PersistenceRequired:1b}" >/dev/null; done; rc "setblock 102 -60 438 respawn_anchor" >/dev/null; rc "setblock 98 -60 438 respawn_anchor" >/dev/null; rc "give $NAME respawn_anchor 4" >/dev/null; rc "give $NAME glowstone 16" >/dev/null; }
+setup_anchor() { X0=100 Y0=-60 Z0=490; KEYS=""; SECS=10; rc "forceload add 100 490" >/dev/null; sleep 2; rc "kill @e[type=zombie]" >/dev/null; for d in "3 0" "-3 0"; do set -- $d; rc "summon zombie $((100+$1)).5 -60 $((490+$2)).5 {NoAI:1b,PersistenceRequired:1b}" >/dev/null; done; rc "setblock 102 -60 488 respawn_anchor" >/dev/null; rc "setblock 98 -60 488 respawn_anchor" >/dev/null; rc "give $NAME respawn_anchor 4" >/dev/null; rc "give $NAME glowstone 16" >/dev/null; }
 measure_anchor() { count zombie; }
 # elytra: spawned high with an elytra on, holding jump and forward. ExtraElytra starts the glide at once.
 setup_elytra() { X0=100 Y0=90 Z0=460; KEYS="space w"; SECS=8; rc "forceload add 100 460" >/dev/null; rc "effect give $NAME slow_falling 40 0 true" >/dev/null; rc "item replace entity $NAME armor.chest with elytra" >/dev/null; }
 measure_elytra() { rc "data get entity $NAME FallFlying" | grep -o "1b\|0b" | head -1; }
+# anchorl: a hand charging an anchor it is looking at, three right clicks with glowstone. Must stay clean.
+setup_anchorl() { X0=100 Y0=-60 Z0=490; KEYS=""; SECS=3; CLICK=3; YAW=-149; PITCH=21; rc "forceload add 100 490" >/dev/null; rc "setblock 102 -60 488 respawn_anchor" >/dev/null; rc "give $NAME glowstone 16" >/dev/null; }
+measure_anchorl() { echo 0; }

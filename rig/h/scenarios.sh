@@ -106,3 +106,5 @@ setup_bowshot() { setup_ranged; Z0=280; CLICK=0; SECS=2; PRE='for i in 1 2 3 4 5
 measure_bowshot() { rc "data get entity @e[type=zombie,limit=1,sort=nearest] Health" | grep -o "[0-9.]*f\?$" | head -1; }
 # a small stone platform 20 blocks up with only air beyond it: ScaffoldWalk lays blocks under the feet, AirPlace places into the air at the crosshair
 setup_scaffold() { X0=100 Y0=-41 Z0=800; KEYS="w"; SECS=8; PITCH=20; CLICK=3; rc "forceload add 90 790 110 860" >/dev/null; sleep 2; rc "fill 90 -45 790 110 -38 860 air" >/dev/null; rc "fill 98 -42 799 102 -42 801 stone" >/dev/null; rc "give $NAME stone 64" >/dev/null; rc "effect give $NAME resistance 60 255 true" >/dev/null; }
+setup_fastplace() { X0=100 Y0=-60 Z0=84; KEYS=""; SECS=8; PITCH=45; rc "give $NAME stone 64" >/dev/null; rc "fill 96 -60 80 104 -55 92 air" >/dev/null; PRE='X mousedown 3; (n=0; while [ $n -lt 30 ]; do sleep 0.25; rc "fill 98 -60 85 102 -59 89 air replace stone" >/dev/null; n=$((n+1)); done; X mouseup 3) &'; }
+measure_fastplace() { rc "give $NAME stone 0" | grep -o "[0-9]\+" | head -1; }

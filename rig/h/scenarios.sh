@@ -66,8 +66,8 @@ measure_meleeclick() { count zombie; }
 setup_reach() { X0=100 Y0=-60 Z0=40; KEYS=""; SECS=8; CLICK=1; rc "summon zombie 100.5 -60 45.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b}" >/dev/null; rc "give $NAME diamond_sword" >/dev/null; }
 measure_reach() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f" | tr -d "f\n"; }
 # mine: a block of stone around the player, with a pickaxe. After the run, count what is left.
-setup_mine() { X0=100 Y0=-60 Z0=58; KEYS=""; SECS=10; PITCH=0; YAW=180; rc "fill 96 -61 50 104 -55 57 stone" >/dev/null; rc "fill 96 -60 58 104 -55 62 air" >/dev/null; rc "give $NAME diamond_pickaxe" >/dev/null; PRE='X mousedown 1; (sleep 10; X mouseup 1) &'; }
-measure_mine() { rc "kill @e[type=item]" | grep -o "[0-9]\+" | head -1 | sed "s/^$/0/"; }
+setup_mine() { rm -f /tmp/mine.flag; X0=100 Y0=-60 Z0=58; KEYS=""; SECS=10; PITCH=0; YAW=180; rc "fill 96 -61 50 104 -55 57 stone" >/dev/null; rc "fill 96 -60 58 104 -55 62 air" >/dev/null; rc "give $NAME diamond_pickaxe" >/dev/null; PRE='X mousedown 1; (sleep 10; X mouseup 1) &'; }
+measure_mine() { if [ -f /tmp/mine.flag ]; then rm -f /tmp/mine.flag; rc "fill 96 -61 50 104 -55 57 air replace stone" | grep -o "[0-9]\+" | head -1; else touch /tmp/mine.flag; echo 504; fi; } # stones left: 504 at start, the end value is counted then cleared
 # melee against one very tanky zombie in the crosshair: the clicker keeps landing hits for the whole run (Criticals, AntiKnockback, TriggerBot, AutoSword need hits to happen)
 setup_meleetank()   { X0=100 Y0=-60 Z0=20; KEYS=""; SECS=12; CLICK=1; JITTER=1
   rc "summon zombie 100.5 -60 23.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null

@@ -42,7 +42,7 @@ measure_junk() { count item; }
 setup_food()   { X0=100 Y0=-60 Z0=200; KEYS=""; SECS=10; rc "give $NAME bread 16" >/dev/null; rc "effect give $NAME hunger 8 60 true" >/dev/null; }
 measure_food() { rc "data get entity $NAME foodLevel" | grep -o "[0-9]*$"; }
 # lowhp: 5 hearts left, armor, a totem, healing potions and soup in the inventory
-setup_lowhp()  { X0=100 Y0=-60 Z0=220; KEYS=""; SECS=8; rc "give $NAME diamond_chestplate" >/dev/null; rc "give $NAME totem_of_undying" >/dev/null; rc "give $NAME splash_potion[potion_contents={potion:\"minecraft:strong_healing\"}] 3" >/dev/null; rc "give $NAME mushroom_stew 3" >/dev/null; rc "damage $NAME 15 generic" >/dev/null; }
+setup_lowhp()  { X0=100 Y0=-60 Z0=220; KEYS=""; SECS=8; rc "give $NAME diamond_chestplate" >/dev/null; rc "give $NAME diamond_helmet" >/dev/null; rc "give $NAME diamond_leggings" >/dev/null; rc "give $NAME diamond_boots" >/dev/null; rc "give $NAME totem_of_undying" >/dev/null; rc "give $NAME splash_potion[potion_contents={potion:\"minecraft:strong_healing\"}] 3" >/dev/null; rc "give $NAME mushroom_stew 3" >/dev/null; rc "damage $NAME 15 generic" >/dev/null; }
 measure_lowhp() { echo "$(hp)hp"; }
 # death: the player dies and the hack has to press respawn
 setup_death()  { X0=100 Y0=-60 Z0=240; KEYS=""; SECS=8; }

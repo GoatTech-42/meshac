@@ -83,6 +83,8 @@ setup_meleemace()   { X0=100 Y0=-60 Z0=20; KEYS=""; SECS=12; CLICK=1; JITTER=1
   rc "give $NAME mace" >/dev/null; }
 measure_meleemace() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f\?$" | head -1; }
 # double-tap jump to start creative-style flight, then hold jump to climb (CreativeFlight only sets mayfly; the player has to toggle flying)
-setup_flytoggle() { X0=100 Y0=-60 Z0=400; KEYS="space"; SECS=6; PRE='X key space; sleep 0.12; X key space; sleep 0.3'; }
+setup_flytoggle() { X0=100 Y0=-60 Z0=400; KEYS="space"; SECS=6; PRE='X keydown space; sleep 0.07; X keyup space; sleep 0.1; X keydown space; sleep 0.07; X keyup space; sleep 0.2'; }
 # sit in a boat and press forward + jump (BoatFly)
 setup_boatride()  { X0=200 Y0=-60 Z0=420; KEYS="w space"; SECS=6; rc "summon oak_boat 200.5 -60 420.5" >/dev/null; PRE='rc "ride $NAME mount @e[type=oak_boat,limit=1,sort=nearest]" >/dev/null; sleep 1'; }
+# the player starts buried inside a stone block; NoClip only acts when the player is inside a solid block
+setup_buried() { X0=160 Y0=-60 Z0=30; KEYS="w"; SECS=6; rc "fill 159 -61 30 161 -58 32 stone" >/dev/null; rc "effect give $NAME resistance 60 255 true" >/dev/null; }

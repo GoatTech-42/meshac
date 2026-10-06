@@ -1,7 +1,9 @@
 package dev.meshac.mixin;
 
 import dev.meshac.Movement;
+import dev.meshac.Vehicle;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.network.protocol.game.ServerboundMoveVehiclePacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,5 +25,10 @@ public abstract class ServerGamePacketListenerImplMixin {
 			teleport(back[0], back[1], back[2], player.getYRot(), player.getXRot());
 			ci.cancel();
 		}
+	}
+
+	@Inject(method = "handleMoveVehicle", at = @At("HEAD"), cancellable = true)
+	private void meshac$vehicle(ServerboundMoveVehiclePacket p, CallbackInfo ci) {
+		if (player.level().getServer().isSameThread() && Vehicle.check(player, p)) ci.cancel();
 	}
 }

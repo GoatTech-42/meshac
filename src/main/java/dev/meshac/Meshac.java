@@ -19,7 +19,7 @@ public final class Meshac implements ModInitializer {
 			Cases.Case c = Cases.activeBan(handler.player.getUUID());
 			if (c != null) handler.disconnect(Screens.ban(c));
 		});
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); Combat.forget(handler.player.getUUID()); });
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); Combat.forget(handler.player.getUUID()); Vehicle.forget(handler.player.getUUID()); });
 		LOG.info("meshac loaded");
 	}
 }

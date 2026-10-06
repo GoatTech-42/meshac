@@ -11,7 +11,14 @@ import net.minecraft.world.phys.Vec3;
 /** Melee checks, one call per attack: reach, line of sight, aim, attack rate, multi-target, robotic aim. */
 public final class Combat {
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
-	private static final class S { long lastMs, lastId; int lastEntity = -1, weak, fast, perfect, snap, n; float lastYaw; final long[] gaps = new long[6]; final double[] errs = new double[6]; final int[] ids = new int[6]; int en; long windowMs; int hits; double lastErr = -1; }
+	private static final class S { long swapMs, swapWinMs; boolean swapDiff; int swapHits; long lastMs, lastId; int lastEntity = -1, weak, fast, perfect, snap, n; float lastYaw; final long[] gaps = new long[6]; final double[] errs = new double[6]; final int[] ids = new int[6]; int en; long windowMs; int hits; double lastErr = -1; }
+
+	/** Called when the player picks another hotbar slot. */
+	public static void swapped(ServerPlayer pl, int slot) {
+		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		s.swapMs = System.currentTimeMillis();
+		s.swapDiff = pl.getInventory().getItem(slot).getItem() != pl.getMainHandItem().getItem();
+	}
 
 	/** Returns a reason when this attack is not something a person at a keyboard could have sent, else null. */
 	public static String check(ServerPlayer pl, Entity target) {
@@ -58,6 +65,12 @@ public final class Combat {
 		if (hit == null && s.fast >= 4) { hit = "attack rate"; s.fast = 0; }
 		if (pl.getAttackStrengthScale(0.5f) < 0.5f) s.weak++; else s.weak = Math.max(0, s.weak - 1);
 		if (hit == null && s.weak >= 6) { hit = "hitting before the cooldown"; s.weak = 0; }
+		// Swap and hit inside 120 ms (AutoSword, AttributeSwap): a hand needs far longer between picking a slot and swinging, and it does not do it every fight.
+		if (s.swapDiff && now - s.swapMs < 120) {
+			if (now - s.swapWinMs > 10000) { s.swapHits = 0; s.swapWinMs = now; }
+			s.swapDiff = false;
+			if (++s.swapHits >= 3 && hit == null) { hit = "swap and hit in one blink"; s.swapHits = 0; }
+		}
 		// Multi-target: two different entities hit inside the same 50 ms.
 		if (hit == null && s.lastEntity != -1 && s.lastEntity != target.getId() && now - s.lastMs < 50) hit = "two targets in one tick";
 		// Snapping: the view swings more than 40 degrees to a different target inside 300 ms. A person cannot do that twice in a row.

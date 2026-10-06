@@ -1,7 +1,9 @@
 package dev.meshac.mixin;
 
 import dev.meshac.Movement;
+import dev.meshac.Combat;
 import dev.meshac.Vehicle;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ServerboundMoveVehiclePacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,5 +32,10 @@ public abstract class ServerGamePacketListenerImplMixin {
 	@Inject(method = "handleMoveVehicle", at = @At("HEAD"), cancellable = true)
 	private void meshac$vehicle(ServerboundMoveVehiclePacket p, CallbackInfo ci) {
 		if (player.level().getServer().isSameThread() && Vehicle.check(player, p)) ci.cancel();
+	}
+
+	@Inject(method = "handleSetCarriedItem", at = @At("HEAD"))
+	private void meshac$swap(ServerboundSetCarriedItemPacket p, CallbackInfo ci) {
+		if (player.level().getServer().isSameThread()) Combat.swapped(player, p.getSlot());
 	}
 }

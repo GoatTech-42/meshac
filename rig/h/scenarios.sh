@@ -89,3 +89,12 @@ setup_boatride()  { X0=200 Y0=-60 Z0=420; KEYS="w space"; SECS=6; rc "summon oak
 # the player starts buried inside a stone block; NoClip only acts when the player is inside a solid block
 setup_buried() { X0=160 Y0=-60 Z0=30; KEYS="w"; SECS=6; rc "fill 159 -61 30 161 -58 32 stone" >/dev/null; rc "effect give $NAME resistance 60 255 true" >/dev/null; }
 setup_bhop() { X0=100 Y0=-60 Z0=500; KEYS="w"; SECS=8; }
+# weak item in slot 0, sword in slot 1, tanky zombie: AutoSword swaps to the sword when you hit
+setup_swordswap() { X0=100 Y0=-60 Z0=600; KEYS=""; SECS=10; CLICK=1; JITTER=1
+  rc "summon zombie 100.5 -60 603.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null
+  rc "give $NAME stick" >/dev/null; rc "give $NAME diamond_sword" >/dev/null; }
+measure_swordswap() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f\?$" | head -1; }
+setup_attrswap() { setup_swordswap; Z0=600; CLICK=0; PRE='say ".t Killaura"'; }
+measure_attrswap() { measure_swordswap; }
+setup_swapback() { setup_swordswap; PRE='X key 2; sleep 0.5'; }
+measure_swapback() { measure_swordswap; }

@@ -15,6 +15,7 @@ run_case() {
   p0=$(pos); h0=$(hp); m0=$(measure_$S 2>/dev/null)
   [ "$H" != none ] && say ".t $H"
   iso=$(date -u +%Y-%m-%dT%H:%M:%S); t0=$(date +%s.%N)
+  sleep 3 # the movement checks give a fresh player 20 packets of grace; let it run out before the hack acts
   for k in $KEYS; do X keydown $k; done
   i=0; while [ $i -lt $SECS ]; do [ $CLICK != 0 ] && { [ "$JITTER" = 1 ] && X mousemove_relative -- $(awk "BEGIN{srand();print int(rand()*9)-4,int(rand()*5)-2}"); X click $CLICK; }; sleep 1; i=$((i+1)); [ $i = $((SECS/2)) ] && { docker exec -e DISPLAY=:99 $CL import -window root /tmp/s.png 2>/dev/null; mkdir -p ~/meshac-work/shots; docker cp $CL:/tmp/s.png ~/meshac-work/shots/$S-$H.png 2>/dev/null; }; done
   for k in $KEYS; do X keyup $k; done; sleep 2

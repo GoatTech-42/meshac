@@ -17,7 +17,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; long graceAt; int levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -29,6 +29,7 @@ public final class Movement {
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		if (!p.hasPosition()) return statusOnly(pl, p, s);
+		if (s.grace > 0 && System.currentTimeMillis() - s.graceAt > 1100) s.grace = 0; // grace is 20 ticks of real time; a player standing still sends few packets
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());
 		boolean ground = p.isOnGround();
 		Long arrived = s.arrivals.poll(); // pairs 1:1 with the stamp from arrive()
@@ -39,7 +40,7 @@ public final class Movement {
 		// A real teleport moves the player a long way. Hacks that send several tiny fake positions in one tick (Criticals, MaceDMG) must not be able to open the grace window.
 		double offBy = Math.min(Math.sqrt((sx - s.px) * (sx - s.px) + (sy - s.py) * (sy - s.py) + (sz - s.pz) * (sz - s.pz)), Math.sqrt((sx - s.cx) * (sx - s.cx) + (sy - s.cy) * (sy - s.cy) + (sz - s.cz) * (sz - s.cz)));
 		if (!s.init || (!(atStart || atClaim) && offBy > 0.75)) {
-			s.init = true; s.grace = s.ownTp ? 3 : SKIP_TICKS; s.ownTp = false; // our own setback needs only a short grace
+			s.init = true; s.graceAt = System.currentTimeMillis(); s.grace = s.ownTp ? 3 : SKIP_TICKS; s.ownTp = false; // our own setback needs only a short grace
 			s.dy = 0; s.ground = ground; s.bufSpeed = s.bufFly = s.bufJump = 0;
 			s.goodX = sx; s.goodY = sy; s.goodZ = sz;
 			s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
@@ -54,7 +55,7 @@ public final class Movement {
 		boolean exempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
 			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.hurtTime > 0
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
-		if (pl.hurtTime > 0) s.grace = SKIP_TICKS;
+		if (pl.hurtTime > 0) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime);
 		String hit = null;
 		// Levitation (NoLevitation): the effect lifts the player every tick. Not rising for a while, with open air above, means the client ignores it.
@@ -130,7 +131,7 @@ public final class Movement {
 			String[] ch = hit.split(" ", 2);
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("microhop") ? 2 : 1); // a block climbed in a few ticks is never an accident
 			s.ownTp = true;
-			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.grace = 2; s.dy = 0;
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			if (step == Verdict.Step.HOLD) s.freezeUntil = System.currentTimeMillis() + 1500;
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};

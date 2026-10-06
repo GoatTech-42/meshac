@@ -18,7 +18,7 @@ run_case() {
   sleep 3 # the movement checks give a fresh player 20 packets of grace; let it run out before the hack acts
   [ -n "$PRE" ] && eval "$PRE"
   for k in $KEYS; do X keydown $k; done
-  i=0; while [ $i -lt $SECS ]; do [ $CLICK != 0 ] && { [ "$JITTER" = 1 ] && X mousemove_relative -- $(awk "BEGIN{srand();print int(rand()*9)-4,int(rand()*5)-2}"); X click $CLICK; }; sleep 1; i=$((i+1)); [ $i = $((SECS/2)) ] && { docker exec -e DISPLAY=:99 $CL import -window root /tmp/s.png 2>/dev/null; mkdir -p ~/meshac-work/shots; docker cp $CL:/tmp/s.png ~/meshac-work/shots/$S-$H.png 2>/dev/null; }; done
+  i=0; while [ $i -lt $SECS ]; do [ $CLICK != 0 ] && { [ "$JITTER" = 1 ] && X mousemove_relative -- $(awk "BEGIN{srand();print int(rand()*25)-12,int(rand()*13)-6}"); X click $CLICK; }; sleep 1; i=$((i+1)); [ $i = $((SECS/2)) ] && { docker exec -e DISPLAY=:99 $CL import -window root /tmp/s.png 2>/dev/null; mkdir -p ~/meshac-work/shots; docker cp $CL:/tmp/s.png ~/meshac-work/shots/$S-$H.png 2>/dev/null; }; done
   for k in $KEYS; do X keyup $k; done; sleep 2
   st=connected; connected || st=kicked
   p1=$(pos); h1=$(hp); m1=$(measure_$S 2>/dev/null)

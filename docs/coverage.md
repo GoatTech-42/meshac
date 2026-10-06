@@ -69,11 +69,26 @@ Same rig and same reading of the columns as above. Every hack here was also run 
 
 - **AutoLeave**: the client closes its own connection.
 - **AutoRespawn, AutoReconnect**: client screens.
-- **AutoTotem, AutoArmor**: worked (totem in the off hand, all four armor pieces on) with zero signals. They are a few clicks a hand can also make. A reaction-time check on totems is not built.
+- **AutoArmor**: worked (all four armor pieces on) with zero signals. A few clicks a hand can also make; not detectable on its own.
+
+### AutoTotem (caught, refused)
+
+Wurst AutoTotem refills the off hand with two inventory clicks in the same tick. The server refuses a fill that lands 10 ms or less after another click, or 10 ms or less after the pop, reverts it and signals. A fill 10 to 25 ms after the pop is a strike: the first is only noted, the second is refused, the third reaches kick level. A normal-speed fill resets the streak. The first fill is refused even with the hack Delay slider at 2 or 3 (fills 182 to 287 ms after the pop), because the two clicks still arrive 0 ms apart. Controls (no hack, F key at 0.4 s and 0.12 s) gave zero signals. Measured on the 26.1.2 rig only so far.
+
+Thresholds and why: simple visual reaction time is about 200 to 250 ms for most people and about 100 ms at the verified best (https://www.frontiersin.org/journals/human-neuroscience/articles/10.3389/fnhum.2015.00131/full, https://humanbenchmark.now/reaction-time-faq/what-is-the-fastest-human-reaction-time-ever-recorded). Anticipating the pop can beat that (https://journals.sagepub.com/doi/10.1080/17470215008416582); our own player has done a sub-25 ms swap once, never five in a row. TotemGuard, an open-source detector, checks click-time difference, standard deviation, low outliers and re-totem sequence (https://github.com/Bram1903/TotemGuard), which is where the strike idea comes from.
+
+### AutoSwitch (caught)
+
+More than 15 hotbar slot changes in one second. Signal at 0.1 s, kicked at 2.3 s in the rig.
+
+### AutoDrop (not detectable)
+
+Drops items with the normal drop action, which the server cannot tell apart from a player doing it.
+
 
 ### Still unproven or unrun
 
-AutoPotion (never healed), FeedAura (no cow fed), AutoSign (scenario never placed a sign), NoClip, CreativeFlight, AutoDrop, AutoSwitch, Restock, AimAssist, AutoSword, and the modules that have not been run yet. Other Minecraft versions: all four jars build and boot with meshac loaded, but no client has joined on 1.21.11, 26.2 or 26.3.
+AutoPotion (never healed), FeedAura (no cow fed), AutoSign (scenario never placed a sign), NoClip, CreativeFlight, Restock, AimAssist, AutoSword, and the modules that have not been run yet. Other Minecraft versions: all four jars build and boot with meshac loaded, but no client has joined on 1.21.11, 26.2 or 26.3.
 
 ## Client-only modules
 

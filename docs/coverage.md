@@ -74,3 +74,11 @@ Same rig and same reading of the columns as above. Every hack here was also run 
 ### Still unproven or unrun
 
 AutoPotion (never healed), FeedAura (no cow fed), AutoSign (scenario never placed a sign), NoClip, CreativeFlight, AutoDrop, AutoSwitch, Restock, AimAssist, AutoSword, and the modules that have not been run yet. Other Minecraft versions: all four jars build and boot with meshac loaded, but no client has joined on 1.21.11, 26.2 or 26.3.
+
+## Client-only modules
+
+Read in the Wurst v7.56 source: none of these calls anything that sends a packet or touches the connection (searched each file for packet sends, the connection, game mode interaction, chat and command sends). They only change what the player sees. The server has nothing to detect, so they are listed as not server-detectable. Where the module reveals hidden things (ESP, radar, tracers, cave and base finders, Freecam, Search, TrueSight), the answer is on the server side by hiding the information, which is a separate piece of work.
+
+AntiBlind, AntiWobble, BarrierESP, BaseFinder, CameraDistance, CameraNoClip, CaveFinder, ChestESP, Freecam, Fullbright, HealthTags, ItemESP, LSD, MobESP, MobSpawnESP, NameProtect, NameTags, NewChunks, NoBackground, NoFireOverlay, NoFog, NoHurtcam, NoOverlay, NoPumpkin, NoShieldOverlay, NoVignette, NoWeather, OpenWaterESP, PlayerESP, PortalESP, ProphuntESP, Radar, RainbowUI, RemoteView, Search, Trajectories, TrueSight.
+
+Still to run with a scenario: AnchorAura, CrystalAura, AutoFish, AutoLibrarian, ExtraElytra, AntiSpam, AutoComplete, FancyChat, ForceOP, InfiniChat, MassTPA.

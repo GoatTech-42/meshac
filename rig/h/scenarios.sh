@@ -77,3 +77,8 @@ measure_meleetank() { rc "data get entity @e[type=zombie,limit=1] Health" | grep
 setup_meleefar()   { X0=100 Y0=-60 Z0=20; KEYS=""; SECS=12; CLICK=1; JITTER=1
   rc "summon zombie 100.5 -60 25.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null; }
 measure_meleefar() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f\?$" | head -1; }
+# like meleetank but the mace is the only item, so it is in the hand (MaceDMG only acts with a mace held)
+setup_meleemace()   { X0=100 Y0=-60 Z0=20; KEYS=""; SECS=12; CLICK=1; JITTER=1
+  rc "summon zombie 100.5 -60 23.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null
+  rc "give $NAME mace" >/dev/null; }
+measure_meleemace() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f\?$" | head -1; }

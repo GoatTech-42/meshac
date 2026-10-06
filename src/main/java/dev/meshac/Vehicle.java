@@ -21,7 +21,7 @@ public final class Vehicle {
 		if (!(v instanceof AbstractBoat) || pl.isCreative() || pl.isSpectator()) { RISING.remove(pl.getUUID()); return false; }
 		boolean lift = v.isInWater() || v.onGround() || v.level().getBlockState(v.blockPosition()).is(Blocks.BUBBLE_COLUMN)
 			|| v.level().getBlockState(v.blockPosition().below()).is(Blocks.BUBBLE_COLUMN) || v.level().getFluidState(v.blockPosition().below()).is(FluidTags.WATER);
-		if (lift || p.position().y - v.getY() < 0.05) { RISING.remove(pl.getUUID()); return false; }
+		if (lift || Packets.pos(p).y - v.getY() < 0.05) { RISING.remove(pl.getUUID()); return false; }
 		int n = RISING.merge(pl.getUUID(), 1, Integer::sum);
 		if (n < RISE_AT) return false;
 		RISING.remove(pl.getUUID());

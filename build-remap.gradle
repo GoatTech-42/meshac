@@ -18,6 +18,7 @@ processResources {
 tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
 
 sourceSets.main.java.srcDir "src/${project.attack_src}/java"
+sourceSets.main.java.srcDir "src/${project.packet_src}/java"
 
 java {
 	withSourcesJar()

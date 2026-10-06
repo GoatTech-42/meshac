@@ -18,9 +18,9 @@ public final class Inventory {
 	/** The click reaches the network thread: note when, before the server tick batches it. */
 	public static void arrive(ServerPlayer pl) { STATE.computeIfAbsent(pl.getUUID(), k -> new S()).arrivals.add(System.currentTimeMillis()); }
 
-	/** The same click, run on the server thread. */
-	public static void click(ServerPlayer pl) {
-		if (pl.isCreative() || pl.isSpectator()) return;
+	/** The same click, run on the server thread. Returns when it reached the network. */
+	public static long click(ServerPlayer pl) {
+		if (pl.isCreative() || pl.isSpectator()) return System.currentTimeMillis();
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		Long at = s.arrivals.poll();
 		long now = at != null ? at : System.currentTimeMillis(), gap = now - s.last;
@@ -29,6 +29,7 @@ public final class Inventory {
 		if (++s.clicks > MAX_IN_WINDOW) { s.clicks = 0; Verdict.signal(pl, "inventory", "more than " + MAX_IN_WINDOW + " item moves in " + WINDOW_MS + " ms", 1); }
 		if (gap < SLOW_MS && Math.abs(gap - s.lastGap) < EVEN_MS) { if (++s.even >= 5) { s.even = 0; Verdict.signal(pl, "inventory", "item moves on a steady beat of " + gap + " ms", 1); } } else s.even = 0;
 		s.lastGap = gap;
+		return now;
 	}
 
 	/** AutoSwitch: the held slot changes every tick. A free-spinning scroll wheel tops out well under 15 notches a second. */

@@ -2,7 +2,7 @@
 # Standing legit-player suite. Every scenario runs with NO hack and must end connected with 0 signals.
 # usage: sh legit.sh [scenario ...]   Exit 1 if anything flagged.
 D="$(dirname "$0")"; . "$D/run.sh"; NAME=mc$(date +%H%M%S); RES=/tmp/legit.csv; : > $RES
-LIST=${*:-"walk fall water wall ladder step web soulsand snow boat push meleeclick meleetank mine build chest food levitate zombiehit swapback fastplace scaffold"}
+LIST=${*:-"walk fall water wall ladder step web soulsand snow boat push meleeclick meleetank mine build chest food levitate zombiehit swapback fastplace scaffold totemf totemz"}
 start_client || exit 1; sh "$D/world.sh" >/dev/null
 for c in $LIST; do run_case $c none >/dev/null; done
 sed 's/"[^"]*"/Q/g' $RES > $RES.flat

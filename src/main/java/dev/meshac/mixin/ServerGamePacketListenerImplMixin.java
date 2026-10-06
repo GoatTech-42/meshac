@@ -4,6 +4,8 @@ import dev.meshac.Movement;
 import dev.meshac.Combat;
 import dev.meshac.Interact;
 import dev.meshac.Inventory;
+import dev.meshac.Totem;
+import dev.meshac.Trace;
 import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
@@ -42,26 +44,32 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleSetCarriedItem", at = @At("HEAD"))
 	private void meshac$swap(ServerboundSetCarriedItemPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) { Combat.swapped(player, p.getSlot()); Inventory.hotbar(player); }
+		if (player.level().getServer().isSameThread()) { Combat.swapped(player, p.getSlot()); Inventory.hotbar(player); Trace.t(player, "hotbar slot=" + p.getSlot()); }
 	}
 
 	@Inject(method = "handleUseItemOn", at = @At("HEAD"))
 	private void meshac$place(ServerboundUseItemOnPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) Interact.place(player, p);
+		if (player.level().getServer().isSameThread()) { Interact.place(player, p); Trace.t(player, "use-on pos=" + p.getHitResult().getBlockPos() + " item=" + player.getMainHandItem().getItem()); }
 	}
 
 	@Inject(method = "handleUseItem", at = @At("HEAD"))
 	private void meshac$use(ServerboundUseItemPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) Interact.use(player);
+		if (player.level().getServer().isSameThread()) { Interact.use(player); Trace.t(player, "use item=" + player.getMainHandItem().getItem()); }
 	}
 
-	@Inject(method = "handlePlayerAction", at = @At("HEAD"))
+	@Inject(method = "handlePlayerAction", at = @At("HEAD"), cancellable = true)
 	private void meshac$release(ServerboundPlayerActionPacket p, CallbackInfo ci) {
+		if (player.level().getServer().isSameThread()) Trace.t(player, "action " + p.getAction());
+		if (p.getAction() == ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND && player.level().getServer().isSameThread() && !player.isCreative() && Totem.refuse(player, System.currentTimeMillis(), 45, true)) { ci.cancel(); player.containerMenu.sendAllDataToRemote(); return; }
 		if (p.getAction() == ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM && player.getUseItem().is(net.minecraft.tags.ItemTags.BOW_ENCHANTABLE) && player.level().getServer().isSameThread()) Interact.release(player);
 	}
 
-	@Inject(method = "handleContainerClick", at = @At("HEAD"))
+	@Inject(method = "handleContainerClick", at = @At("HEAD"), cancellable = true)
 	private void meshac$click(ServerboundContainerClickPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) Inventory.click(player); else Inventory.arrive(player);
+		if (!player.level().getServer().isSameThread()) { Inventory.arrive(player); return; }
+		long at = Inventory.click(player);
+		Trace.t(player, "click slot=" + p.slotNum() + " button=" + p.buttonNum() + " arrived=" + at);
+		boolean offhand = p.containerId() == 0 && (p.slotNum() == 45 || p.buttonNum() == 40);
+		if (!player.isCreative() && Totem.refuse(player, at, p.slotNum(), offhand)) { ci.cancel(); player.containerMenu.sendAllDataToRemote(); }
 	}
 }

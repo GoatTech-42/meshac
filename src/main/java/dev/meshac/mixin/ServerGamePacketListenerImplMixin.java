@@ -42,7 +42,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleSetCarriedItem", at = @At("HEAD"))
 	private void meshac$swap(ServerboundSetCarriedItemPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) Combat.swapped(player, p.getSlot());
+		if (player.level().getServer().isSameThread()) { Combat.swapped(player, p.getSlot()); Inventory.hotbar(player); }
 	}
 
 	@Inject(method = "handleUseItemOn", at = @At("HEAD"))

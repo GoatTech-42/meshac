@@ -36,7 +36,7 @@ measure_sign() { echo -; }
 setup_chest()  { X0=100 Y0=-60 Z0=160; KEYS=""; SECS=8; CLICK=3; PITCH=15; rc "forceload add 100 163" >/dev/null; sleep 2; rc "setblock 100 -60 163 air" >/dev/null; rc "setblock 100 -60 163 chest{Items:[{Slot:0,id:\"minecraft:diamond\",count:8},{Slot:1,id:\"minecraft:gold_ingot\",count:8},{Slot:2,id:\"minecraft:iron_ingot\",count:8},{Slot:3,id:\"minecraft:emerald\",count:8},{Slot:4,id:\"minecraft:coal\",count:8},{Slot:5,id:\"minecraft:copper_ingot\",count:8},{Slot:6,id:\"minecraft:lapis_lazuli\",count:8},{Slot:7,id:\"minecraft:redstone\",count:8},{Slot:8,id:\"minecraft:quartz\",count:8},{Slot:9,id:\"minecraft:amethyst_shard\",count:8},{Slot:10,id:\"minecraft:stick\",count:8},{Slot:11,id:\"minecraft:bone\",count:8}]}" >/dev/null; }
 measure_chest() { rc "data get block 100 -60 163 Items" | grep -o "id: \"minecraft:[a-z_]*\"" | wc -l; }
 # junk: a hotbar full of dirt and cobblestone
-setup_junk()   { X0=100 Y0=-60 Z0=180; KEYS=""; SECS=8; rc "give $NAME dirt 64" >/dev/null; rc "give $NAME cobblestone 64" >/dev/null; rc "give $NAME bread 8" >/dev/null; }
+setup_junk()   { X0=100 Y0=-60 Z0=180; KEYS=""; SECS=8; rc "give $NAME dirt 64" >/dev/null; rc "give $NAME cobblestone 64" >/dev/null; rc "give $NAME bread 8" >/dev/null; rc "give $NAME wheat_seeds 32" >/dev/null; rc "give $NAME rotten_flesh 32" >/dev/null; }
 measure_junk() { count item; }
 # food: hungry player holding bread
 setup_food()   { X0=100 Y0=-60 Z0=200; KEYS=""; SECS=10; rc "give $NAME bread 16" >/dev/null; rc "effect give $NAME hunger 8 60 true" >/dev/null; }

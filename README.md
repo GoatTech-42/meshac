@@ -33,7 +33,7 @@ The plan is a `/mesh` command and a small config file with three presets (calm, 
 
 ## License
 
-MIT.
+GNU Affero General Public License v3.0 only (see LICENSE). You can use, change and share meshac freely. If you distribute it or run a modified copy for others over a network, you have to share your changes under the same license and keep the copyright notices.
 
 ## Versions
 

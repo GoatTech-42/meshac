@@ -1,5 +1,6 @@
 package dev.meshac.mixin;
 
+import dev.meshac.Glide;
 import dev.meshac.Movement;
 import dev.meshac.Combat;
 import dev.meshac.Interact;
@@ -30,7 +31,8 @@ public abstract class ServerGamePacketListenerImplMixin {
 	@Inject(method = "handleMovePlayer", at = @At("HEAD"), cancellable = true)
 	private void meshac$move(ServerboundMovePlayerPacket p, CallbackInfo ci) {
 		if (!player.level().getServer().isSameThread()) { Movement.arrive(player, p); return; } // vanilla re-queues this packet onto the main thread
-		double[] back = Movement.check(player, p);
+		double[] back = Glide.check(player, p);
+		if (back == null) back = Movement.check(player, p);
 		if (back != null) {
 			teleport(back[0], back[1], back[2], player.getYRot(), player.getXRot());
 			ci.cancel();

@@ -77,6 +77,14 @@ Wurst AutoTotem refills the off hand with two inventory clicks in the same tick.
 
 Thresholds and why: simple visual reaction time is about 200 to 250 ms for most people and about 100 ms at the verified best (https://www.frontiersin.org/journals/human-neuroscience/articles/10.3389/fnhum.2015.00131/full, https://humanbenchmark.now/reaction-time-faq/what-is-the-fastest-human-reaction-time-ever-recorded). Anticipating the pop can beat that (https://journals.sagepub.com/doi/10.1080/17470215008416582); our own player has done a sub-25 ms swap once, never five in a row. TotemGuard, an open-source detector, checks click-time difference, standard deviation, low outliers and re-totem sequence (https://github.com/Bram1903/TotemGuard), which is where the strike idea comes from.
 
+### ExtraElytra (caught)
+
+Gliding only trades height for speed: v squared over 64 plus height cannot rise without a firework rocket or a hit. Wurst ExtraElytra reached about 80 blocks a second after a 44 block drop. Two samples in a row more than 10 blocks of energy above the lowest point are a signal; rockets and hits pause the check. Caught and kicked at 8 s; the vanilla glide control gave zero signals. 26.1.2 rig only so far.
+
+### AnchorAura (caught, refused)
+
+Place, charge and detonate happen in one tick. Clicks at a block the player is not looking at are cancelled and the block is resynced, so the blast does not happen; the player is kicked after repeats. Rig, 26.1.2 only. Clean-world rerun and macro timing variants still to do.
+
 ### AutoSwitch (caught)
 
 More than 15 hotbar slot changes in one second. Signal at 0.1 s, kicked at 2.3 s in the rig.

@@ -30,7 +30,7 @@ public final class Interact {
 	}
 
 	/** A use-item packet (throw, eat, bow). */
-	public static void use(ServerPlayer pl) { rate(pl); }
+	public static void use(ServerPlayer pl) { Glide.rocket(pl); rate(pl); }
 
 	/** A use-item-on-block packet (placing). */
 	/** Returns true when the click must be refused: it hit a block the player is not looking at. */

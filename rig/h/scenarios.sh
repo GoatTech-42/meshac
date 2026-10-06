@@ -104,3 +104,5 @@ setup_zombiehit() { X0=100 Y0=-60 Z0=700; KEYS=""; SECS=20; rc "effect give $NAM
 # draw and release a bow at standing zombies 12 blocks away (BowAimbot aims the shot for you)
 setup_bowshot() { setup_ranged; Z0=280; CLICK=0; SECS=2; PRE='for i in 1 2 3 4 5 6; do X mousedown 3; sleep 1.3; X mouseup 3; sleep 0.6; done'; }
 measure_bowshot() { rc "data get entity @e[type=zombie,limit=1,sort=nearest] Health" | grep -o "[0-9.]*f\?$" | head -1; }
+# a small stone platform 20 blocks up with only air beyond it: ScaffoldWalk lays blocks under the feet, AirPlace places into the air at the crosshair
+setup_scaffold() { X0=100 Y0=-41 Z0=800; KEYS="w"; SECS=8; PITCH=20; CLICK=3; rc "forceload add 90 790 110 860" >/dev/null; sleep 2; rc "fill 90 -45 790 110 -38 860 air" >/dev/null; rc "fill 98 -42 799 102 -42 801 stone" >/dev/null; rc "give $NAME stone 64" >/dev/null; rc "effect give $NAME resistance 60 255 true" >/dev/null; }

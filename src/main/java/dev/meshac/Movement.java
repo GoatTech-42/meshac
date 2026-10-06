@@ -28,6 +28,7 @@ public final class Movement {
 	/** Returns a setback position, or null if the packet is fine. */
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		if (p.hasRotation()) Interact.look(pl, p.getYRot(pl.getYRot()), p.getXRot(pl.getXRot()));
 		if (!p.hasPosition()) return statusOnly(pl, p, s);
 		if (s.grace > 0 && System.currentTimeMillis() - s.graceAt > 1100) s.grace = 0; // grace is 20 ticks of real time; a player standing still sends few packets
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());

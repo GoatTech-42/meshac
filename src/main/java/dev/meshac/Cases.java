@@ -47,10 +47,17 @@ public final class Cases {
 		}
 		return null;
 	}
-	/** Past bans and kicks inside the memory window; this is what escalation counts. */
+	/** meshac's own removals (kicks, tempbans, bans) inside the memory window that were not pardoned; this is what escalation counts. Staff actions do not count. */
 	public static synchronized int offences(UUID id) {
-		long from = System.currentTimeMillis() - Config.get().offenceMemoryDays * 86_400_000L; int n = 0;
-		for (Case c : all) if (c.uuid.equals(id.toString()) && !c.pardoned && c.at >= from && !c.action.equals("kick")) n++;
+		long from = System.currentTimeMillis() - Config.get().memoryDays() * 86_400_000L; int n = 0;
+		for (Case c : all) if (c.uuid.equals(id.toString()) && !c.pardoned && c.at >= from && c.by.equals("meshac")) n++;
+		return n;
+	}
+	/** Lifts every active ban on this player and forgives those cases. Returns how many were lifted. */
+	public static synchronized int unban(String name) {
+		long now = System.currentTimeMillis(); int n = 0;
+		for (Case c : all) if (c.player.equalsIgnoreCase(name) && !c.pardoned && (c.action.equals("ban") || (c.action.equals("tempban") && c.until > now))) { c.pardoned = true; n++; }
+		if (n > 0) save();
 		return n;
 	}
 	public static synchronized Case find(String id) { for (Case c : all) if (c.id.equalsIgnoreCase(id)) return c; return null; }

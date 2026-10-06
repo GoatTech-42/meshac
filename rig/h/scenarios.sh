@@ -176,3 +176,6 @@ measure_feed() { rc "clear $NAME wheat 0" | grep -o "[0-9]\+" | head -1; }
 # sign2: AutoSign copies the first sign's text onto later signs. A hand types the first one (2 s after the click), the second goes down at once.
 setup_sign2() { setup_sign; CLICK=0; SECS=4; PRE='X click 3; sleep 2.5; X type hello; sleep 0.5; X key Escape; sleep 1; X mousemove_relative -- 0 140; sleep 0.5; X click 3; sleep 1.5; X key Escape'; }
 measure_sign2() { measure_sign; }
+# windjump: the legit max-height wind charge jump. Jump while a charge goes off at the feet, over and over, landing between. Must stay at zero flags.
+setup_windjump() { X0=100 Y0=-60 Z0=900; KEYS="space"; SECS=12; rc "forceload add 100 900" >/dev/null; rc "fill 96 -60 896 108 -40 912 air" >/dev/null; rc "fill 96 -61 896 108 -61 912 stone" >/dev/null; rc "effect give $NAME resistance 60 4 true" >/dev/null; PRE='for i in 1 2 3 4 5; do rc "summon wind_charge 100.5 -60.5 900.5" >/dev/null; sleep 2; done'; }
+measure_windjump() { pos | cut -d, -f2; }

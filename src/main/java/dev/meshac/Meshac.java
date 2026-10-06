@@ -19,6 +19,7 @@ public final class Meshac implements ModInitializer {
 			Cases.Case c = Cases.activeBan(handler.player.getUUID());
 			if (c != null) handler.disconnect(Screens.ban(c));
 		});
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : server.getPlayerList().getPlayers()) Movement.tick(pl); });
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); Combat.forget(handler.player.getUUID()); Vehicle.forget(handler.player.getUUID()); Mining.forget(handler.player.getUUID()); Interact.forget(handler.player.getUUID()); Inventory.forget(handler.player.getUUID()); Totem.forget(handler.player.getUUID()); Glide.forget(handler.player.getUUID()); });
 		LOG.info("meshac loaded");
 	}

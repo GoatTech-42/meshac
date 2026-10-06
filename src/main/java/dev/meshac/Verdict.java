@@ -10,12 +10,12 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * One place decides what a signal costs. Heat is shared by every check, so a player who flies and then
- * kill-auras is one suspect, not two. Ladder: 1-2 setback (or the hit is denied), 3-4 hold, 5+ removal.
- * Removal is a kick the first time and an escalating tempban after that (see Config.tempbanMinutes).
+ * kill-auras is one suspect, not two. Heat steps: below holdAt a setback (or the hit is denied), then hold, then removal at removeAt.
+ * Removal climbs a ladder kept in the case store, so it survives rejoins: kicks first, then tempbans, then a permanent ban if the config allows it.
  */
 public final class Verdict {
 	public enum Step { SETBACK, HOLD, REMOVE }
-	private static final class H { int heat; long at; final ArrayDeque<String> trace = new ArrayDeque<>(); }
+	private static final class H { int heat; long at; final ArrayDeque<String> trace = new ArrayDeque<>(); final java.util.LinkedHashMap<String, Integer> weight = new java.util.LinkedHashMap<>(); final Map<String, String> detail = new java.util.HashMap<>(); }
 	private static final Map<UUID, H> HEAT = new ConcurrentHashMap<>();
 
 	/** Cheap per-event note kept in a ring so a case can carry the lead-up. */
@@ -32,32 +32,42 @@ public final class Verdict {
 		long ms = System.currentTimeMillis();
 		Step step;
 		List<String> ev;
+		String why;
 		synchronized (h) {
-			h.heat = ms - h.at > 10_000 ? weight : h.heat + weight; // heat cools after 10 s clean
+			if (ms - h.at > Config.get().heatCoolMs()) { h.weight.clear(); h.detail.clear(); }
+			h.heat = ms - h.at > Config.get().heatCoolMs() ? weight : h.heat + weight;
+			h.weight.merge(check, weight, Integer::sum); h.detail.put(check, detail); // heat cools after the configured clean time
 			h.at = ms;
-			step = h.heat >= 5 ? Step.REMOVE : h.heat >= 3 ? Step.HOLD : Step.SETBACK;
+			step = h.heat >= Config.get().removeAt() ? Step.REMOVE : h.heat >= Config.get().holdAt() ? Step.HOLD : Step.SETBACK;
 			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + h.heat);
 			ev = new ArrayList<>(h.trace);
-			if (step == Step.REMOVE) h.heat = 0;
+			// The case names the check that carried most of the heat, not whichever one happened to land last: a held player hovering after a no-fall flag is a no-fall case.
+			String top = check; int best = -1;
+			for (var e : h.weight.entrySet()) if (e.getValue() > best) { best = e.getValue(); top = e.getKey(); }
+			why = top + " " + h.detail.get(top);
+			if (step == Step.REMOVE) { h.heat = 0; h.weight.clear(); h.detail.clear(); }
 		}
 		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> {}", pl.getGameProfile().name(), check, detail, h.heat, step.name().toLowerCase());
-		if (step == Step.REMOVE) remove(pl, check + " " + detail, ev);
+		if (step == Step.HOLD && h.heat - weight < Config.get().holdAt()) Discord.hold(pl.getGameProfile().name(), check, detail);
+		if (step == Step.REMOVE) remove(pl, why, ev);
 		return step;
 	}
 
 	private static void remove(ServerPlayer pl, String why, List<String> evidence) {
 		String reason = "Unusual " + why.split(" ")[0] + " (" + why + ")";
-		int prior = Cases.offences(pl.getUUID());
-		int[] ladder = Config.get().tempbanMinutes;
+		Config cf = Config.get();
+		int prior = Cases.offences(pl.getUUID()), idx = prior - cf.kicks();
+		int[] ladder = cf.tempMinutes();
+		String name = pl.getGameProfile().name();
 		Cases.Case c;
-		if (prior == 0) { // first removal is a kick
-			c = Cases.add(pl.getGameProfile().name(), pl.getUUID(), "kick", reason, "meshac", 0, evidence);
+		if (idx < 0) {
+			c = Cases.add(name, pl.getUUID(), "kick", reason, "meshac", 0, evidence);
 			pl.connection.disconnect(Screens.kick(reason, c));
-		} else if (prior - 1 < ladder.length) {
-			c = Cases.add(pl.getGameProfile().name(), pl.getUUID(), "tempban", reason, "meshac", System.currentTimeMillis() + ladder[prior - 1] * 60_000L, evidence);
+		} else if (idx < ladder.length || !cf.perma()) {
+			c = Cases.add(name, pl.getUUID(), "tempban", reason, "meshac", System.currentTimeMillis() + ladder[Math.min(idx, ladder.length - 1)] * 60_000L, evidence);
 			pl.connection.disconnect(Screens.ban(c));
 		} else {
-			c = Cases.add(pl.getGameProfile().name(), pl.getUUID(), "ban", reason, "meshac", 0, evidence);
+			c = Cases.add(name, pl.getUUID(), "ban", reason, "meshac", 0, evidence);
 			pl.connection.disconnect(Screens.ban(c));
 		}
 		Meshac.LOG.warn("[meshac] CASE {} {} {} {}", c.id, c.action, c.player, reason);

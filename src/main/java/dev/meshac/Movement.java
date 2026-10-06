@@ -5,7 +5,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.AbstractWindCharge;
 import net.minecraft.world.phys.AABB;
 
 /** Movement checks: speed, fly (hover/ascend), high jump. Runs on every position packet, before vanilla. */
@@ -17,7 +19,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt; long kbAt; double kbX, kbY, kbZ; int noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -68,23 +70,14 @@ public final class Movement {
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
 		}
-		boolean exempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
-			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.hurtTime > 0
+		boolean baseExempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
+			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable()
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
-		if (pl.hurtTime > 0) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
-		// AntiKnockback: a hit pushes the player about half a block. Barely moving half a second after a hit, with open space behind, three times in a row, is not luck.
+		// A wind charge launches the player far past any jump or fall. Exempt from the moment a charge is near until a moment after the landing.
 		long nowMs = System.currentTimeMillis();
-		if (pl.hurtTime > 0 && s.kbAt == 0) { s.kbAt = nowMs; s.kbX = sx; s.kbY = sy; s.kbZ = sz; }
-		else if (s.kbAt != 0 && nowMs - s.kbAt > 450) {
-			boolean open = pl.level().noCollision(pl, pl.getBoundingBox().inflate(0.8, -0.1, 0.8));
-			if (open && !exempt && !pl.isBlocking() && !pl.isShiftKeyDown() && pl.getHealth() > 0) {
-				double moved = Math.max(Math.hypot(sx - s.kbX, sz - s.kbZ), sy - s.kbY); // a blast from below throws a player up, not sideways
-				if (TRACE) Meshac.LOG.info("[trace] kb moved={}", r(moved));
-				s.noKb = moved < 0.3 ? s.noKb + 1 : 0;
-			}
-			s.kbAt = 0;
-			if (s.noKb >= 3) { s.noKb = 0; Verdict.signal(pl, "antiknockback", "no push after three hits", 2); }
-		}
+		if (nowMs - s.windAt < 4000) s.boosted = true; else if (ground) s.boosted = false;
+		boolean exempt = baseExempt || pl.hurtTime > 0 || s.boosted;
+		if (pl.hurtTime > 0) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime);
 		String hit = null;
 		// Levitation (NoLevitation): the effect lifts the player every tick. Not rising for a while, with open air above, means the client ignores it.
@@ -99,6 +92,7 @@ public final class Movement {
 		} else s.bufClimb = 0;
 		if (s.grace > 0 || exempt) {
 			if (s.grace > 0) s.grace--;
+			s.airY0 = y; s.sinceJump = 99; s.exemptAt = System.currentTimeMillis();
 		} else {
 			// Speed: horizontal blocks per packet. Ground and air have different vanilla ceilings (sprint-jump is the peak);
 			// slippery blocks lift both. Scaled by the speed attribute (0.13 when sprinting).
@@ -115,11 +109,23 @@ public final class Movement {
 			else if (++s.clean >= 10) { s.bufSpeed = Math.max(0, s.bufSpeed - 1); s.clean = 0; }
 			if (s.bufSpeed >= SIGNAL_AT) hit = String.format("speed %.2f>%.2f", h, cap);
 			// Fly: in the air, vanilla gravity gives dy = (lastDy - 0.08) * 0.98. Going above that is not vanilla.
-			if (!s.ground && !ground) {
+			if (!s.ground && !ground && System.currentTimeMillis() > s.freezeUntil + 2000) { // right after a hold the player hangs where we froze them; that is our doing, not a flight
 				double expect = (s.dy - 0.08) * 0.98;
 				s.bufFly = dy > expect + 0.03 ? s.bufFly + (dy > expect + 0.3 ? 3 : 1) : Math.max(0, s.bufFly - 1); // a big climb counts triple
 				if (s.bufFly >= SIGNAL_AT && hit == null) hit = String.format("fly dy %.3f expect %.3f", dy, expect);
-			} else s.bufFly = 0;
+				// Air jump: a fresh upward kick in mid-air. A wind charge can do it once per 10 ticks, so two kicks inside 8 packets, or four inside 2.5 s, is not vanilla.
+				s.sinceJump++;
+				if (dy > expect + 0.3 && s.grace == 0) {
+					long ms = System.currentTimeMillis();
+					s.ajN = ms - s.ajAt > 2500 ? 1 : s.ajN + 1; s.ajAt = ms;
+					if (hit == null && ((s.sinceJump <= 8 && s.ajN >= 2) || s.ajN >= 4)) hit = String.format("air jump dy %.3f", dy);
+					s.sinceJump = 0;
+				}
+				// High jump: one jump climbs 1.25 blocks (more with Jump Boost). Rising past that in one flight is not vanilla unless a wind charge threw the player.
+				MobEffectInstance jb = pl.getEffect(MobEffects.JUMP_BOOST);
+				double room = 1.45 + (jb == null ? 0 : (jb.getAmplifier() + 1) * 0.6);
+				if (dy > 0.05 && y - s.airY0 > room && s.grace == 0 && hit == null && System.currentTimeMillis() - s.exemptAt > 4000) hit = String.format("high jump rose %.2f", y - s.airY0);
+			} else { s.bufFly = 0; s.sinceJump = 99; s.airY0 = s.ground ? sy : y; }
 			// Step: a hack can climb a block with several small rises that all claim ground. Add them up.
 			if (ground && dy > 0.05) { s.rise += dy; s.riseT = 4; } else if (--s.riseT <= 0) { s.rise = 0; s.riseT = 0; }
 			if (s.rise > 0.65 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && hit == null) { hit = String.format("step rose %.2f on the ground", s.rise); s.rise = 0; }
@@ -168,6 +174,32 @@ public final class Movement {
 		if (s.bufSpeed == 0 && s.bufFly == 0 && s.bufJump == 0 && s.inBlock == 0) { s.goodX = x; s.goodY = y; s.goodZ = z; }
 		s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
 		return null;
+	}
+
+	/** Once per server tick for every player. A player who stands still because the client ignores the push sends no move packets at all, so the check cannot hang on them. */
+	public static void tick(ServerPlayer pl) {
+		S s = STATE.get(pl.getUUID());
+		if (s == null || !s.init) return;
+		if (!pl.level().getEntitiesOfClass(AbstractWindCharge.class, pl.getBoundingBox().inflate(10)).isEmpty()) s.windAt = System.currentTimeMillis();
+		double sx = pl.getX(), sy = pl.getY(), sz = pl.getZ();
+		boolean baseExempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger() || pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable()
+			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
+		// AntiKnockback: a hit pushes the player about half a block. Barely moving half a second after a hit, with open space behind, three times in a row, is not luck.
+		long nowMs = System.currentTimeMillis();
+		net.minecraft.world.damagesource.DamageSource lds = pl.getLastDamageSource(); // only a mob or player swing pushes this way: blasts, falls and wind charges do not count
+		boolean meleeHurt = lds != null && lds.getDirectEntity() instanceof net.minecraft.world.entity.LivingEntity && System.currentTimeMillis() - s.windAt > 5000;
+		if (pl.hurtTime > 0 && s.kbAt == 0 && meleeHurt) { s.kbAt = nowMs; s.kbX = sx; s.kbY = sy; s.kbZ = sz; }
+		else if (s.kbAt != 0 && nowMs - s.kbAt > 450) {
+			boolean open = pl.level().noCollision(pl, pl.getBoundingBox().inflate(0.8, -0.1, 0.8));
+			if (TRACE) Meshac.LOG.info("[trace] kb eval open={} ex={} blk={} sh={} hp={}", open, baseExempt, pl.isBlocking(), pl.isShiftKeyDown(), pl.getHealth());
+			if (open && !baseExempt && !pl.isBlocking() && !pl.isShiftKeyDown() && pl.getHealth() > 0) {
+				double moved = Math.max(Math.hypot(sx - s.kbX, sz - s.kbZ), sy - s.kbY); // a blast from below throws a player up, not sideways
+				if (TRACE) Meshac.LOG.info("[trace] kb moved={} pkt={}", r(moved), r(Math.hypot(s.cx - s.kbX, s.cz - s.kbZ)));
+				s.noKb = moved < 0.3 ? s.noKb + 1 : 0;
+			}
+			s.kbAt = 0;
+			if (s.noKb >= 3) { s.noKb = 0; Verdict.signal(pl, "antiknockback", "no push after three hits", 2); }
+		}
 	}
 
 	/** Packets that carry only the on-ground flag. A NoFall hack sends these while falling to reset fall damage. */

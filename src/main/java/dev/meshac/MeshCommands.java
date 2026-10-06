@@ -9,7 +9,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-/** /mesh for staff: cases, info, ban, pardon, reload. */
+/** /mesh for staff: cases, case, pardon, unban, ban, reload. */
 public final class MeshCommands {
 	public static void register(CommandDispatcher<CommandSourceStack> d) {
 		d.register(Commands.literal("mesh").requires(Perm.admin())
@@ -19,6 +19,9 @@ public final class MeshCommands {
 			.then(Commands.literal("pardon").then(Commands.argument("id", StringArgumentType.word()).executes(c -> {
 				boolean ok = Cases.pardon(StringArgumentType.getString(c, "id"));
 				c.getSource().sendSuccess(() -> Component.literal(ok ? "Pardoned." : "No such case."), true); return ok ? 1 : 0; })))
+			.then(Commands.literal("unban").then(Commands.argument("player", StringArgumentType.word()).executes(c -> {
+				int n = Cases.unban(StringArgumentType.getString(c, "player"));
+				c.getSource().sendSuccess(() -> Component.literal(n > 0 ? "Lifted " + n + " ban(s)." : "No active ban."), true); return n; })))
 			.then(Commands.literal("ban").then(Commands.argument("player", StringArgumentType.word())
 				.then(Commands.argument("minutes", IntegerArgumentType.integer(0)).then(Commands.argument("reason", StringArgumentType.greedyString()).executes(c -> ban(c.getSource(),
 					StringArgumentType.getString(c, "player"), IntegerArgumentType.getInteger(c, "minutes"), StringArgumentType.getString(c, "reason")))))))

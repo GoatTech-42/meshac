@@ -27,7 +27,8 @@ public final class Mining {
 			return true;
 		}
 		// A hand breaks what the crosshair is on. Nuker breaks blocks all around without turning.
-		if (new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) {
+		boolean instant = pl.level().getBlockState(pos).getDestroySpeed(pl.level(), pos) == 0f; // grass, ferns, flowers, torches: no hand-timing to judge, and the view often lags the click
+		if (!instant && new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) {
 			Verdict.signal(pl, "mining", "broke a block it is not looking at", 1);
 			return true;
 		}
@@ -35,11 +36,11 @@ public final class Mining {
 		long now = System.currentTimeMillis();
 		// Nuker turns the view to each block in turn. A tunnel miner keeps pointing the same way; fast successive breaks more than 40 degrees apart are not a hand.
 		Vec3 dir = centre.subtract(eye).normalize();
-		if (s.lastDir != null && now - s.lastAt < 600 && dir.dot(s.lastDir) < 0.766) {
+		if (!instant && s.lastDir != null && now - s.lastAt < 600 && dir.dot(s.lastDir) < 0.766) {
 			if (now - s.turnWin > 3000) { s.turnWin = now; s.turns = 0; }
 			if (++s.turns >= 4) { s.turns = 0; Verdict.signal(pl, "mining", "breaks blocks in every direction", 1); return true; }
 		}
-		s.lastDir = dir; s.lastAt = now;
+		if (!instant) { s.lastDir = dir; s.lastAt = now; }
 		if (now - s.windowAt > 1000) { s.windowAt = now; s.breaks = 0; }
 		if (++s.breaks > MAX_PER_SECOND) {
 			Verdict.signal(pl, "mining", "more than " + MAX_PER_SECOND + " blocks in a second", 1);

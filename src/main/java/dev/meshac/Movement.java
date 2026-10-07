@@ -17,7 +17,7 @@ public final class Movement {
 	private static final int SKIP_TICKS = 20;  // grace after teleport, damage, effects
 
 	private static final class S {
-		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
+		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
 		boolean ground, cground, init, ownTp;
 		long glideAt; double glideH; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
@@ -38,6 +38,12 @@ public final class Movement {
 		if (s.grace > 0 && System.currentTimeMillis() - s.graceAt > 1100) s.grace = 0; // grace is 20 ticks of real time; a player standing still sends few packets
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());
 		boolean ground = p.isOnGround();
+		// Our own record of the fall: the highest point since the player last stood on something real. A NoFall hack keeps resetting the server's count, so a flag hands it back.
+		{
+			AABB fb = pl.getBoundingBox().move(x - pl.getX(), y - pl.getY(), z - pl.getZ());
+			boolean supported = !pl.level().noCollision(pl, new AABB(fb.minX, fb.minY - 0.1, fb.minZ, fb.maxX, fb.minY, fb.maxZ));
+			if ((supported && s.nfAt == 0) || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.isFallFlying() || pl.isPassenger() || y > s.fallPeak + 50) s.fallPeak = y; else s.fallPeak = Math.max(s.fallPeak, y);
+		}
 		Long arrived = s.arrivals.poll(); // pairs 1:1 with the stamp from arrive()
 		// The server position is the last accepted one (vanilla has already handled the previous packet).
 		// If it is neither where the previous packet started nor where it claimed, the server moved the player.
@@ -157,8 +163,8 @@ public final class Movement {
 		if (s.lastNs != 0) {
 			// Teleports make the client send extra confirm packets, so no timing while in grace.
 			s.balMs = s.grace > 0 ? 0 : s.balMs + 50 - (now - s.lastNs) / 1e6;
-			s.balMs = Math.max(-300, Math.min(s.balMs, 600)); // lag may bank up to 300 ms of catch-up
-			if (s.balMs > 450 && hit == null) hit = String.format("timer ahead %.0f ms", s.balMs);
+			s.balMs = Math.max(-300, Math.min(s.balMs, 1600)); // a stalled connection (tunnel, wifi) releases its held packets in one burst: bank up to 1.6 s of catch-up
+			if (s.balMs > 1300 && hit == null) hit = String.format("timer ahead %.0f ms", s.balMs);
 		}
 		s.lastNs = now;
 		// NoFall / ground spoof: claims to stand on something with only air below.
@@ -170,6 +176,7 @@ public final class Movement {
 		} else s.bufGround = 0;
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
+			if (ch[0].equals("nofall")) { s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("microhop") ? 2 : 1); // a block climbed in a few ticks is never an accident
 			s.ownTp = true;
 			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
@@ -192,6 +199,18 @@ public final class Movement {
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
 		// AntiKnockback: a hit pushes the player about half a block. Barely moving half a second after a hit, with open space behind, three times in a row, is not luck.
 		long nowMs = System.currentTimeMillis();
+		// NoFall hands the fall back: the hack kept the server's fall count at zero, so when the player really lands the drop we recorded is applied, unless vanilla already counted it.
+		if (s.nfAt != 0) {
+			AABB tb = pl.getBoundingBox();
+			boolean supported = !pl.level().noCollision(pl, new AABB(tb.minX, tb.minY - 0.1, tb.minZ, tb.maxX, tb.minY, tb.maxZ));
+			s.fdMax = Math.max(s.fdMax, pl.fallDistance);
+			if (supported && !pl.isCreative() && !pl.isSpectator()) {
+				double drop = s.fallPeak - pl.getY();
+				if (TRACE) Meshac.LOG.info("[trace] nofall land peak={} y={} drop={} fdMax={}", r(s.fallPeak), r(pl.getY()), r(drop), r(s.fdMax));
+				if (drop > 3 && s.fdMax < 3) pl.causeFallDamage(drop, 1.0f, pl.damageSources().fall());
+				s.nfAt = 0; s.fdMax = 0; s.fallPeak = pl.getY();
+			} else if (nowMs - s.nfAt > 15000 || pl.isInWater() || pl.isInLava() || pl.isFallFlying() || pl.onClimbable()) { s.nfAt = 0; s.fdMax = 0; }
+		}
 		net.minecraft.world.damagesource.DamageSource lds = pl.getLastDamageSource(); // only a mob or player swing pushes this way: blasts, falls and wind charges do not count
 		boolean meleeHurt = lds != null && lds.getDirectEntity() instanceof net.minecraft.world.entity.LivingEntity && System.currentTimeMillis() - s.windAt > 5000;
 		if (pl.hurtTime > 0 && s.kbAt == 0 && meleeHurt) { s.kbAt = nowMs; s.kbX = sx; s.kbY = sy; s.kbZ = sz; }
@@ -217,6 +236,7 @@ public final class Movement {
 		s.bufStatus = air ? s.bufStatus + 1 : 0;
 		if (s.bufStatus < 3) return null;
 		s.bufStatus = 0;
+		s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall status flag peak={} y={}", r(s.fallPeak), r(pl.getY()));
 		Verdict.Step step = Verdict.signal(pl, "nofall", "ground flag in mid-air");
 		if (step == Verdict.Step.HOLD) s.freezeUntil = System.currentTimeMillis() + 1500;
 		return new double[] {pl.getX(), pl.getY(), pl.getZ(), 0};

@@ -10,7 +10,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Scaffold, AirPlace, AutoBuild, Throw: using blocks and items faster, or somewhere else, than a hand does. */
 public final class Interact {
-	private static final class S { long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; long clickAt, entAt, entWin, swapAt, useWin; int swapUses; int entId = -1, entStrikes; }
+	private static final class S { boolean pairOpen; final long[] rt = new long[6]; final float[] ry = new float[6], rp = new float[6]; int ri; long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; long clickAt, entAt, entWin, swapAt, useWin; int swapUses; int entId = -1, entStrikes; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 16; // fast bridging is about 8 a second
 
@@ -18,6 +18,7 @@ public final class Interact {
 	public static void look(ServerPlayer pl, float yaw, float pitch) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		s.prevPitch = s.pitch; s.prevYaw = s.yaw; s.pitch = pitch; s.yaw = yaw;
+		s.ri = (s.ri + 1) % s.rt.length; s.rt[s.ri] = System.currentTimeMillis(); s.ry[s.ri] = yaw; s.rp[s.ri] = pitch;
 		if (Math.max(Math.abs(pitch - s.prevPitch), Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - s.prevYaw))) > 25) s.flickAt = System.currentTimeMillis();
 	}
 
@@ -40,8 +41,11 @@ public final class Interact {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.swapAt >= 40) return false;
+		// Swap-and-use is how respawn anchors, totems and gapples are played, and a laggy link delivers the slot change and the click together. Only potions and throwables are worth refusing.
+		var it = pl.getMainHandItem().getItem().toString();
+		if (!(it.contains("potion") || it.contains("pearl") || it.contains("snowball") || it.contains("egg"))) return false;
 		if (now - s.useWin > 10000) { s.useWin = now; s.swapUses = 0; }
-		if (++s.swapUses >= 2) Verdict.signal(pl, "interact", "used an item " + (now - s.swapAt) + " ms after changing slot", 1);
+		if (++s.swapUses >= 4) Verdict.signal(pl, "interact", "used an item " + (now - s.swapAt) + " ms after changing slot", 1);
 		return true;
 	}
 
@@ -77,7 +81,17 @@ public final class Interact {
 		if (pl.level().getBlockState(Packets.hit(p).getBlockPos()).isAir()) { Verdict.signal(pl, "interact", "placed against air", 1); rate(pl); return true; }
 		AABB box = new AABB(Packets.hit(p).getBlockPos()).inflate(0.3);
 		Vec3 eye = pl.getEyePosition();
-		if (box.clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) { Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1); rate(pl); return true; }
+		boolean seen = !box.clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty();
+		// The click carries the view the client has on screen right now, which can be a few packets newer than the last rotation the server saw. A view held within the last quarter second counts.
+		S sv = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		long tnow = System.currentTimeMillis();
+		for (int i = 0; i < sv.rt.length && !seen; i++) {
+			if (sv.rt[i] == 0 || tnow - sv.rt[i] > 250) continue;
+			double yr = Math.toRadians(sv.ry[i]), pr = Math.toRadians(sv.rp[i]);
+			Vec3 dir = new Vec3(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr));
+			seen = !box.clip(eye, eye.add(dir.scale(8))).isEmpty();
+		}
+		if (!seen) { Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1); rate(pl); return true; }
 		// Human flicks and teleport aim corrections are legal; rotation jumps alone do not prove automation.
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
@@ -104,9 +118,12 @@ public final class Interact {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.windowAt > 1000) { s.windowAt = now; s.uses = 0; }
+		// One click on an item that can also be placed arrives as two packets in the same instant; that is one use.
+		if (s.pairOpen && now - s.lastUse <= 5) { s.pairOpen = false; return; }
+		s.pairOpen = true;
 		if (now - s.lastUse < 20) s.burst++; else s.burst = 0; // several uses inside one tick
 		s.lastUse = now;
-		if (s.burst >= 3) { s.burst = 0; Verdict.signal(pl, "interact", "several uses in one tick", 1); }
+		if (s.burst >= 5) { s.burst = 0; Verdict.signal(pl, "interact", "several uses in one tick", 1); } // a lag stall can release a few held clicks at once; six in one tick is not a hand
 		else if (++s.uses > MAX_PER_SECOND) { s.uses = 0; Verdict.signal(pl, "interact", "more than " + MAX_PER_SECOND + " uses in a second", 1); }
 	}
 

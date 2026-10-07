@@ -181,7 +181,7 @@ public final class Movement {
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
 			if (ch[0].equals("nofall")) { s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
-			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("microhop") || ch[0].equals("fly") ? 2 : 1); // a block climbed in a few ticks is never an accident
+			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("fly") ? 3 : ch[0].equals("microhop") ? 2 : 1); // a block climbed in a few ticks is never an accident
 			s.ownTp = true;
 			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;

@@ -48,10 +48,11 @@ public final class Cases {
 		return null;
 	}
 	/** meshac's own removals (kicks, tempbans, bans) inside the memory window that were not pardoned; this is what escalation counts. Staff actions do not count. */
-	public static synchronized int offences(UUID id) {
-		long from = System.currentTimeMillis() - Config.get().memoryDays() * 86_400_000L; int n = 0;
-		for (Case c : all) if (c.uuid.equals(id.toString()) && !c.pardoned && c.at >= from && c.by.equals("meshac")) n++;
-		return n;
+	public static synchronized double offences(UUID id) {
+		double hl = Config.get().offenceHalfLifeDays(); long now = System.currentTimeMillis(); java.util.List<Double> ages = new java.util.ArrayList<>();
+		for (Case c : all) if (c.uuid.equals(id.toString()) && !c.pardoned && c.by.equals("meshac") && now - c.at < hl * 8 * 86_400_000L) ages.add((now - c.at) / 86_400_000.0);
+		double[] a = new double[ages.size()]; for (int k = 0; k < a.length; k++) a[k] = ages.get(k);
+		return Ladder.effectiveOffences(a, hl);
 	}
 	/** Lifts every active ban on this player but keeps the offences on record, so the next one still escalates. Returns how many were lifted. */
 	public static synchronized int unban(String name) {

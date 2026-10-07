@@ -17,8 +17,12 @@ public final class Config {
 	public boolean discordOnHold = true; // also post when a player reaches the hold step, not only on kicks and bans
 	/** lenient, default or strict. Every knob below that is null follows the preset; set one to override just that knob. */
 	public String preset = "default";
-	public Integer holdAt, removeAt, heatCoolSeconds, kicksBeforeTempban, offenceMemoryDays;
+	public Double holdAt, removeAt; public Integer heatCoolSeconds, kicksBeforeTempban, offenceMemoryDays;
 	public int[] tempbanMinutes;
+	/** Ladder maths, see docs/PUNISHMENT-DESIGN.md. null follows the preset. */
+	public Double halfLifeSeconds, tempbanBaseMinutes, tempbanGrowth, tempbanMaxMinutes, offenceHalfLifeDays;
+	public Integer requireClusters, requireClustersTierA;
+	public Boolean permanentNeedsTierA = true, skipRungOnTierA = true;
 	public Boolean permanentBan; // false caps the ladder at its longest tempban
 	public String accent = "#7CF5C8";
 	public String warn = "#FFB454";
@@ -27,17 +31,28 @@ public final class Config {
 	// holdAt, removeAt, heat cool-down s, kicks before the first tempban, memory days, permanent ban (1/0)
 	private int[] base() {
 		return switch (preset.toLowerCase()) {
-			case "lenient" -> new int[] {4, 7, 10, 2, 14, 1};
-			case "strict" -> new int[] {3, 4, 10, 1, 90, 1};
-			default -> new int[] {3, 5, 10, 1, 30, 1};
+			case "lenient" -> new int[] {4, 7, 10, 2, 14, 0};
+			case "strict" -> new int[] {3, 4, 10, 1, 28, 0};
+			default -> new int[] {3, 5, 10, 1, 14, 0};
 		};
 	}
-	public int holdAt() { return holdAt != null ? holdAt : base()[0]; }
-	public int removeAt() { return removeAt != null ? removeAt : base()[1]; }
+	
+	
 	public long heatCoolMs() { return (heatCoolSeconds != null ? heatCoolSeconds : base()[2]) * 1000L; }
 	public int kicks() { return kicksBeforeTempban != null ? kicksBeforeTempban : base()[3]; }
 	public int memoryDays() { return offenceMemoryDays != null ? offenceMemoryDays : base()[4]; }
-	public boolean perma() { return permanentBan != null ? permanentBan : base()[5] == 1; }
+	public boolean perma() { return permanentBan != null ? permanentBan : false; }
+	public int holdAtI() { return (int) Math.round(holdAtD()); }
+	public double holdAtD() { return holdAt != null ? holdAt : 3; }
+	public double removeAtD() { return removeAt != null ? removeAt : switch (preset.toLowerCase()) { case "lenient" -> 8; case "strict" -> 5; default -> 6; }; }
+	public Ladder.Params ladderParams() { return new Ladder.Params(halfLifeSeconds != null ? halfLifeSeconds : 8, holdAtD(), removeAtD(), requireClusters != null ? requireClusters : 3, requireClustersTierA != null ? requireClustersTierA : 2, 3, 150); }
+	public boolean explicitLadder() { return tempbanMinutes != null && tempbanMinutes.length > 0; }
+	public double tempBase() { return tempbanBaseMinutes != null ? tempbanBaseMinutes : switch (preset.toLowerCase()) { case "lenient" -> 5; case "strict" -> 30; default -> 10; }; }
+	public double tempGrowth() { return tempbanGrowth != null ? tempbanGrowth : 6; }
+	public double tempMax() { return tempbanMaxMinutes != null ? tempbanMaxMinutes : 10080; }
+	public double offenceHalfLifeDays() { return offenceHalfLifeDays != null ? offenceHalfLifeDays : memoryDays(); }
+	public boolean permanentNeedsTierA() { return permanentNeedsTierA == null || permanentNeedsTierA; }
+	public boolean skipRungOnTierA() { return skipRungOnTierA == null || skipRungOnTierA; }
 	public int[] tempMinutes() {
 		if (tempbanMinutes != null && tempbanMinutes.length > 0) return tempbanMinutes;
 		return switch (preset.toLowerCase()) {

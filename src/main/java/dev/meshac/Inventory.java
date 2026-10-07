@@ -37,7 +37,7 @@ public final class Inventory {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.hotStart > 1000) { s.hotStart = now; s.hot = 0; }
-		if (++s.hot > 15) { s.hot = 0; Verdict.signal(pl, "inventory", "hotbar slot changed over 15 times in a second", 1); }
+		if (++s.hot > 30) { s.hot = 0; Verdict.signal(pl, "inventory", "hotbar slot changed over 30 times in a second", 1); }
 	}
 
 	public static void forget(UUID id) { STATE.remove(id); }

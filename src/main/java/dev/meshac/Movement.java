@@ -85,8 +85,11 @@ public final class Movement {
 		// Only server-observed elytra motion can seed the horizontal exit envelope.
 		// Removing the elytra does not instantly erase the vanilla client momentum.
 		if (pl.isFallFlying()) { s.glideAt = nowMs; s.glideH = Math.hypot(dx, dz); }
-		boolean exempt = baseExempt || pl.hurtTime > 0 || s.boosted;
-		if (pl.hurtTime > 0) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
+		// Only a hit that can throw the player (a mob, a projectile, a blast) buys slack. Fire, poison, wither, starvation and cactus hurt every second and would mask any hack run beside them.
+		var hs = pl.getLastDamageSource();
+		boolean pushed = pl.hurtTime > 0 && hs != null && (hs.getDirectEntity() != null || hs.getEntity() != null || hs.getMsgId().contains("explosion") || hs.getMsgId().contains("fall") || hs.getMsgId().contains("flyIntoWall") || hs.getMsgId().contains("anvil") || hs.getMsgId().contains("fallingBlock"));
+		boolean exempt = baseExempt || pushed || s.boosted;
+		if (pushed) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime);
 		String hit = null;
 		// Levitation (NoLevitation): the effect lifts the player every tick. Not rising for a while, with open air above, means the client ignores it.

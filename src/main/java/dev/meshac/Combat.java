@@ -10,6 +10,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Melee checks, one call per attack: reach, line of sight, aim, attack rate, multi-target, robotic aim. */
 public final class Combat {
+	private static final java.util.Map<java.util.UUID, long[]> MULTI = new java.util.concurrent.ConcurrentHashMap<>();
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final class S { int fakeCrit; long fakeAt; long[] rt = new long[12]; double[] re = new double[12]; int[] ri = new int[12]; int rn; long swapMs, swapWinMs, hitAt, cycleStart; boolean swapDiff; int swapHits, cycles; long g1, g2; int prevSlot = -1; long lastMs, lastId; int lastEntity = -1, weak, fast, perfect, snap, n; float lastYaw; final long[] gaps = new long[6]; final double[] errs = new double[6]; final int[] ids = new int[6]; int en; long windowMs; int hits; double lastErr = -1; }
 
@@ -86,7 +87,12 @@ public final class Combat {
 			if (es.size() >= 8 && who.size() >= 4) { java.util.Collections.sort(es); if (es.get(es.size() / 2) > 0.9) { hit = "hits on " + who.size() + " targets without aiming at them"; s.rn = 0; } }
 		}
 		// Multi-target: two different entities hit inside the same 50 ms.
-		if (hit == null && s.lastEntity != -1 && s.lastEntity != target.getId() && now - s.lastMs < 50) hit = "two targets in one tick";
+		if (hit == null && s.lastEntity != -1 && s.lastEntity != target.getId() && now - s.lastMs < 50) {
+			long[] mt = MULTI.computeIfAbsent(pl.getUUID(), kk -> new long[2]);
+			if (now - mt[0] > 10000) mt[1] = 0;
+			mt[0] = now;
+			if (++mt[1] >= 2) { mt[1] = 0; hit = "two targets in one tick"; }
+		}
 		// Snapping: the view swings more than 40 degrees to a different target inside 300 ms. A person cannot do that twice in a row.
 		float yaw = pl.getYRot(); float turn = Math.abs(net.minecraft.util.Mth.wrapDegrees(yaw - s.lastYaw));
 		if (s.lastEntity != -1 && s.lastEntity != target.getId() && now - s.lastMs < 300 && turn > 40) s.snap++; else if (now - s.lastMs > 600) s.snap = 0;

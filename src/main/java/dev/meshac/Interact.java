@@ -100,7 +100,7 @@ public final class Interact {
 		// Only blocks laid where the feet would be (over air) count as scaffolding; walking on solid ground while holding right click lays blocks ahead of you and is a legal play.
 		net.minecraft.core.BlockPos laid = Packets.hit(p).getBlockPos().relative(Packets.hit(p).getDirection());
 		boolean underFeet = laid.getY() == net.minecraft.util.Mth.floor(pl.getY()) - 1 && Math.abs(laid.getX() + 0.5 - pl.getX()) < 1.2 && Math.abs(laid.getZ() + 0.5 - pl.getZ()) < 1.2;
-		boolean step = underFeet && pl.getXRot() > 70 && dist > 0.3 && dt < 700;
+		boolean step = underFeet && dist > 0.3 && dt < 700;
 		if (step) { s.fwd++; s.chainDist += dist; s.chainMs += dt; } else { s.fwd = 0; s.chainDist = 0; s.chainMs = 0; }
 		s.lx = pl.getX(); s.lz = pl.getZ(); s.lt = now;
 		if (s.fwd >= 10) {

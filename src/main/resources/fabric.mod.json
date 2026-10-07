@@ -3,7 +3,7 @@
 	"id": "meshac",
 	"version": "${version}",
 	"name": "meshac",
-	"description": "Server-side anticheat for Fabric. Players install nothing.",
+	"description": "a native fabric anticheat",
 	"license": "AGPL-3.0-only",
 	"environment": "server",
 	"mixins": ["meshac.mixins.json"],

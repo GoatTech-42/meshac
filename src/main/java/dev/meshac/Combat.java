@@ -37,6 +37,7 @@ public final class Combat {
 	public static String check(ServerPlayer pl, Entity target) {
 		if (pl.isCreative() || pl.isSpectator()) return null;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		dev.meshac.veil.Veil.attacked(pl, target, pl.level().getServer().getTickCount());
 		long now = System.currentTimeMillis();
 		Vec3 eye = pl.getEyePosition();
 		AABB box = target.getBoundingBox();

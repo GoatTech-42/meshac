@@ -23,6 +23,7 @@ public final class Config {
 	public Double halfLifeSeconds, tempbanBaseMinutes, tempbanGrowth, tempbanMaxMinutes, offenceHalfLifeDays;
 	public Integer requireClusters, requireClustersTierA;
 	public Boolean permanentNeedsTierA = true, skipRungOnTierA = true;
+	public Boolean veilXray, veilEsp; // anti-xray and anti-ESP, both off until proven on a real client
 	public Boolean monitorOnly; // true: log and alert but never kick or ban
 	public Boolean permanentBan; // false caps the ladder at its longest tempban
 	public String accent = "#7CF5C8";
@@ -77,6 +78,7 @@ public final class Config {
 	private static Config cur = new Config();
 	public static Config get() { return cur; }
 
+	public static void applyVeil() { dev.meshac.veil.Veil.xrayOn = get().veilXray != null && get().veilXray; dev.meshac.veil.Veil.espOn = get().veilEsp != null && get().veilEsp; dev.meshac.veil.Veil.clear(); }
 	public static void load() {
 		Path p = FabricLoader.getInstance().getConfigDir().resolve("meshac.json");
 		Gson g = new GsonBuilder().setPrettyPrinting().serializeNulls().create();

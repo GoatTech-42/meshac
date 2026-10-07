@@ -136,7 +136,7 @@ Drops items with the normal drop action, which the server cannot tell apart from
 
 ### Manual attribute swapping is legal
 
-Swapping to a weapon for one hit and back is normal PvP. A single swap-hit-swapback looks the same on the wire whether a player or a module does it (our own test showed both at about 100 ms), so no timing separates them. meshac only flags the automated pattern: repeated cycles with machine-steady gaps. One manual swap never counts. This rule is rig-unproven so far.
+Swapping to a weapon for one hit and back is normal PvP. A single swap-hit-swapback looks the same on the wire whether a player or a module does it (our own test showed both at about 100 ms), so no timing separates them. meshac only flags the automated pattern: repeated cycles with machine-steady gaps. One manual swap never counts. Rig proof: Wurst AttributeSwap swapping to a second weapon on every hit trips it on the third cycle (swap-to-hit 1 ms), while the manual swap-back control in the legit suite stays clean. One 12 s run gives one signal, so a kick needs the pattern to continue.
 
 ### Still unproven or unrun
 

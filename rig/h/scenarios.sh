@@ -179,3 +179,6 @@ measure_sign2() { measure_sign; }
 # windjump: the legit max-height wind charge jump. Jump while a charge goes off at the feet, over and over, landing between. Must stay at zero flags.
 setup_windjump() { X0=100 Y0=-60 Z0=900; KEYS="space"; SECS=12; rc "forceload add 100 900" >/dev/null; rc "fill 96 -60 896 108 -40 912 air" >/dev/null; rc "fill 96 -61 896 108 -61 912 stone" >/dev/null; rc "effect give $NAME resistance 60 4 true" >/dev/null; PRE='for i in 1 2 3 4 5; do rc "summon wind_charge 100.5 -60.5 900.5" >/dev/null; sleep 2; done'; }
 measure_windjump() { pos | cut -d, -f2; }
+# AttributeSwap needs a target slot that holds a different item: sword in slot 1, axe in slot 2, module set to swap to slot 2 on each hit
+setup_swaphit() { setup_meleetank; PRE="say \".setslider attributeswap Target_slot 2\""; }
+measure_swaphit() { measure_meleetank; }

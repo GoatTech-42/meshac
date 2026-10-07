@@ -101,6 +101,7 @@ public final class Combat {
 			// A regular legal click rhythm or packet delivery cadence is not enough to convict.
 			if (Math.sqrt(var / 6) < 15) s.n = 0;
 		}
+		if (pl.getMainHandItem().getItem().toString().contains("mace")) Movement.maceSmash(pl);
 		if (System.getenv("MESHAC_TRACE") != null) Meshac.LOG.info("[trace] attack {} t={} reach={} err={} gap={} turn={} cd={} fd={} ground={} slot={} swapGap={} hit={}", pl.getGameProfile().name(), target.getId(), String.format("%.2f", reach), String.format("%.3f", err), gap, String.format("%.0f", turn), String.format("%.2f", pl.getAttackStrengthScale(0.5f)), String.format("%.2f", pl.fallDistance), pl.onGround(), pl.getInventory().getSelectedSlot(), now - s.swapMs, hit);
 		s.lastMs = now; s.lastEntity = target.getId();
 		return hit;

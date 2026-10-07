@@ -256,5 +256,7 @@ public final class Movement {
 		return Math.abs(ax - bx) < 0.01 && Math.abs(ay - by) < 0.01 && Math.abs(az - bz) < 0.01;
 	}
 
+	/** A mace smash with Wind Burst throws the player upward like a wind charge does. */
+	public static void maceSmash(ServerPlayer pl) { S s = STATE.get(pl.getUUID()); if (s != null) s.windAt = System.currentTimeMillis(); }
 	public static void forget(UUID id) { STATE.remove(id); }
 }

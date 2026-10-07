@@ -78,15 +78,15 @@ public final class Interact {
 		AABB box = new AABB(Packets.hit(p).getBlockPos()).inflate(0.3);
 		Vec3 eye = pl.getEyePosition();
 		if (box.clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) { Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1); rate(pl); return true; }
-		// Scaffold: the view jumps to the block just before each click. A hand turns over many packets.
+		// Human flicks and teleport aim corrections are legal; rotation jumps alone do not prove automation.
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
-		if (now - s.snapWin > 5000) { s.snapWin = now; s.snaps = 0; }
-		float jump = Math.max(Math.abs(s.pitch - s.prevPitch), Math.abs(net.minecraft.util.Mth.wrapDegrees(s.yaw - s.prevYaw)));
-		if (jump > 35 && ++s.snaps >= 3) { s.snaps = 0; Verdict.signal(pl, "interact", "view snaps to the block before placing", 1); }
 		// Scaffold walks over air at full walking speed with the view pinned down, laying a block under each step. Even elite speed-bridgers crouch at the edge and stay under 4 blocks a second.
 		double dist = Math.hypot(pl.getX() - s.lx, pl.getZ() - s.lz); long dt = now - s.lt;
-		boolean step = Packets.hit(p).getBlockPos().getY() < pl.getY() && pl.getXRot() > 70 && dist > 0.3 && dt < 700;
+		// Only blocks laid where the feet would be (over air) count as scaffolding; walking on solid ground while holding right click lays blocks ahead of you and is a legal play.
+		net.minecraft.core.BlockPos laid = Packets.hit(p).getBlockPos().relative(Packets.hit(p).getDirection());
+		boolean underFeet = laid.getY() == net.minecraft.util.Mth.floor(pl.getY()) - 1 && Math.abs(laid.getX() + 0.5 - pl.getX()) < 1.2 && Math.abs(laid.getZ() + 0.5 - pl.getZ()) < 1.2;
+		boolean step = underFeet && pl.getXRot() > 70 && dist > 0.3 && dt < 700;
 		if (step) { s.fwd++; s.chainDist += dist; s.chainMs += dt; } else { s.fwd = 0; s.chainDist = 0; s.chainMs = 0; }
 		s.lx = pl.getX(); s.lz = pl.getZ(); s.lt = now;
 		if (s.fwd >= 10) {

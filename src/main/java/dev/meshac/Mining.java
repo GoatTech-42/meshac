@@ -12,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Nuker, Kaboom, FastBreak and friends: breaking blocks no hand could reach, see or break that fast. */
 public final class Mining {
-	private static final class S { long windowAt; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; }
+	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 8; // a hasted, efficiency V player on soft blocks tops out near 5
 
@@ -41,6 +41,7 @@ public final class Mining {
 			if (++s.turns >= 4) { s.turns = 0; Verdict.signal(pl, "mining", "breaks blocks in every direction", 1); return true; }
 		}
 		if (!instant) { s.lastDir = dir; s.lastAt = now; }
+		if (Trace.ON) Meshac.LOG.info("[trace] break {} {} gap={} lookdeg={} instant={} turnsInWin={}", pl.getGameProfile().name(), pos, s.lastBreak == 0 ? -1 : now - s.lastBreak, Math.round(Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, dir.dot(pl.getLookAngle())))))), instant, s.turns); s.lastBreak = now;
 		if (now - s.windowAt > 1000) { s.windowAt = now; s.breaks = 0; }
 		if (++s.breaks > MAX_PER_SECOND) {
 			Verdict.signal(pl, "mining", "more than " + MAX_PER_SECOND + " blocks in a second", 1);

@@ -17,10 +17,10 @@ public final class Meshac implements ModInitializer {
 		// A banned player who reconnects is shown the ban screen again with the time that is left.
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			Cases.Case c = Cases.activeBan(handler.player.getUUID());
-			if (c != null) handler.disconnect(Screens.ban(c));
+			if (c != null) handler.disconnect(Screens.ban(c)); else Fingerprints.check(handler.player);
 		});
-		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : server.getPlayerList().getPlayers()) Movement.tick(pl); });
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); Combat.forget(handler.player.getUUID()); Vehicle.forget(handler.player.getUUID()); Mining.forget(handler.player.getUUID()); Interact.forget(handler.player.getUUID()); Inventory.forget(handler.player.getUUID()); Totem.forget(handler.player.getUUID()); Glide.forget(handler.player.getUUID()); });
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : new java.util.ArrayList<>(server.getPlayerList().getPlayers())) { Movement.tick(pl); Fingerprints.check(pl); } });
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Fingerprints.forget(handler.player.getUUID()); Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); Combat.forget(handler.player.getUUID()); Vehicle.forget(handler.player.getUUID()); Mining.forget(handler.player.getUUID()); Interact.forget(handler.player.getUUID()); Inventory.forget(handler.player.getUUID()); Totem.forget(handler.player.getUUID()); Glide.forget(handler.player.getUUID()); });
 		LOG.info("meshac loaded");
 	}
 }

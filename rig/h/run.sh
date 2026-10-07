@@ -7,14 +7,16 @@ RES=${RES:-$HOME/meshac-work/results.csv}
 run_case() {
   S=$1; H=$2; PRE=""; KEYS=""; SECS=8; CLICK=0; JITTER=0; YAW=0; PITCH=0
   ensure || { echo "$S,$H,,,,,,,,,client lost" >> $RES; return; }
+  # Isolate setup from legal residual elytra/knockback momentum before inventory clear.
+  rc "tp $NAME 100.5 -60 0.5 0 0" >/dev/null; sleep 2
   rc "difficulty easy" >/dev/null; rc "time set midnight" >/dev/null; rc "gamerule spawn_mobs false" >/dev/null; rc "gamerule natural_health_regeneration false" >/dev/null
   rc "gamemode survival $NAME" >/dev/null; rc "effect clear $NAME" >/dev/null; rc "clear $NAME" >/dev/null
   rc "kill @e[type=!player]" >/dev/null; rc "effect give $NAME instant_health 1 10 true" >/dev/null
   setup_$S; rc "forceload add $((X0-8)) $((Z0-8)) $((X0+8)) $((Z0+12))" >/dev/null; sleep 2; rc "clear $NAME" >/dev/null; setup_$S
   rc "tp $NAME $X0.5 $Y0 $Z0.5 $YAW $PITCH" >/dev/null; sleep 2
   p0=$(pos); h0=$(hp); m0=$(measure_$S 2>/dev/null)
-  [ "$H" != none ] && say ".t $H"
   iso=$(date -u +%Y-%m-%dT%H:%M:%S); t0=$(date +%s.%N)
+  [ "$H" != none ] && say ".t $H"
   sleep 3 # the movement checks give a fresh player 20 packets of grace; let it run out before the hack acts
   [ -n "$PRE" ] && eval "$PRE"
   for k in $KEYS; do X keydown $k; done

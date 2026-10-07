@@ -19,7 +19,7 @@ public final class Movement {
 	private static final class S {
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ;
 		boolean ground, cground, init, ownTp;
-		long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
+		long glideAt; double glideH; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -76,6 +76,9 @@ public final class Movement {
 		// A wind charge launches the player far past any jump or fall. Exempt from the moment a charge is near until a moment after the landing.
 		long nowMs = System.currentTimeMillis();
 		if (nowMs - s.windAt < 4000) s.boosted = true; else if (ground) s.boosted = false;
+		// Only server-observed elytra motion can seed the horizontal exit envelope.
+		// Removing the elytra does not instantly erase the vanilla client momentum.
+		if (pl.isFallFlying()) { s.glideAt = nowMs; s.glideH = Math.hypot(dx, dz); }
 		boolean exempt = baseExempt || pl.hurtTime > 0 || s.boosted;
 		if (pl.hurtTime > 0) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime);
@@ -103,6 +106,9 @@ public final class Movement {
 				|| pl.level().getBlockState(pl.blockPosition().above()).is(net.minecraft.world.level.block.Blocks.COBWEB);
 			s.slowTicks = slow < 1.0 ? s.slowTicks + 1 : 0; // the first ticks on a slow block still carry normal momentum
 			double cap = (s.ground && ground ? 0.34 : 0.62) * (pl.getSpeed() / 0.13) * (fr > 0.61 ? 3 : 1) * (s.slowTicks >= 5 ? Math.max(slow, 0.65) : 1.0);
+			// One second at no more than the last verified glide speed. No flight,
+			// timer, wall or jump check is exempted, and acceleration is not allowed.
+			if (s.glideAt != 0 && nowMs - s.glideAt < 1000) cap = Math.max(cap, s.glideH + 0.03);
 			if (web) cap = 0.10; // vanilla cobweb scales motion by 0.25 or less
 			double h = Math.hypot(dx, dz);
 			if (h > cap) { s.bufSpeed += h > cap * 1.25 ? 3 : 1; s.clean = 0; } // a big overshoot counts triple

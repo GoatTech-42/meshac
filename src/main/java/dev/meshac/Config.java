@@ -8,6 +8,10 @@ import net.fabricmc.loader.api.FabricLoader;
 
 /** config/meshac.json. Written with defaults on first start so staff can see every knob. */
 public final class Config {
+	/** Optional client-supplied identity hints. Empty exact lists, disabled by default. */
+	public boolean clientFingerprintEnabled = false;
+	public String[] clientFingerprintBrands = {};
+	public String[] clientFingerprintChannels = {};
 	public String appeal = "Think this is a mistake? Tell staff the case ID above.";
 	public String discordWebhook = ""; // empty = off
 	public boolean discordOnHold = true; // also post when a player reaches the hold step, not only on kicks and bans
@@ -43,6 +47,16 @@ public final class Config {
 		};
 	}
 
+	private static String documented(Gson g, Config c) {
+		var root = g.toJsonTree(c).getAsJsonObject();
+		var help = new com.google.gson.JsonObject();
+		help.addProperty("preset", "lenient, default or strict. null overrides below use the preset.");
+		help.addProperty("punishments", "holdAt/removeAt are heat levels; heatCoolSeconds cools heat. kicksBeforeTempban counts removals, offenceMemoryDays sets history. tempbanMinutes is the ladder. permanentBan=false caps it.");
+		help.addProperty("clientFingerprint", "OFF by default. Exact client-provided brand/channel matches only, case-sensitive. Empty lists match nobody. Hints can be spoofed; never proof of cheats. First match kicks, matching rejoin bans separately from behavior. Generic vanilla/fabric/forge/neoforge and minecraft/fabric/forge channels are ignored. Pardon cases to clear history.");
+		help.addProperty("discord", "Empty discordWebhook disables posts. Treat webhook as secret. discordOnHold also posts holds.");
+		help.addProperty("appearance", "accent and warn are #RRGGBB colors. serverName and appeal appear on removal screens.");
+		root.add("_help", help); return g.toJson(root) + "\n";
+	}
 	private static Config cur = new Config();
 	public static Config get() { return cur; }
 
@@ -50,8 +64,15 @@ public final class Config {
 		Path p = FabricLoader.getInstance().getConfigDir().resolve("meshac.json");
 		Gson g = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
 		try {
-			if (Files.exists(p)) cur = g.fromJson(Files.readString(p), Config.class);
-			else Files.writeString(p, g.toJson(cur));
+			if (Files.exists(p)) {
+				var root = com.google.gson.JsonParser.parseString(Files.readString(p)).getAsJsonObject();
+				cur = g.fromJson(root, Config.class);
+				// Add new defaults/help without changing existing or unknown owner settings.
+				var defaults = com.google.gson.JsonParser.parseString(documented(g, new Config())).getAsJsonObject();
+				for (var entry : defaults.entrySet()) if (!root.has(entry.getKey())) root.add(entry.getKey(), entry.getValue());
+				Files.writeString(p, g.toJson(root) + "\n");
+			}
+			else Files.writeString(p, documented(g, cur));
 		} catch (Exception e) { Meshac.LOG.warn("[meshac] could not read config, using defaults: {}", e.toString()); }
 	}
 }

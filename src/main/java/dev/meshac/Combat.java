@@ -52,30 +52,19 @@ public final class Combat {
 		double bx = Math.max(-2, Math.min(2, mv.x * -4)), bz = Math.max(-2, Math.min(2, mv.z * -4)); // sideways only: gravity is not a reason to look lower
 		AABB aimed = new AABB(box.minX + Math.min(0, bx), box.minY, box.minZ + Math.min(0, bz), box.maxX + Math.max(0, bx), box.maxY, box.maxZ + Math.max(0, bz)).inflate(0.35);
 		var ray = aimed.clip(eye, eye.add(look.scale(6)));
-		if (hit == null && ray.isEmpty() && reach > 0.15) hit = "not looking at target"; // inside the hitbox the ray has no entry point; anywhere else a miss of the box is a miss
+		if (hit == null && ray.isEmpty() && !aimed.contains(eye) && reach > 0.15) hit = "not looking at target"; // inside the hitbox the ray has no entry point; anywhere else a miss of the box is a miss
 		// Robotic aim: the look ray hits the exact same spot of the box hit after hit. People wobble by a few centimetres.
 		Vec3 centre = box.getCenter();
 		// Closest approach of the look ray to the box centre. Distance from the entry point is nearly constant for any central hit, so it hides wobble.
 		double err = ray.isPresent() ? centre.subtract(eye.add(look.scale(Math.max(0, centre.subtract(eye).dot(look))))).length() : 9.0;
 		if (s.lastErr >= 0 && Math.abs(err - s.lastErr) < 0.004 && err < 1) s.perfect++; else s.perfect = Math.max(0, s.perfect - 1);
 		s.lastErr = err;
-		if (hit == null && s.perfect >= 5) { hit = "aim is too steady"; s.perfect = 0; }
+		// Holding a still mouse on a stationary target is legal. Same-target steadiness is not evidence of automation.
 		// Same aim error on different targets: the look ray lands at the same spot of every box. People are never that even across targets.
 		if (s.lastMs != 0 && now - s.lastMs > 3000) s.en = 0; // an old fight does not count towards this one
 		s.errs[s.en % 6] = err; s.ids[s.en % 6] = target.getId(); s.en++;
-		if (hit == null && s.en >= 6 && err < 1) {
-			double[] sorted = s.errs.clone(); java.util.Arrays.sort(sorted); double med = (sorted[2] + sorted[3]) / 2;
-			int close = 0; java.util.Set<Integer> who = new java.util.HashSet<>();
-			for (int i = 0; i < 6; i++) if (Math.abs(s.errs[i] - med) < 0.004) { close++; who.add(s.ids[i]); }
-			if (close >= 5 && who.size() >= 2) hit = "same aim on different targets";
-			// Dead on the centre of the box: a hand never lands within 3 mm of the exact middle three times in six hits.
-			int exact = 0; for (int i = 0; i < 6; i++) if (s.errs[i] < 0.003) exact++;
-			if (hit == null && exact >= 3) hit = "aim is exactly on the centre";
-			// Dead-centre aim: nearly every recent hit lands within 15 cm of the box centre, across more than one target. A person drifts.
-			int centred = 0; java.util.Set<Integer> cwho = new java.util.HashSet<>();
-			for (int i = 0; i < 6; i++) if (s.errs[i] < 0.15) { centred++; cwho.add(s.ids[i]); }
-			if (hit == null && centred >= 4 && cwho.size() >= 2) hit = "aim locked to the centre";
-		}
+		// Precise or consistent aim, including across targets, is legal and does not prove automation.
+
 		// Attack rate: more than about 12 swings a second, or many hits at low cooldown charge.
 		if (now - s.lastMs < 70) s.fast++; else s.fast = Math.max(0, s.fast - 1);
 		if (hit == null && s.fast >= 4) { hit = "attack rate"; s.fast = 0; }
@@ -109,7 +98,8 @@ public final class Combat {
 		if (hit == null && s.n >= 6) {
 			double mean = 0; for (long g : s.gaps) mean += g; mean /= 6;
 			double var = 0; for (long g : s.gaps) var += (g - mean) * (g - mean);
-			if (Math.sqrt(var / 6) < 15) { hit = "attack timing is too regular"; s.n = 0; }
+			// A regular legal click rhythm or packet delivery cadence is not enough to convict.
+			if (Math.sqrt(var / 6) < 15) s.n = 0;
 		}
 		if (System.getenv("MESHAC_TRACE") != null) Meshac.LOG.info("[trace] attack {} t={} reach={} err={} gap={} turn={} cd={} fd={} ground={} slot={} swapGap={} hit={}", pl.getGameProfile().name(), target.getId(), String.format("%.2f", reach), String.format("%.3f", err), gap, String.format("%.0f", turn), String.format("%.2f", pl.getAttackStrengthScale(0.5f)), String.format("%.2f", pl.fallDistance), pl.onGround(), pl.getInventory().getSelectedSlot(), now - s.swapMs, hit);
 		s.lastMs = now; s.lastEntity = target.getId();

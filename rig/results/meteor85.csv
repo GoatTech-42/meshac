@@ -1,0 +1,8 @@
+flyw,long-jump,"100.5,-60.0,0.5","100.5,-60.0,33.69095488684804",20.0>20.0,"0>0",1,5.3,-,-,speed,connected
+reach,reach,"100.5,-60.0,40.5","",20.0>,"20.0>20.0",3,5.1,6.3,-,combat,kicked
+meleetank,kill-aura,"100.5,-60.0,20.5","",20.0>,"1000.0f>991.706f",3,2.4,2.5,-,combat,kicked
+meleefar,kill-aura,"100.5,-60.0,20.5","100.5,-60.0,20.5",20.0>20.0,"1000.0f>1000.0f",0,-,-,-,-,connected
+meleefar,hitboxes,"100.5,-60.0,20.5","",20.0>,"1000.0f>1000.0f",3,5.2,6.5,-,combat,kicked
+meleeclick,criticals,"100.5,-60.0,20.5","",20.0>,"8>7",3,6.6,9.1,-,microhop,kicked
+meleeclick,auto-clicker,"100.5,-60.0,20.5","",20.0>,"8>8",3,2.4,3.3,-,combat,kicked
+DONE

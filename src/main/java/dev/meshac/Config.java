@@ -23,6 +23,7 @@ public final class Config {
 	public Double halfLifeSeconds, tempbanBaseMinutes, tempbanGrowth, tempbanMaxMinutes, offenceHalfLifeDays;
 	public Integer requireClusters, requireClustersTierA;
 	public Boolean permanentNeedsTierA = true, skipRungOnTierA = true;
+	public Boolean monitorOnly; // true: log and alert but never kick or ban
 	public Boolean permanentBan; // false caps the ladder at its longest tempban
 	public String accent = "#7CF5C8";
 	public String warn = "#FFB454";
@@ -41,6 +42,7 @@ public final class Config {
 	public long heatCoolMs() { return (heatCoolSeconds != null ? heatCoolSeconds : base()[2]) * 1000L; }
 	public int kicks() { return kicksBeforeTempban != null ? kicksBeforeTempban : base()[3]; }
 	public int memoryDays() { return offenceMemoryDays != null ? offenceMemoryDays : base()[4]; }
+	public boolean monitor() { return monitorOnly != null && monitorOnly; }
 	public boolean perma() { return permanentBan != null ? permanentBan : false; }
 	public int holdAtI() { return (int) Math.round(holdAtD()); }
 	public double holdAtD() { return holdAt != null ? holdAt : 3; }

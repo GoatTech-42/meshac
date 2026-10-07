@@ -47,9 +47,26 @@ public final class Verdict {
 			if (step == Step.REMOVE) { h.heat = 0; h.lh.reset(); h.weight.clear(); h.detail.clear(); }
 		}
 		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> {}", pl.getGameProfile().name(), check, detail, h.heat, step.name().toLowerCase());
+		alert(pl, check + " " + detail + " heat " + h.heat + " " + step.name().toLowerCase());
+		if (step == Step.REMOVE && Config.get().monitor()) { Meshac.LOG.warn("[meshac] MONITOR {} would be removed: {}", pl.getGameProfile().name(), why); alert(pl, "monitor mode: would remove (" + why + ")"); return Step.HOLD; }
 		if (step == Step.HOLD && h.heat - weight < Config.get().holdAtI()) Discord.hold(pl.getGameProfile().name(), check, detail);
 		if (step == Step.REMOVE) remove(pl, why, ev);
 		return step;
+	}
+
+	/** Staff who ran /mesh watch see every flag as it happens. */
+	public static final java.util.Set<UUID> WATCH = ConcurrentHashMap.newKeySet();
+	private static void alert(ServerPlayer pl, String text) {
+		if (WATCH.isEmpty()) return;
+		var srv = pl.level().getServer();
+		for (UUID u : WATCH) { ServerPlayer w = srv.getPlayerList().getPlayer(u); if (w != null) w.sendSystemMessage(net.minecraft.network.chat.Component.literal("[meshac] " + pl.getGameProfile().name() + " " + text)); }
+	}
+	/** One line for /mesh status. */
+	public static String status(ServerPlayer pl) {
+		H h = HEAT.get(pl.getUUID()); Config cf = Config.get();
+		double eff = Cases.offences(pl.getUUID()); int rung = Ladder.rung(eff, cf.kicks(), false);
+		String next = rung <= cf.kicks() ? "kick" : (cf.explicitLadder() ? cf.tempMinutes()[Math.min(rung - cf.kicks() - 1, cf.tempMinutes().length - 1)] : Ladder.tempMinutes(rung, cf.kicks(), cf.tempBase(), cf.tempGrowth(), cf.tempMax())) + " min tempban";
+		return pl.getGameProfile().name() + ": heat " + (h == null ? "0.0" : String.format("%.1f", h.lh.now(System.currentTimeMillis(), cf.ladderParams()))) + ", offences " + String.format("%.2f", eff) + ", next removal: " + next + (cf.monitor() ? " (monitor mode, no removals)" : "");
 	}
 
 	private static void remove(ServerPlayer pl, String why, List<String> evidence) {

@@ -9,7 +9,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-/** /mesh for staff: cases, case, pardon, unban, ban, reload. */
+/** /mesh for staff: cases, case, pardon, unban, ban, kick, status, watch, monitor, reload. */
 public final class MeshCommands {
 	public static void register(CommandDispatcher<CommandSourceStack> d) {
 		d.register(Commands.literal("mesh").requires(Perm.admin())
@@ -25,6 +25,20 @@ public final class MeshCommands {
 			.then(Commands.literal("ban").then(Commands.argument("player", StringArgumentType.word())
 				.then(Commands.argument("minutes", IntegerArgumentType.integer(0)).then(Commands.argument("reason", StringArgumentType.greedyString()).executes(c -> ban(c.getSource(),
 					StringArgumentType.getString(c, "player"), IntegerArgumentType.getInteger(c, "minutes"), StringArgumentType.getString(c, "reason")))))))
+			.then(Commands.literal("status").then(Commands.argument("player", net.minecraft.commands.arguments.EntityArgument.player()).executes(c -> {
+				ServerPlayer t = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player"); String s = Verdict.status(t);
+				c.getSource().sendSuccess(() -> Component.literal(s), false); return 1; })))
+			.then(Commands.literal("watch").executes(c -> {
+				ServerPlayer me = c.getSource().getPlayer(); if (me == null) { c.getSource().sendFailure(Component.literal("Players only.")); return 0; }
+				boolean on = Verdict.WATCH.add(me.getUUID()); if (!on) Verdict.WATCH.remove(me.getUUID());
+				c.getSource().sendSuccess(() -> Component.literal(on ? "Watching flags." : "Stopped watching."), false); return 1; }))
+			.then(Commands.literal("monitor").executes(c -> { c.getSource().sendSuccess(() -> Component.literal("Monitor mode is " + (Config.get().monitor() ? "on" : "off") + "."), false); return 1; })
+				.then(Commands.literal("on").executes(c -> { Config.get().monitorOnly = true; c.getSource().sendSuccess(() -> Component.literal("Monitor mode on: flags are logged, nobody is kicked or banned."), true); return 1; }))
+				.then(Commands.literal("off").executes(c -> { Config.get().monitorOnly = false; c.getSource().sendSuccess(() -> Component.literal("Monitor mode off."), true); return 1; })))
+			.then(Commands.literal("kick").then(Commands.argument("player", net.minecraft.commands.arguments.EntityArgument.player()).then(Commands.argument("reason", StringArgumentType.greedyString()).executes(c -> {
+				ServerPlayer t = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player"); String why = StringArgumentType.getString(c, "reason");
+				Cases.Case cs = Cases.add(t.getGameProfile().name(), t.getUUID(), "kick", why, c.getSource().getTextName(), 0, List.of("Staff kick")); t.connection.disconnect(Screens.kick(why, cs));
+				c.getSource().sendSuccess(() -> Component.literal("Kicked " + t.getGameProfile().name() + ", case " + cs.id), true); return 1; }))))
 			.then(Commands.literal("reload").executes(c -> { Config.load(); Cases.load(); c.getSource().sendSuccess(() -> Component.literal("meshac reloaded."), true); return 1; })));
 	}
 

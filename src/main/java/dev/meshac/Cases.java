@@ -15,7 +15,7 @@ public final class Cases {
 	public static final class Case {
 		public String id, player, uuid, action, reason, by;
 		public long at, until;          // until: 0 = no expiry (kick, permanent ban)
-		public boolean pardoned;
+		public boolean pardoned, lifted;
 		public List<String> evidence = new ArrayList<>();
 	}
 	private static final Gson G = new GsonBuilder().setPrettyPrinting().create();
@@ -42,7 +42,7 @@ public final class Cases {
 		long now = System.currentTimeMillis();
 		for (int i = all.size() - 1; i >= 0; i--) {
 			Case c = all.get(i);
-			if (!c.uuid.equals(id.toString()) || c.pardoned) continue;
+			if (!c.uuid.equals(id.toString()) || c.pardoned || c.lifted) continue;
 			if (c.action.equals("ban") || (c.action.equals("tempban") && c.until > now)) return c;
 		}
 		return null;
@@ -53,10 +53,10 @@ public final class Cases {
 		for (Case c : all) if (c.uuid.equals(id.toString()) && !c.pardoned && c.at >= from && c.by.equals("meshac")) n++;
 		return n;
 	}
-	/** Lifts every active ban on this player and forgives those cases. Returns how many were lifted. */
+	/** Lifts every active ban on this player but keeps the offences on record, so the next one still escalates. Returns how many were lifted. */
 	public static synchronized int unban(String name) {
 		long now = System.currentTimeMillis(); int n = 0;
-		for (Case c : all) if (c.player.equalsIgnoreCase(name) && !c.pardoned && (c.action.equals("ban") || (c.action.equals("tempban") && c.until > now))) { c.pardoned = true; n++; }
+		for (Case c : all) if (c.player.equalsIgnoreCase(name) && !c.pardoned && !c.lifted && (c.action.equals("ban") || (c.action.equals("tempban") && c.until > now))) { c.lifted = true; n++; }
 		if (n > 0) save();
 		return n;
 	}

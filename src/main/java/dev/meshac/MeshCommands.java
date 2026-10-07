@@ -30,7 +30,7 @@ public final class MeshCommands {
 
 	private static int list(CommandSourceStack s, List<Cases.Case> cs) {
 		if (cs.isEmpty()) { s.sendSuccess(() -> Component.literal("No cases."), false); return 0; }
-		for (Cases.Case c : cs) s.sendSuccess(() -> Component.literal(c.id + "  " + c.action + "  " + c.player + "  " + c.reason + (c.pardoned ? "  (pardoned)" : "")), false);
+		for (Cases.Case c : cs) s.sendSuccess(() -> Component.literal(c.id + "  " + c.action + "  " + c.player + "  " + c.reason + (c.pardoned ? "  (pardoned)" : c.lifted ? "  (lifted)" : "")), false);
 		return cs.size();
 	}
 	private static int show(CommandSourceStack s, String id) {

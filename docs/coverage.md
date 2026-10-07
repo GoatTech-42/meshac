@@ -46,7 +46,7 @@ Same rig and same reading of the columns as above. Every hack here was also run 
 | Hack | What happened | Check |
 |---|---|---|
 | BoatFly | Kicked in about 5 s | A boat that rises 5 packets in a row in open air is refused |
-| AttributeSwap | Held at 10.8 s | Swap to another item type and hit inside 120 ms, 3 times in 10 s |
+| AttributeSwap | Held at 10.8 s | Swap, hit, swap back three times in 20 s with the gaps repeating within 12 ms, or a swap-to-hit gap under 30 ms |
 | AntiKnockback | Caught | Hit, then under 0.3 block of push in 450 ms with open space, 3 times in a row. Real pushes measured 0.7 to 1.1 blocks |
 | SpeedNuker, Kaboom | Kicked in 2.2 s (Kaboom partly, through-block rule) | Block broken through another block, or more than 8 breaks a second |
 | AutoBuild, InstaBuild | Kicked in 4 to 6 s | Click on a block that is not in the look ray, or more than 16 uses a second |
@@ -133,6 +133,10 @@ More than 15 hotbar slot changes in one second. Signal at 0.1 s, kicked at 2.3 s
 
 Drops items with the normal drop action, which the server cannot tell apart from a player doing it.
 
+
+### Manual attribute swapping is legal
+
+Swapping to a weapon for one hit and back is normal PvP. A single swap-hit-swapback looks the same on the wire whether a player or a module does it (our own test showed both at about 100 ms), so no timing separates them. meshac only flags the automated pattern: repeated cycles with machine-steady gaps. One manual swap never counts. This rule is rig-unproven so far.
 
 ### Still unproven or unrun
 

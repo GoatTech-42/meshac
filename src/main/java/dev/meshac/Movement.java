@@ -139,6 +139,7 @@ public final class Movement {
 				// High jump: one jump climbs 1.25 blocks (more with Jump Boost). Rising past that in one flight is not vanilla unless a wind charge threw the player.
 				MobEffectInstance jb = pl.getEffect(MobEffects.JUMP_BOOST);
 				double room = 1.45 + (jb == null ? 0 : (jb.getAmplifier() + 1) * 0.6);
+				if (s.airY0 == 0) s.airY0 = y; // a fresh state has no takeoff height yet
 				if (dy > 0.05 && y - s.airY0 > room && s.grace == 0 && hit == null && System.currentTimeMillis() - s.exemptAt > 4000) hit = String.format("high jump rose %.2f", y - s.airY0);
 			} else { s.bufFly = 0; s.sinceJump = 99; s.airY0 = s.ground ? sy : y; }
 			// Step: a hack can climb a block with several small rises that all claim ground. Add them up.

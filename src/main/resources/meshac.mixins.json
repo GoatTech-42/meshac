@@ -2,6 +2,6 @@
 	"required": true,
 	"package": "dev.meshac.mixin",
 	"compatibilityLevel": "JAVA_21",
-	"server": ["ServerCommonPacketListenerImplMixin", "ServerConfigurationPacketListenerImplMixin", "ServerGamePacketListenerImplMixin", "AttackMixin", "ServerPlayerGameModeMixin", "LivingEntityMixin", "ChunkDataMixin", "TrackedEntityMixin", "ChunkMapMixin", "ServerLevelVeilMixin"],
+	"server": ["ServerCommonPacketListenerImplMixin", "ServerConfigurationPacketListenerImplMixin", "ServerGamePacketListenerImplMixin", "AttackMixin", "ServerPlayerGameModeMixin", "LivingEntityMixin", "ChunkDataMixin", "TrackedEntityMixin", "ChunkMapMixin", "ServerLevelVeilMixin", "PistonWaterMixin"],
 	"injectors": { "defaultRequire": 1 }
 }

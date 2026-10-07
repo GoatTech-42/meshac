@@ -23,6 +23,7 @@ public final class Config {
 	public Double halfLifeSeconds, tempbanBaseMinutes, tempbanGrowth, tempbanMaxMinutes, offenceHalfLifeDays;
 	public Integer requireClusters, requireClustersTierA;
 	public Boolean permanentNeedsTierA = true, skipRungOnTierA = true;
+	public Boolean fixPistonWater; // patches MC-130183 (short-pulse sticky piston keeps waterlogging), stops flood machines. OFF by default
 	public Boolean veilXray, veilEsp; // anti-xray and anti-ESP, both off until proven on a real client
 	public Boolean monitorOnly; // true: log and alert but never kick or ban
 	public Boolean permanentBan; // false caps the ladder at its longest tempban

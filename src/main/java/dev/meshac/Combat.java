@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 /** Melee checks, one call per attack: reach, line of sight, aim, attack rate, multi-target, robotic aim. */
 public final class Combat {
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
-	private static final class S { long swapMs, swapWinMs, hitAt, cycleStart; boolean swapDiff; int swapHits, cycles; long g1, g2; int prevSlot = -1; long lastMs, lastId; int lastEntity = -1, weak, fast, perfect, snap, n; float lastYaw; final long[] gaps = new long[6]; final double[] errs = new double[6]; final int[] ids = new int[6]; int en; long windowMs; int hits; double lastErr = -1; }
+	private static final class S { int fakeCrit; long fakeAt; long[] rt = new long[12]; double[] re = new double[12]; int[] ri = new int[12]; int rn; long swapMs, swapWinMs, hitAt, cycleStart; boolean swapDiff; int swapHits, cycles; long g1, g2; int prevSlot = -1; long lastMs, lastId; int lastEntity = -1, weak, fast, perfect, snap, n; float lastYaw; final long[] gaps = new long[6]; final double[] errs = new double[6]; final int[] ids = new int[6]; int en; long windowMs; int hits; double lastErr = -1; }
 
 	/** Called when the player picks another hotbar slot. */
 	public static void swapped(ServerPlayer pl, int slot) {
@@ -52,7 +52,7 @@ public final class Combat {
 		double bx = Math.max(-2, Math.min(2, mv.x * -4)), bz = Math.max(-2, Math.min(2, mv.z * -4)); // sideways only: gravity is not a reason to look lower
 		AABB aimed = new AABB(box.minX + Math.min(0, bx), box.minY, box.minZ + Math.min(0, bz), box.maxX + Math.max(0, bx), box.maxY, box.maxZ + Math.max(0, bz)).inflate(0.35);
 		var ray = aimed.clip(eye, eye.add(look.scale(6)));
-		if (hit == null && ray.isEmpty() && reach > 0.8) hit = "not looking at target";
+		if (hit == null && ray.isEmpty() && reach > 0.15) hit = "not looking at target"; // inside the hitbox the ray has no entry point; anywhere else a miss of the box is a miss
 		// Robotic aim: the look ray hits the exact same spot of the box hit after hit. People wobble by a few centimetres.
 		Vec3 centre = box.getCenter();
 		// Closest approach of the look ray to the box centre. Distance from the entry point is nearly constant for any central hit, so it hides wobble.
@@ -82,6 +82,20 @@ public final class Combat {
 		if (pl.getAttackStrengthScale(0.5f) < 0.5f) s.weak++; else s.weak = Math.max(0, s.weak - 1);
 		if (hit == null && s.weak >= 6) { hit = "hitting before the cooldown"; s.weak = 0; }
 		s.hitAt = now;
+		// Criticals: the client says "in the air" for a few centimetres so the server counts a fall and the hit crits. A real crit needs a real fall.
+		double fd = pl.fallDistance;
+		if (!pl.onGround() && fd > 0 && fd < 0.3 && !pl.onClimbable() && !pl.isInWater() && !pl.isPassenger() && !pl.getAbilities().mayfly) {
+			if (now - s.fakeAt > 10000) s.fakeCrit = 0;
+			s.fakeAt = now;
+			if (++s.fakeCrit >= 3 && hit == null) { hit = String.format("critical hits from a %.2f block fall", fd); s.fakeCrit = 0; }
+		}
+		// KillAura: many different targets in a few seconds with the aim ray nowhere near their centres. A hand fights one or two and aims at them.
+		int k = s.rn++ % 12; s.rt[k] = now; s.re[k] = err; s.ri[k] = target.getId();
+		if (hit == null) {
+			java.util.Set<Integer> who = new java.util.HashSet<>(); java.util.List<Double> es = new java.util.ArrayList<>();
+			for (int i = 0; i < Math.min(s.rn, 12); i++) if (now - s.rt[i] < 5000) { who.add(s.ri[i]); es.add(s.re[i]); }
+			if (es.size() >= 8 && who.size() >= 4) { java.util.Collections.sort(es); if (es.get(es.size() / 2) > 0.9) { hit = "hits on " + who.size() + " targets without aiming at them"; s.rn = 0; } }
+		}
 		// Multi-target: two different entities hit inside the same 50 ms.
 		if (hit == null && s.lastEntity != -1 && s.lastEntity != target.getId() && now - s.lastMs < 50) hit = "two targets in one tick";
 		// Snapping: the view swings more than 40 degrees to a different target inside 300 ms. A person cannot do that twice in a row.
@@ -97,7 +111,7 @@ public final class Combat {
 			double var = 0; for (long g : s.gaps) var += (g - mean) * (g - mean);
 			if (Math.sqrt(var / 6) < 15) { hit = "attack timing is too regular"; s.n = 0; }
 		}
-		if (System.getenv("MESHAC_TRACE") != null) Meshac.LOG.info("[trace] attack {} t={} reach={} err={} gap={} turn={} cd={} hit={}", pl.getGameProfile().name(), target.getId(), String.format("%.2f", reach), String.format("%.3f", err), gap, String.format("%.0f", turn), String.format("%.2f", pl.getAttackStrengthScale(0.5f)), hit);
+		if (System.getenv("MESHAC_TRACE") != null) Meshac.LOG.info("[trace] attack {} t={} reach={} err={} gap={} turn={} cd={} fd={} ground={} slot={} swapGap={} hit={}", pl.getGameProfile().name(), target.getId(), String.format("%.2f", reach), String.format("%.3f", err), gap, String.format("%.0f", turn), String.format("%.2f", pl.getAttackStrengthScale(0.5f)), String.format("%.2f", pl.fallDistance), pl.onGround(), pl.getInventory().getSelectedSlot(), now - s.swapMs, hit);
 		s.lastMs = now; s.lastEntity = target.getId();
 		return hit;
 	}

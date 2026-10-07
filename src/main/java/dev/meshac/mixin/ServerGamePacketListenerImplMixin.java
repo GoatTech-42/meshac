@@ -55,12 +55,12 @@ public abstract class ServerGamePacketListenerImplMixin {
 	private void meshac$place(ServerboundUseItemOnPacket p, CallbackInfo ci) {
 		if (player.level().getServer().isSameThread()) {
 			boolean refused = Interact.place(player, p);
-			Trace.t(player, "use-on" + (refused ? " REFUSED" : "") + " pos=" + p.getHitResult().getBlockPos() + " item=" + player.getMainHandItem().getItem());
+			Trace.t(player, "use-on" + (refused ? " REFUSED" : "") + " pos=" + dev.meshac.Packets.hit(p).getBlockPos() + " item=" + player.getMainHandItem().getItem());
 			if (refused) {
-				net.minecraft.core.BlockPos at = p.getHitResult().getBlockPos();
-				player.connection.ackBlockChangesUpTo(p.getSequence());
+				net.minecraft.core.BlockPos at = dev.meshac.Packets.hit(p).getBlockPos();
+				player.connection.ackBlockChangesUpTo(dev.meshac.Packets.seq(p));
 				player.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(player.level(), at));
-				player.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(player.level(), at.relative(p.getHitResult().getDirection())));
+				player.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(player.level(), at.relative(dev.meshac.Packets.hit(p).getDirection())));
 				player.containerMenu.sendAllDataToRemote();
 				ci.cancel();
 			}
@@ -70,8 +70,8 @@ public abstract class ServerGamePacketListenerImplMixin {
 	@Inject(method = "handleSignUpdate", at = @At("HEAD"), cancellable = true)
 	private void meshac$sign(net.minecraft.network.protocol.game.ServerboundSignUpdatePacket p, CallbackInfo ci) {
 		if (player.level().getServer().isSameThread()) {
-			boolean refused = Interact.sign(player, p.getLines());
-			Trace.t(player, "sign text" + (refused ? " REFUSED" : "") + " lines=" + String.join("|", p.getLines()));
+			boolean refused = Interact.sign(player, dev.meshac.Packets.lines(p));
+			Trace.t(player, "sign text" + (refused ? " REFUSED" : "") + " lines=" + String.join("|", dev.meshac.Packets.lines(p)));
 			if (refused) ci.cancel();
 		}
 	}
@@ -81,7 +81,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 		if (player.level().getServer().isSameThread()) {
 			boolean refused = Interact.use(player);
 			Trace.t(player, "use item=" + player.getMainHandItem().getItem() + (refused ? " REFUSED" : ""));
-			if (refused) { player.connection.ackBlockChangesUpTo(p.getSequence()); player.containerMenu.sendAllDataToRemote(); ci.cancel(); }
+			if (refused) { player.connection.ackBlockChangesUpTo(dev.meshac.Packets.seq(p)); player.containerMenu.sendAllDataToRemote(); ci.cancel(); }
 		}
 	}
 

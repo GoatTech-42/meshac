@@ -19,8 +19,8 @@ Hold at H >= 3, remove at H >= R (default R = 6 bits). Setback below that.
 ## 3. Why a legit player cannot reach R
 If a legit player trips flags as a Poisson process with rate L per second (summed over checks, weight-weighted), reaching R inside the decay window needs about k = R / w_avg flags inside about 2 * T_half. P(legit removal) per window = P(Poisson(mu) >= k), mu = L * 2 * T_half. With L from the controls (<= 3 per 60 clean hours per check, 10 checks): mu = 0.0003 * 16 -> 0.005, k = 6 for tier C: P ~ mu^k / k! ~ 1e-17 per window. The live false positives were NOT independent: one lag stall tripped several checks at once. So add the independence rule:
 
-    Remove requires evidence from >= 2 different check families, or one tier-A flag worth >= R/2 plus any other.
-One cause (a stalled link) hits the same family or the same tick, so it can no longer remove by itself.
+    Remove requires heat >= R from >= 3 independent causes, or >= 2 independent tier-A causes.
+A cause = a burst: flags within 150 ms of the first flag of the burst are one cause and only the heaviest adds heat. A lag stall is one burst however many checks it trips; a hack that keeps flagging (pure fly, pure speed, killaura) makes a new cause every 150 ms and is removed in about 1 s (tier A) to 2.5 s (tier C) even though only one check fires.
 
 ## 4. Offence ladder with decaying memory
 Each removal is an offence with weight 1, forgiven by half-life tau (default 14 days): effective offences n = sum 0.5^(age/tau).

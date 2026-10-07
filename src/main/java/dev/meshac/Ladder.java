@@ -20,7 +20,8 @@ public final class Ladder {
 			else if (weight >= p.tierAWeight() && clusterMax < p.tierAWeight()) tierAClusters++;
 			if (weight > clusterMax) { h += weight - clusterMax; clusterMax = weight; }
 			heat = h; at = t;
-			if (h >= p.removeAt() && (clusters >= p.minClusters() || tierAClusters >= p.minClustersTierA())) return Step.REMOVE;
+			if (tierAClusters >= p.minClustersTierA() && h >= p.removeAt() - 1) return Step.REMOVE; // two separate tier A bursts: no need to wait for full heat
+			if (h >= p.removeAt() && clusters >= p.minClusters()) return Step.REMOVE;
 			if (h >= p.holdAt()) return Step.HOLD;
 			return Step.SETBACK;
 		}

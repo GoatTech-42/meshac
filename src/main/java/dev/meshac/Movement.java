@@ -124,7 +124,7 @@ public final class Movement {
 			else if (++s.clean >= 10) { s.bufSpeed = Math.max(0, s.bufSpeed - 1); s.clean = 0; }
 			if (s.bufSpeed >= SIGNAL_AT) hit = String.format("speed %.2f>%.2f", h, cap);
 			// Fly: in the air, vanilla gravity gives dy = (lastDy - 0.08) * 0.98. Going above that is not vanilla.
-			if (!s.ground && !ground && System.currentTimeMillis() > s.freezeUntil + 2000) { // right after a hold the player hangs where we froze them; that is our doing, not a flight
+			if (!s.ground && !ground && System.currentTimeMillis() > s.freezeUntil + 600) { // right after a hold the player hangs where we froze them; that is our doing, not a flight
 				double expect = (s.dy - 0.08) * 0.98;
 				s.bufFly = dy > expect + 0.03 ? s.bufFly + (dy > expect + 0.3 ? 3 : 1) : Math.max(0, s.bufFly - 1); // a big climb counts triple
 				if (s.bufFly >= SIGNAL_AT && hit == null) hit = String.format("fly dy %.3f expect %.3f", dy, expect);

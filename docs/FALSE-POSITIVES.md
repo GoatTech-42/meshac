@@ -93,3 +93,7 @@ Legit flick-mining through the lag proxy (300 ms stall every 3 s, 800 ms every 4
 After: 0 signals at both stalls, hand-mining control under stall 0, Wurst Nuker still caught.
 
 Deploy: full stack (wurst leftovers, bow trace, sweep at 10, through-block fix, lag fixes) on meshac-lan, 26.1 jar md5 51102b2f625e556f2b8d859d5bb93ae8, while lan is stopped. Rollback: lan-test/meshac.jar.prev-b2406454 (through-block jar). meshac-lan not restarted. Restart: docker start meshac-lan.
+
+## Rules that never ran (Oct 8)
+
+Not a false positive, but the same lesson: a check that never fires looks exactly like a clean run. The sign-text rule and the chat command rule were hooked on the main thread, and Minecraft handles those two packets on the network thread, so they were dead from the start. Found by putting a debug line in the hook and watching it report the wrong thread on every call. Both now run where the packet arrives, with the verdict applied on the main thread. Every other hook in the packet mixin was checked: the trace lines or a catch show each one firing.

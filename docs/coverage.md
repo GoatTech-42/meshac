@@ -105,9 +105,17 @@ Wurst AirPlace sends a block placement against thin air and vanilla accepts it. 
 
 Wurst FeedAura picks a random animal every tick and feeds it, so it hits a new animal 50 ms after the last. A hand needs time to turn to the next animal. An interaction with a different entity less than 250 ms after the previous one is refused, and a second one inside three seconds is a signal. Before: all four cows fed (wheat 32 to 28), 0 signals. After: 5 signals, kicked, the player is out before the herd is fed. Control is clean. Rig, 26.1.2 only (the 1.21.11 jar has no entity-interact hook yet).
 
-### AutoSign (unproven)
+### AutoSign (packet level only)
 
-AutoSign copies the text of the first sign onto every later one. meshac refuses sign text that arrives under a second after the click (a hand needs longer to type), but the rig client never sent a sign-update packet, so the check has not been seen firing. The scenario needs the sign editor to open on the real client. Not counted as caught.
+AutoSign copies the text of the first sign onto every later one, so the text arrives the moment the editor opens. meshac refuses sign text that arrives within 300 ms of the click (a hand needs longer to type; the check subtracts ping up to 300 ms).
+
+This check was dead until Oct 8. Minecraft hands the sign-update packet to our hook on the network thread and never re-queues it onto the main thread, and the hook only ran on the main thread. It could not fire, and the real-client runs never showed it. It now runs on the network thread. Tested with a scripted bot on a 26.1.2 server: sign text sent 200 to 230 ms after placing, 4 of 4 refused and signalled; the same bot with a 600 ms pause, 0 signals. The real Wurst client has not been seen doing it (the scripted typing never reached the sign editor), so that part is still open. Not tested at ping 300 or on the other versions.
+
+### MassTPA and ForceOP (packet level only)
+
+Both send the same command with a different argument on a fixed delay. meshac signals after 8 commands with the same root, all different arguments, and gaps within 60 ms of each other (gaps under 150 ms count as a burst, not a beat). Nothing is blocked.
+
+Same story as AutoSign: this hook never ran before Oct 8 because the server handles chat commands on the network thread. Fixed and tested with a scripted bot sending /tpa to 12 different players on a 26.1.2 server: 250 ms steady beat, signalled after the 8th command; random 300 to 3000 ms gaps, 0 signals; the same argument 12 times at 250 ms, 0; 100 ms gaps, 0 (burst, left to vanilla's spam kick). No real MassTPA client run yet, and not tested through the lag proxy.
 
 ### NoClip (caught, stopped)
 
@@ -140,7 +148,7 @@ Swapping to a weapon for one hit and back is normal PvP. A single swap-hit-swapb
 
 ### Still unproven or unrun
 
-AutoPotion (never healed), FeedAura (no cow fed), AutoSign (scenario never placed a sign), NoClip, CreativeFlight, Restock, AimAssist, AutoSword, and the modules that have not been run yet. Other Minecraft versions: all four jars build and boot with meshac loaded, but no client has joined on 1.21.11, 26.2 or 26.3.
+AutoPotion (never healed), FeedAura (no cow fed), NoClip, CreativeFlight, Restock, AimAssist, AutoSword, and the modules that have not been run yet. Other Minecraft versions: all four jars build and boot with meshac loaded, but no client has joined on 1.21.11, 26.2 or 26.3.
 
 ## Client-only modules
 
@@ -148,4 +156,4 @@ Read in the Wurst v7.56 source: none of these calls anything that sends a packet
 
 AntiBlind, AntiWobble, BarrierESP, BaseFinder, CameraDistance, CameraNoClip, CaveFinder, ChestESP, Freecam, Fullbright, HealthTags, ItemESP, LSD, MobESP, MobSpawnESP, NameProtect, NameTags, NewChunks, NoBackground, NoFireOverlay, NoFog, NoHurtcam, NoOverlay, NoPumpkin, NoShieldOverlay, NoVignette, NoWeather, OpenWaterESP, PlayerESP, PortalESP, ProphuntESP, Radar, RainbowUI, RemoteView, Search, Trajectories, TrueSight.
 
-Still to run with a scenario: AnchorAura, CrystalAura, AutoFish, AutoLibrarian, ExtraElytra, AntiSpam, AutoComplete, FancyChat, ForceOP, InfiniChat, MassTPA.
+Still to run with a scenario: AnchorAura, CrystalAura, AutoFish, AutoLibrarian, ExtraElytra, AntiSpam, AutoComplete, FancyChat, InfiniChat. AutoSign, ForceOP and MassTPA only have the packet-level tests above.

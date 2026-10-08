@@ -16,7 +16,7 @@ public final class Movement {
 	private static final int SIGNAL_AT = 6;      // buffered violations before a setback
 	private static final int SKIP_TICKS = 20;  // grace after teleport, damage, effects
 
-	private static final class S {
+	private static final class S { double lastH; int slipN; 
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
 		boolean ground, cground, init, ownTp;
 		long glideAt; double glideH; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
@@ -75,6 +75,17 @@ public final class Movement {
 			Verdict.signal(pl, "noclip", d2 > 100 ? String.format("jumped %.0f blocks in one packet", Math.sqrt(d2)) : String.format("moved %.1f blocks through solid blocks", Math.sqrt(d2)), 2);
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
+		}
+		// Slippy: client-side friction override. On a normal block (0.6) a stopping player loses about 45 percent of the speed every tick; ice keeps 89 percent. Five ground ticks in a row that lose only 3 to 20 percent on a block that is not ice, slime or the like is a changed friction.
+		{
+			double h = Math.hypot(dx, dz);
+			boolean normal = !pl.isInWater() && !pl.isInLava() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly && pl.level().getBlockState(pl.blockPosition().below()).getBlock().getFriction() == 0.6f && pl.level().getBlockState(pl.blockPosition()).getBlock().getFriction() == 0.6f;
+			if (ground && s.ground && normal && !pl.isCreative() && !pl.isSpectator()) {
+				if (h > 0.03 && s.lastH > 0.03) { double r = h / s.lastH; if (r > 0.80 && r < 0.97) s.slipN++; else if (r < 0.75 || r >= 1.0) s.slipN = 0; }
+				else s.slipN = 0;
+			} else s.slipN = 0;
+			s.lastH = h;
+			if (s.slipN >= 5) { s.slipN = 0; Verdict.signal(pl, "movement", "slippery ground: speed barely drops on a normal block", 1); }
 		}
 		boolean baseExempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
 			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable()

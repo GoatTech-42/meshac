@@ -102,3 +102,9 @@ BowAimbot stays a known miss: a rotation-snap check would risk flagging legitima
 
 ## Anchor Aura follow-up (sweep 21)
 The 4 signals are all "placed against air": meshac refuses the aura's anchor placements and sets the player back, so the aura cannot build anchors (victim health stayed 20). Detection is working as a block plus low heat, not a kick. Legit rapid anchor placing (4 clicks a second at the floor, anchors in hand): 0 signals, 3 anchors placed. Together with the earlier legit charge control (0 signals), no false flag found. Raising the weight was not needed to stop the hack; kept as is (no jar change).
+
+## Sweep 22: Criticals alone (killaura off, only-killaura false, melee on a tanky zombie, control 917 dmg-health)
+- Packet: CAUGHT, 4 microhop signals (weight 6.5/9.0), kicked; hits landed.
+- UpdatedNCP: partial. 4 combat signals (7.8/11.6), not kicked; hits landed.
+- OldNCP: CAUGHT, 4 microhop signals, kicked; hits landed.
+- Jump: 4 combat signals, kicked, but the target took no damage, so the hack's hits did not land; counts as flagged, not as a proven catch of a working crit. Legit jump-crit control not run yet (no false-flag check for the combat signal).

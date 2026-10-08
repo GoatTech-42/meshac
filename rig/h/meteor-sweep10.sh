@@ -4,7 +4,7 @@ cd /home/luke/meshac-work/meshac/rig/h
 RES=/tmp/meteorSW10.csv
 trap 'docker stop meshac-wurst >/dev/null 2>&1' EXIT
 : > "$RES"
-NAME=mcSW10
+NAME=mcSW12
 start_client(){
  docker rm -f meshac-wurst >/dev/null 2>&1
  d=/home/luke/meshac-work/clients/meteor/run/meteor-client
@@ -19,6 +19,10 @@ sh ./world.sh >/dev/null
 go(){ h=$1; sc=$2; shift 2; connected || start_client; say ".t all off"; if [ "$h" != none ]; then for st in "$@"; do say ".settings $h $st"; done; fi; run_case $sc $h; }
 setup_boost2(){ X0=100 Y0=250 Z0=460; KEYS="space w"; SECS=16; rc "forceload add 100 460" >/dev/null; rc "effect clear $NAME" >/dev/null; rc "effect give $NAME slow_falling 6 0 true" >/dev/null; rc "item replace entity $NAME armor.chest with elytra" >/dev/null; rc "item replace entity $NAME hotbar.0 with firework_rocket 64" >/dev/null; PRE='X key 1; (sleep 4; for i in $(seq 1 10); do X click 3; sleep 1.2; done) &'; }
 measure_boost2(){ rc "clear $NAME firework_rocket 0" | grep -o "[0-9]\+" | head -1; }
+setup_dive(){ X0=100 Y0=250 Z0=460; KEYS="space"; SECS=14; PITCH=45; rc "forceload add 100 460" >/dev/null; rc "effect clear $NAME" >/dev/null; rc "effect give $NAME slow_falling 6 0 true" >/dev/null; rc "item replace entity $NAME armor.chest with elytra" >/dev/null; }
+measure_dive(){ measure_boost2; }
+go none dive
 go none boost2
 go elytra-boost boost2
+go none boost2
 echo DONE >> $RES

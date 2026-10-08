@@ -5,6 +5,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.Items;
 
 /**
@@ -12,7 +13,7 @@ import net.minecraft.world.item.Items;
  * cannot go up without a firework rocket, a hit or an explosion. A hack that holds forward and keeps speeding up breaks that.
  */
 public final class Glide {
-	private static final class S { int tick0 = -1; double x0, y0, z0, e0 = Double.NaN; long rocketAt, windAt; int hits; double prevE = Double.NaN; int noLoss; long[] st = new long[6]; int sti; }
+	private static final class S { int tick0 = -1; double x0, y0, z0, e0 = Double.NaN; long rocketAt, windAt; int hits; double prevE = Double.NaN, winE = Double.NaN, inputScore; int noLoss; long[] st = new long[6]; int sti; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int WINDOW = 10;          // ticks per sample
 	private static final double SLACK = 10.0;      // blocks of energy gained over the lowest point so far. Air drag only loses energy, this covers rounding and packet timing
@@ -47,9 +48,15 @@ public final class Glide {
 		if (now - s.tick0 < WINDOW) return null;
 		double secs = (now - s.tick0) * 0.05, d = Math.sqrt((x - s.x0) * (x - s.x0) + (y - s.y0) * (y - s.y0) + (z - s.z0) * (z - s.z0));
 		double v = d / secs, e = v * v / 64.0 + y;
+		if (!pl.level().getEntitiesOfClass(FireworkRocketEntity.class, pl.getBoundingBox().inflate(3)).isEmpty()) s.rocketAt = System.currentTimeMillis(); // a real rocket pushes from the server side; a client-made one (Meteor ElytraBoost) does not exist here
 		boolean boosted = System.currentTimeMillis() - s.rocketAt < ROCKET_MS || System.currentTimeMillis() - s.windAt < ROCKET_MS || pl.hurtTime > 0;
 		// Vanilla gliding always loses energy to air drag (motion x0.99/x0.98 every tick). A flight that holds its speed and height (Meteor/Wurst ElytraFly control, packet and hover modes) never does.
 		boolean clear = !boosted && !pl.horizontalCollision && !pl.verticalCollision && !pl.onGround() && !pl.isInWater() && !pl.isInLava() && pl.level().getBlockState(pl.blockPosition()).isAir() && pl.getY() > pl.level().getMinY() + 2;
+		// Energy input with no rocket. A fast vanilla glide loses about 1.5 blocks of energy per 10 ticks at 31 blocks a second (measured on the rig); real rockets, wind charges, hits and explosions are excluded above. A client-side boost keeps the energy up while no rocket exists on the server.
+		if (!clear || Double.isNaN(s.winE)) s.inputScore = 0;
+		else if (v >= 28 && e - s.winE > -0.6) { if ((s.inputScore += 1) >= 4) { s.inputScore = 0; Verdict.signal(pl, "glide", String.format("flying at %.0f blocks a second with no rocket and no energy loss (boost hack)", v), 3); } }
+		else s.inputScore = Math.max(0, s.inputScore - 0.5);
+		s.winE = clear ? e : Double.NaN;
 		if (!clear || Double.isNaN(s.prevE)) s.noLoss = 0;
 		else if (e >= s.prevE - 0.05) s.noLoss++;
 		else if (e < s.prevE - 0.4) s.noLoss = Math.max(0, s.noLoss - 3);

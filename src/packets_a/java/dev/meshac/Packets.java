@@ -12,6 +12,7 @@ public final class Packets {
 	public static BlockHitResult hit(ServerboundUseItemOnPacket p) { return p.getHitResult(); }
 	public static Vec3 pos(ServerboundMoveVehiclePacket p) { return p.position(); }
 	public static int seq(ServerboundUseItemOnPacket p) { return p.getSequence(); }
+	public static net.minecraft.world.InteractionHand hand(ServerboundUseItemOnPacket p) { return p.getHand(); }
 	public static int seq(ServerboundUseItemPacket p) { return p.getSequence(); }
 	public static String[] lines(ServerboundSignUpdatePacket p) { return p.getLines(); }
 }

@@ -12,13 +12,23 @@ import net.minecraft.world.phys.Vec3;
 
 /** Nuker, Kaboom, FastBreak and friends: breaking blocks no hand could reach, see or break that fast. */
 public final class Mining {
-	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; }
+	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; long brokeCt = -100; Vec3 brokeDir; BlockPos brokePos, nukePos; long retWin; int retStrikes; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 8; // a hasted, efficiency V player on soft blocks tops out near 5
 
 	/** A hand mines by holding the button with the crosshair on the block; the client drops the dig the moment the crosshair leaves. PacketMine keeps the dig alive while the view is elsewhere and turns to the block only for the final packet. Time spent aiming away during a dig is counted. */
 	public static void digStart(ServerPlayer pl, BlockPos pos) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		// Nuker: after a block breaks, the next dig starts on a block more than 40 degrees away within one client tick. A hand has to turn the view and click again,
+		// and held mining waits 5 client ticks between blocks; the hack calls the dig packet itself. Counted in client ticks (Ticks), not milliseconds, so a lag burst
+		// that delivers several ticks of packets together still reads as separate ticks. Off for clients with no tick-end packets.
+		if (Ticks.active(pl) && s.brokeDir != null && !pos.equals(s.brokePos) && Ticks.n(pl) - s.brokeCt <= 1
+			&& pl.level().getBlockState(pos).getDestroySpeed(pl.level(), pos) != 0f
+			&& Vec3.atCenterOf(pos).subtract(pl.getEyePosition()).normalize().dot(s.brokeDir) < 0.766) {
+			long t0 = System.currentTimeMillis();
+			if (t0 - s.retWin > 10000) { s.retWin = t0; s.retStrikes = 0; }
+			if (++s.retStrikes >= 3) { s.nukePos = pos; Verdict.signal(pl, "mining", "starts digging a block 40+ degrees away within one tick of the last break", 1); }
+		}
 		s.dig = pos; s.digTick = pl.tickCount; s.early = false; s.digSample = System.currentTimeMillis(); s.off = 0; s.lookOff = !aims(pl, pos, pl.getLookAngle());
 	}
 	/** A client sends STOP only when its own progress reached 1. A STOP in the same tick as the START, with the block far from done, is PacketMine: the server keeps digging on its own after the START and breaks the block with no hand on it. */
@@ -64,6 +74,7 @@ public final class Mining {
 		}
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
+		if (pos.equals(s.nukePos)) { s.nukePos = null; return true; }
 		if (Trace.ON) Meshac.LOG.info("[trace] refuse? dig={} pos={} early={}", s.dig, pos, s.early);
 		if (s.dig != null && s.dig.equals(pos)) {
 			if (s.lookOff) s.off += now - s.digSample;
@@ -76,7 +87,7 @@ public final class Mining {
 			if (now - s.turnWin > 3000) { s.turnWin = now; s.turns = 0; }
 			if (++s.turns >= 4) { s.turns = 0; Verdict.signal(pl, "mining", "breaks blocks in every direction", 1); return true; }
 		}
-		if (!instant) { s.lastDir = dir; s.lastAt = now; }
+		if (!instant) { s.lastDir = dir; s.lastAt = now; s.brokeDir = dir; s.brokeCt = Ticks.n(pl); s.brokePos = pos; }
 		if (Trace.ON) Meshac.LOG.info("[trace] break {} {} gap={} lookdeg={} instant={} turnsInWin={}", pl.getGameProfile().name(), pos, s.lastBreak == 0 ? -1 : now - s.lastBreak, Math.round(Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, dir.dot(pl.getLookAngle())))))), instant, s.turns); s.lastBreak = now;
 		if (now - s.windowAt > 1000) { s.windowAt = now; s.breaks = 0; }
 		if (++s.breaks > MAX_PER_SECOND) {

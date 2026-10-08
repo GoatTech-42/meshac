@@ -114,3 +114,12 @@ The 4 signals are all "placed against air": meshac refuses the aura's anchor pla
 - Surround: MISS. The hack acted (0 to 4 obsidian blocks placed around the player in one go), 0 signals. Placements are on valid floor faces, so a rule would need a rate cap on placements, which risks flagging legit fast block placing. No rule added; documented as known miss.
 - HoleFiller: INCONCLUSIVE. Nothing was placed (hole stayed empty), so the hack did not act in this scenario (range or targeting). Needs a different setup.
 - FastUse: INCONCLUSIVE. The snowball count measure did not move between hack-off and hack-on (16 to 28 in all rows, so the measure is bad). Hack not shown acting.
+
+## Sweep 24-25 (Meteor-client evidence against the patched wurst-leftovers 26.2 jar)
+These are Meteor client behaviors, not the real Wurst ones.
+- Nuker: 8 mining signals, kicked; the new "digs a block 40+ degrees away within a tick of the last break" rule fired. Hold-mining legit control: 0 signals.
+- AutoFish: Meteor acted (2-3 catches), 0 signals. New Fish rule did not fire. Inconclusive for Wurst.
+- AutoSteal: Meteor has no standalone one (part of InventoryTweaks). Not run.
+
+## Wurst client, real (26.3 rig, patched jar, EGL image)
+- Nuker: 1 mining signal, 13.0 reported, not kicked. Hack-off control 0; hold-mining control 0.

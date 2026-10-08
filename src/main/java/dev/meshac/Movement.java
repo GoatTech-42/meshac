@@ -148,7 +148,7 @@ public final class Movement {
 			// Step: claiming ground while rising more than a half block. Vanilla only auto-steps 0.6.
 			if (ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && hit == null) hit = String.format("step dy %.3f onGround", dy);
 			// High jump / step: leaving the ground higher than a jump (0.42 + jump boost) or a step (0.6).
-			if (s.ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0)) {
+			if (s.ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && nowMs - s.glideAt > 2500) { // not just after an elytra landing: rocket and glide momentum carries into the first hop
 				s.bufJump += 2;
 				if (s.bufJump >= 2 && hit == null) hit = String.format("jump dy %.3f", dy);
 			} else s.bufJump = Math.max(0, s.bufJump - 1);

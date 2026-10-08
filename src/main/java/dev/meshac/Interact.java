@@ -77,6 +77,9 @@ public final class Interact {
 
 	public static boolean place(ServerPlayer pl, ServerboundUseItemOnPacket p) {
 		if (pl.isCreative() || pl.isSpectator()) return false;
+		// Thrown items (wind charge, pearl, snowball, egg) are only thrown when the click lands on a block. The clicked block is not touched, so where the hand looks cannot matter. Wind-charge jumps flick the view down and click in the same instant.
+		var held = pl.getItemInHand(p.getHand());
+		if (held.is(net.minecraft.world.item.Items.WIND_CHARGE) || held.is(net.minecraft.world.item.Items.ENDER_PEARL) || held.is(net.minecraft.world.item.Items.SNOWBALL) || held.is(net.minecraft.world.item.Items.EGG)) return false;
 		// AirPlace: a hand can only click a face of a block that is there. Vanilla places against thin air if the packet says so.
 		if (pl.level().getBlockState(Packets.hit(p).getBlockPos()).isAir()) { Verdict.signal(pl, "interact", "placed against air", 1); rate(pl); return true; }
 		AABB box = new AABB(Packets.hit(p).getBlockPos()).inflate(0.3);

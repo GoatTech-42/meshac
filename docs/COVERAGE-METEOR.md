@@ -93,3 +93,7 @@ Meteor AnchorAura only targets real players, so a second client is needed as the
 - AutoTotem: CAUGHT (1 signal, weight 5.2, inventory check). Controls: human-speed F-key totem swaps (0.4 s and 0.12 s after pop, 3 runs) gave 0 signals.
 - Reach (extra-entity-reach 3, target 5 blocks out): CAUGHT, 4 combat signals, kicked. Caveat: the target health did not change (server rejected the hit), so the flag came from the attack attempt. Legit reach control: ordinary melee runs at normal range gave 0 signals earlier.
 - AirJump: INCONCLUSIVE, the airjump scenario is not defined in scenarios.sh (only in meteor-air.sh), no data.
+
+## Sweep 19: AirJump, HighJump
+- AirJump (space tapped mid-air): CAUGHT, 7 air signals (weight 6.7 and 8.6 peaks); control with the hack off: 0 signals. Player took 2 damage (setbacks).
+- HighJump (jump-multiplier 4, walk+jump): CAUGHT, 6 jump signals; control: 0 signals. Player ended at 0 health in the run (fall or setback damage), noted.

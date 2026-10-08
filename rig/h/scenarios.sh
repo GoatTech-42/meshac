@@ -182,3 +182,6 @@ measure_windjump() { pos | cut -d, -f2; }
 # AttributeSwap needs a target slot that holds a different item: sword in slot 1, axe in slot 2, module set to swap to slot 2 on each hit
 setup_swaphit() { setup_meleetank; PRE="say \".setslider attributeswap Target_slot 2\""; }
 measure_swaphit() { measure_meleetank; }
+# airjump: tap space every 0.25 s over open air-free flat floor; a hack lets the player rise by jumping mid-air (final y reported)
+setup_airjump() { X0=100 Y0=-60 Z0=940; KEYS=""; SECS=12; rc "forceload add 100 940" >/dev/null; rc "fill 94 -60 934 106 -30 946 air" >/dev/null; rc "fill 94 -61 934 106 -61 946 stone" >/dev/null; PRE="(for i in \$(seq 1 35); do X key space; sleep 0.25; done) &"; }
+measure_airjump() { rc "data get entity $NAME Pos[1]" | grep -o "[-0-9.]*d\?$" | head -1; }

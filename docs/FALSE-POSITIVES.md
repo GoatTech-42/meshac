@@ -54,3 +54,6 @@ Rig 26.2 (walk 10 s): control 0 signals. Meteor Blink pulse-delay 15 (0.75 s): 8
 
 ## Lag control for Blink (10:48 PM)
 rig/h/lagproxy.py: TCP proxy between the client and the rig that freezes BOTH directions for 800 ms every 4 s (python:3-alpine container meshac-lagproxy; client target meshac-lagproxy:25565). Legit 24 s walk through it with the Blink check live: 107 blocks, 0 signals, connected. A longer stall (1.2 s) and a one-way stall are not tested yet.
+
+## Explosion knockback legit control (11:31 PM, 26.2 rig, current build)
+Real client, no hack, resistance 4 (no damage, knockback stays). 4x TNT (fuse 0) on the player: 0 signals, connected. 4x end crystal killed by /damage next to the player: 0 signals, connected. Floor blew away under the player both times (y -60 to -63), so the blast did act. Weakness: the player sat between walls, so the push was mostly vertical; no long horizontal launch. Anchor and bed blasts not run on the rig (covered by the code exemption only). Files: rig/h/meteor-kb2.sh, results-meteor-kb-legit.csv.

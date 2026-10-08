@@ -57,3 +57,6 @@ rig/h/lagproxy.py: TCP proxy between the client and the rig that freezes BOTH di
 
 ## Explosion knockback legit control (11:31 PM, 26.2 rig, current build)
 Real client, no hack, resistance 4 (no damage, knockback stays). 4x TNT (fuse 0) on the player: 0 signals, connected. 4x end crystal killed by /damage next to the player: 0 signals, connected. Floor blew away under the player both times (y -60 to -63), so the blast did act. Weakness: the player sat between walls, so the push was mostly vertical; no long horizontal launch. Anchor and bed blasts not run on the rig (covered by the code exemption only). Files: rig/h/meteor-kb2.sh, results-meteor-kb-legit.csv.
+
+## FP #1 teleport arrival, rig check (3:30 AM, 26.2 rig, current build)
+Real client, no hack: /tp 3000 blocks out then walk and jump 10 s (2 runs), /spreadplayers 4000 with radius 600 then walk and jump (2 runs), /tp 5000 followed by three 5-block tps while walking (1 run): 0 signals in all 5, connected. Limit: the rig is a flat world, so chunk generation at the arrival point is fast. Luke's live case was a 635-block spreadplayers on real terrain with slow chunk loads, which this does not reproduce. FP #1 is not proven fixed for slow chunk loading. Files: rig/h/meteor-sweep9.sh, results-meteor-tp-legit.csv.

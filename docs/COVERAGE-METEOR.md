@@ -63,3 +63,9 @@ Files: rig/h/meteor-sweep3.sh, results-meteor-sweep3.csv.
 - crystal-aura: CAUGHT. Obsidian floor, zombie 5.7 blocks away, entities=zombie, range 5: it hit the zombie (1000 to 935.9 hp), 5 signals at 2.0 s, kicked 2.4 s. Control (hack off): 0 signals, no damage.
 - bow-aimbot: INCONCLUSIVE, no arrow hit the zombie; 0 signals.
 Files: rig/h/meteor-sweep4.sh, results-meteor-sweep4.csv.
+
+## Sweep 5 (1:50 AM)
+- kill-aura alone (zombie): 5 signals at 2.6 s, held at 2.8 s, still connected at the end (earlier run: kicked 2.5 s). Hack-off control 0 signals.
+- kill-aura + criticals (mode Packet): 4 signals, first at 2.0 s, kicked 3.2 s; top category "microhop" (the criticals packet hop). CAUGHT. Criticals alone is not separable from the aura run.
+- anchor-aura: still INCONCLUSIVE (target count unchanged; needs a respawn-anchor setup that the module accepts).
+- windjump legit control: the wind charge did not launch the player (y stayed -60), so the control is INCONCLUSIVE. Wind-charge legit control still owed.

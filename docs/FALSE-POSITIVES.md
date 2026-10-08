@@ -32,3 +32,6 @@ Post-session: enumerate every Meteor module (combat/movement/player/render/world
 - Packet mode: MISS. Server-side isFallFlying flaps (true 3 s, false 3 s) because Meteor sends START_FALL_FLYING after every move packet, so Glide.check (gated on isFallFlying) rarely runs and its no-drag counter resets. Movement exempts on isFallFlying/SLOW_FALLING (the old setup_elytra gives slow_falling, so the first Packet run was exempt for the wrong reason; rerun without it is inconclusive, player died to fall damage, z did not move).
 - Fix direction: do not gate the glide check on the instantaneous flag; count START_FALL_FLYING packets and flag a player that re-sends it while airborne more than ~1 per 2 s, and keep the exemption for fall flying only while the state has been stable.
 - Pitch40 and Bounce scenarios did not exercise the hack (plain descent). Need a scenario with pitch input / ground bounce.
+
+## ElytraFly Packet mode fix (8:28 PM)
+Glide.startFly: 6 START_FALL_FLYING commands in 3 s while airborne = signal (hook handlePlayerCommand). Rig 26.2: Packet mode signalled at 1.6 s, 3 signals/setbacks, flight denied (player stayed put and fell; no kick since the hack stopped). Legit controls (glide from y250, glide with rocket-free elytra from y90): 0 signals. Built on all 4 versions; only 26.2 run so far. Not deployed to lan.

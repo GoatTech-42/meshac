@@ -12,7 +12,7 @@ import net.minecraft.world.item.Items;
  * cannot go up without a firework rocket, a hit or an explosion. A hack that holds forward and keeps speeding up breaks that.
  */
 public final class Glide {
-	private static final class S { int tick0 = -1; double x0, y0, z0, e0 = Double.NaN; long rocketAt, windAt; int hits; double prevE = Double.NaN; int noLoss; }
+	private static final class S { int tick0 = -1; double x0, y0, z0, e0 = Double.NaN; long rocketAt, windAt; int hits; double prevE = Double.NaN; int noLoss; long[] st = new long[6]; int sti; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int WINDOW = 10;          // ticks per sample
 	private static final double SLACK = 10.0;      // blocks of energy gained over the lowest point so far. Air drag only loses energy, this covers rounding and packet timing
@@ -25,6 +25,16 @@ public final class Glide {
 
 	/** A wind charge burst or a mace smash is near the player: a legal vanilla launch, same exemption as a rocket. */
 	public static void wind(ServerPlayer pl) { STATE.computeIfAbsent(pl.getUUID(), k -> new S()).windAt = System.currentTimeMillis(); }
+
+	/** A start-gliding command. A real glide starts once per take-off. ElytraFly Packet mode re-sends it with every move packet to keep the server flag up (the flag flaps, so the glide checks above rarely run). Six starts inside three seconds while airborne is that. */
+	public static void startFly(ServerPlayer pl) {
+		if (pl.isCreative() || pl.isSpectator() || pl.onGround()) return;
+		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		long now = System.currentTimeMillis();
+		s.st[s.sti] = now; s.sti = (s.sti + 1) % s.st.length;
+		long oldest = Long.MAX_VALUE; for (long v : s.st) oldest = Math.min(oldest, v);
+		if (oldest > 0 && now - oldest < 3000) { java.util.Arrays.fill(s.st, 0L); Verdict.signal(pl, "glide", "restarted gliding 6 times in 3 s while airborne (packet elytra)", 1); }
+	}
 
 	/** Every position packet. Returns a setback position, or null. */
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {

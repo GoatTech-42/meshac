@@ -1,10 +1,10 @@
 #!/bin/bash
 cd /home/luke/meshac-work/meshac/rig/h
 . ./run.sh
-RES=/tmp/meteorPK3.csv
+RES=/tmp/meteorPK5.csv
 trap 'docker stop meshac-wurst >/dev/null 2>&1' EXIT
 : > "$RES"
-NAME=mcPK3
+NAME=mcPK5
 start_client(){
  docker rm -f meshac-wurst >/dev/null 2>&1
  d=/home/luke/meshac-work/clients/meteor/run/meteor-client
@@ -20,6 +20,7 @@ go(){ h=$1; sc=$2; shift 2; connected || start_client; say ".t all off"; if [ "$
 setup_elytra16(){ X0=100 Y0=250 Z0=460; KEYS="space w"; SECS=16; rc "forceload add 100 460" >/dev/null; rc "effect clear $NAME" >/dev/null; rc "item replace entity $NAME armor.chest with elytra" >/dev/null; }
 measure_elytra16(){ measure_elytra; }
 date -u +%T >> $RES
+
 go none elytra16
-go elytra-fly elytra16 "mode Packet"
+go none elytra
 echo DONE >> $RES

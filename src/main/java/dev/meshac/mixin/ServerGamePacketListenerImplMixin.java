@@ -85,6 +85,11 @@ public abstract class ServerGamePacketListenerImplMixin {
 		}
 	}
 
+	@Inject(method = "handlePlayerCommand", at = @At("HEAD"))
+	private void meshac$command(net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket p, CallbackInfo ci) {
+		if (p.getAction() == net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket.Action.START_FALL_FLYING && player.level().getServer().isSameThread()) Glide.startFly(player);
+	}
+
 	@Inject(method = "handlePlayerAction", at = @At("HEAD"), cancellable = true)
 	private void meshac$release(ServerboundPlayerActionPacket p, CallbackInfo ci) {
 		if (player.level().getServer().isSameThread()) Trace.t(player, "action " + p.getAction());

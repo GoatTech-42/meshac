@@ -57,7 +57,7 @@ i also found checks of my own that never fired. the sign text rule and the chat 
 
 players install nothing.
 
-**start in monitor mode.** set `monitorOnly` to `true` (or run `/mesh monitor on`). it logs and alerts but never kicks or bans. watch what it flags on your own server for a bit, then turn punishment on.
+**start in monitor mode.** set `monitorOnly` to `true`. it logs and alerts but never kicks or bans. watch what it flags on your own server for a bit, then turn punishment on.
 
 | minecraft | jar | java |
 | --- | --- | --- |
@@ -78,9 +78,9 @@ all `/mesh` commands are op only.
 | `/mesh case <id>` | what happened and why |
 | `/mesh status <player>` | a player's heat, offences and what happens next |
 | `/mesh watch` | flags in chat as they happen |
-| `/mesh monitor on\|off` | log everything without kicking anyone |
+| `/mesh monitor` | shows whether monitor mode is on |
 | `/mesh kick`, `/mesh ban` | manual removal |
-| `/mesh pardon`, `/mesh unban` | lift a ban. unban keeps the offence on record |
+| `/mesh pardon <case id>`, `/mesh unban <player>` | lift a case or a ban |
 | `/mesh reload` | reload the config |
 
 there's an optional discord webhook for holds and removals.

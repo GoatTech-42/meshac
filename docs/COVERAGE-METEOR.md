@@ -58,3 +58,8 @@ Speed hacks at or below legit sprint-jump speed are not detectable by speed alon
 ## Sweep 3 (1:13 AM, combat, default settings, existing scenarios)
 All 0 signals and none of them visibly acted, so all INCONCLUSIVE (not misses, not passes): velocity (floor blown out, no horizontal launch), crystal-aura and anchor-aura (target counts unchanged, needs obsidian and real target setup), auto-totem (player at 3 hp ended 0 hp, popped/died check not read), bow-aimbot, bow-spam (no hit on target), auto-weapon, auto-armor, hole-filler, auto-trap, surround (need their own scenarios), criticals (Packet mode without kill-aura, no hit landed; needs a kill-aura plus criticals scenario with a hit).
 Files: rig/h/meteor-sweep3.sh, results-meteor-sweep3.csv.
+
+## Sweep 4 (1:30 AM)
+- crystal-aura: CAUGHT. Obsidian floor, zombie 5.7 blocks away, entities=zombie, range 5: it hit the zombie (1000 to 935.9 hp), 5 signals at 2.0 s, kicked 2.4 s. Control (hack off): 0 signals, no damage.
+- bow-aimbot: INCONCLUSIVE, no arrow hit the zombie; 0 signals.
+Files: rig/h/meteor-sweep4.sh, results-meteor-sweep4.csv.

@@ -12,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Nuker, Kaboom, FastBreak and friends: breaking blocks no hand could reach, see or break that fast. */
 public final class Mining {
-	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; long brokeCt = -100; Vec3 brokeDir; BlockPos brokePos, nukePos; long retWin; int retStrikes; }
+	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; long brokeCt = -100; Vec3 brokeDir; BlockPos brokePos, nukePos; Vec3 lastLook; int sweep; long retWin; int retStrikes; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 8; // a hasted, efficiency V player on soft blocks tops out near 5
 
@@ -87,6 +87,20 @@ public final class Mining {
 			if (now - s.turnWin > 3000) { s.turnWin = now; s.turns = 0; }
 			if (++s.turns >= 4) { s.turns = 0; Verdict.signal(pl, "mining", "breaks blocks in every direction", 1); return true; }
 		}
+		// Sweep mining (Wurst Nuker, survival). Rig trace of the real hack: one block every 550-650 ms around a sphere, the view turning 30-170 degrees between every pair of breaks
+		// (it faces each block by packet, so the turn costs it nothing). A hand needs time to flick and settle on each new block, and mining a wall at close range turns only about
+		// 25-35 degrees per block. Count breaks where the view turned 60+ degrees since the last break and the last break was at most 15 client ticks (750 ms) ago: +1; any other break -1.
+		// 8 net is a signal and the break is refused. Client ticks, not milliseconds, so a lag burst that lands several breaks together does not count as speed; clients with no tick-end
+		// packets use 750 ms. A hand sweeping at that rate for 8 breaks in a row, every one a 60+ degree flick, does not exist; wall sweeps (25-35) and tunnels turn well under 60.
+		Vec3 lookNow = pl.getLookAngle();
+		if (!instant && s.lastLook != null && now - s.lastAt < 3000) {
+			double lookTurn = Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, lookNow.dot(s.lastLook)))));
+			boolean fast = Ticks.active(pl) ? Ticks.n(pl) - s.brokeCt <= 15 : now - s.lastAt < 750;
+			if (lookTurn >= 60 && fast) s.sweep = Math.min(12, s.sweep + 1); else s.sweep = Math.max(0, s.sweep - 1);
+			if (Trace.ON) Meshac.LOG.info("[trace] sweep {} {} turn={} gapMs={} gapTicks={} sweep={}", pl.getGameProfile().name(), pos, String.format("%.1f", lookTurn), now - s.lastAt, Ticks.n(pl) - s.brokeCt, s.sweep);
+			if (s.sweep >= 8) { Verdict.signal(pl, "mining", "breaks blocks one after another with a 60+ degree view turn each time", 1); return true; }
+		}
+		if (!instant) s.lastLook = lookNow;
 		if (!instant) { s.lastDir = dir; s.lastAt = now; s.brokeDir = dir; s.brokeCt = Ticks.n(pl); s.brokePos = pos; }
 		if (Trace.ON) Meshac.LOG.info("[trace] break {} {} gap={} lookdeg={} instant={} turnsInWin={}", pl.getGameProfile().name(), pos, s.lastBreak == 0 ? -1 : now - s.lastBreak, Math.round(Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, dir.dot(pl.getLookAngle())))))), instant, s.turns); s.lastBreak = now;
 		if (now - s.windowAt > 1000) { s.windowAt = now; s.breaks = 0; }

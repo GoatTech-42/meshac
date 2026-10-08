@@ -12,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Nuker, Kaboom, FastBreak and friends: breaking blocks no hand could reach, see or break that fast. */
 public final class Mining {
-	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; long digCt; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; long brokeCt = -100; Vec3 brokeDir; BlockPos brokePos, nukePos; Vec3 lastLook; int sweep; long retWin; int retStrikes; }
+	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; long digCt, aimCt; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; long brokeCt = -100; Vec3 brokeDir; BlockPos brokePos, nukePos; Vec3 lastLook; int sweep; long retWin; int retStrikes; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 8; // a hasted, efficiency V player on soft blocks tops out near 5
 
@@ -29,7 +29,7 @@ public final class Mining {
 			if (t0 - s.retWin > 10000) { s.retWin = t0; s.retStrikes = 0; }
 			if (++s.retStrikes >= 3) { s.nukePos = pos; Verdict.signal(pl, "mining", "starts digging a block 40+ degrees away within one tick of the last break", 1); }
 		}
-		s.dig = pos; s.digTick = pl.tickCount; s.digCt = Ticks.n(pl); s.early = false; s.digSample = System.currentTimeMillis(); s.off = 0; s.lookOff = !aims(pl, pos, pl.getLookAngle());
+		s.dig = pos; s.digTick = pl.tickCount; s.digCt = Ticks.n(pl); s.early = false; s.digSample = System.currentTimeMillis(); s.off = 0; s.lookOff = !aims(pl, pos, pl.getLookAngle()); s.aimCt = s.lookOff ? -1000 : Ticks.n(pl);
 	}
 	/** A client sends STOP only when its own progress reached 1. A STOP in the same tick as the START, with the block far from done, is PacketMine: the server keeps digging on its own after the START and breaks the block with no hand on it. */
 	public static void digStop(ServerPlayer pl, BlockPos pos) {
@@ -50,7 +50,7 @@ public final class Mining {
 		if (s.lookOff) s.off += now - s.digSample;
 		s.digSample = now;
 		double yr = Math.toRadians(yaw), pr = Math.toRadians(pitch);
-		s.lookOff = !aims(pl, s.dig, new Vec3(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr)));
+		s.lookOff = !aims(pl, s.dig, new Vec3(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr))); if (!s.lookOff) s.aimCt = Ticks.n(pl);
 	}
 	private static boolean aims(ServerPlayer pl, BlockPos pos, Vec3 dir) {
 		Vec3 eye = pl.getEyePosition();
@@ -88,7 +88,10 @@ public final class Mining {
 		}
 		// A hand breaks what the crosshair is on. Nuker breaks blocks all around without turning.
 		boolean instant = pl.level().getBlockState(pos).getDestroySpeed(pl.level(), pos) == 0f; // grass, ferns, flowers, torches: no hand-timing to judge, and the view often lags the click
-		if (!instant && new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) {
+		S sd = STATE.get(pl.getUUID());
+		// a lag burst can deliver the next view turn before the server finishes the break; a hand that was on this block within the last 10 client ticks is not Nuker
+		boolean recentAim = sd != null && sd.dig != null && sd.dig.equals(pos) && Ticks.active(pl) && Ticks.n(pl) - sd.aimCt <= 10;
+		if (!instant && !recentAim && new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) {
 			Verdict.signal(pl, "mining", "broke a block it is not looking at", 1);
 			return true;
 		}

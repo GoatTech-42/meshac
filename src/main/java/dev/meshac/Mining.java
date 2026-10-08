@@ -91,7 +91,8 @@ public final class Mining {
 		S sd = STATE.get(pl.getUUID());
 		// a lag burst can deliver the next view turn before the server finishes the break; a hand that was on this block within the last 10 client ticks is not Nuker
 		boolean recentAim = sd != null && sd.dig != null && sd.dig.equals(pos) && Ticks.active(pl) && Ticks.n(pl) - sd.aimCt <= 10;
-		if (!instant && !recentAim && new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) {
+		if (Trace.ON && !instant) Meshac.LOG.info("[trace] aimchk pos={} dig={} active={} n={} aimCt={} recent={} lookingNow={}", pos, sd == null ? null : sd.dig, Ticks.active(pl), Ticks.n(pl), sd == null ? -1 : sd.aimCt, recentAim, !new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty());
+		if (!instant && !recentAim && !Ticks.bunched(pl) && new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) {
 			Verdict.signal(pl, "mining", "broke a block it is not looking at", 1);
 			return true;
 		}

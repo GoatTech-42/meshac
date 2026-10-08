@@ -86,8 +86,10 @@ Files: rig/h/meteor-sweep8.sh, results-meteor-controls2.csv.
 - anchor-aura: NOT TESTABLE on this rig. The module only targets real players (target-priority setting, no entity filter) and the rig has one client; the fake-player trick gave no placement (anchors 16 to 16). Needs a second real player. Bed-aura only works in the Nether/End and was not set up.
 - velocity: caught for melee knockback, known miss for explosion knockback (decided: leave, protects legit explosion play).
 
-## Anchor / Bed Aura (sweep 16): not tested
-Meteor AnchorAura only targets real players, so a second client is needed as the victim. Two Meteor containers on one Gradle home collide on the cache lock; a copied cache (gh2) hit the same lock error. No anchor-aura result either way. Treat as untested, not caught. Bed Aura needs Nether/End setup and was not attempted. BowAimbot stays a known miss: a rotation-snap check would risk flagging legitimate bow flicks (legit 45 dmg vs aimbot 49 dmg, 0 signals).
+## Anchor / Bed Aura (sweep 16)
+The second client (vic1) works when it is started FIRST and alone; starting both Gradle builds at once collides on the cache lock. The victim has resistance and regeneration, so its health cannot show the hack acting; the attacker did move about 2.7 blocks, so the hack acted.
+- Anchor Aura: PARTIAL. 4 interact signals, weight 1.9, NOT kicked. Control (hack off) 0 signals; legit anchor charge and detonate control (2 runs) 0 signals. Needs a stronger weight or a second signal to act. Bed Aura not attempted (Nether/End).
+BowAimbot stays a known miss: a rotation-snap check would risk flagging legitimate bow flicks (legit 45 dmg vs aimbot 49 dmg, 0 signals).
 
 ## Sweep 17/18: AutoTotem, Reach, AirJump
 - AutoTotem: CAUGHT (1 signal, weight 5.2, inventory check). Controls: human-speed F-key totem swaps (0.4 s and 0.12 s after pop, 3 runs) gave 0 signals.

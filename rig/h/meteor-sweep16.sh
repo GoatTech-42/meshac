@@ -4,7 +4,7 @@ cd /home/luke/meshac-work/meshac/rig/h
 RES=/tmp/meteorSW15.csv
 trap "docker stop meshac-wurst meshac-target >/dev/null 2>&1" EXIT
 : > "$RES"
-NAME=mcSW20
+NAME=mcSW24
 start_client(){
  docker rm -f meshac-wurst >/dev/null 2>&1
  d=/home/luke/meshac-work/clients/meteor/run/meteor-client
@@ -24,7 +24,7 @@ start_target(){
 }
 setup_anchor3(){ X0=100 Y0=-60 Z0=490; KEYS=""; SECS=14; rc "forceload add 100 490" >/dev/null; rc "fill 80 -60 470 120 -50 510 air" >/dev/null; rc "fill 80 -62 470 120 -61 510 stone" >/dev/null; rc "item replace entity $NAME hotbar.0 with respawn_anchor 16" >/dev/null; rc "item replace entity $NAME hotbar.1 with glowstone 32" >/dev/null; rc "effect give $NAME resistance 120 4 true" >/dev/null; rc "gamemode survival vic1" >/dev/null; rc "effect give vic1 resistance 120 4 true" >/dev/null; rc "effect give vic1 regeneration 120 4 true" >/dev/null; rc "tp vic1 103.5 -60 492.5" >/dev/null; PRE='X key 1'; }
 measure_anchor3(){ rc "data get entity vic1 Health" | grep -o "[0-9.]*f\?$" | head -1; }
-start_target || { echo "target failed" >> $RES; exit 1; }
+{ rc list | grep -q vic1 || start_target; } || { echo "target failed" >> $RES; exit 1; }
 go none anchor3
 go anchor-aura anchor3
 echo DONE >> $RES

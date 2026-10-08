@@ -6,9 +6,7 @@ meshac watches how each player moves, works out what vanilla physics would allow
 
 ## Where it stands
 
-Early, but it works. Against a real hacked client (Wurst) it catches Flight, SpeedHack, HighJump, Glide and Timer, usually within a second, and it does that before vanilla's own checks do. It is not ready for a live server yet: it only checks movement, and some block types (ice, slime, bubble columns) still need testing. The full list of what is covered and what is not is in [docs/coverage.md](docs/coverage.md).
-
-Builds for Minecraft 26.1.2 and 26.3. 1.21.11 is next.
+Early beta work, not yet released. It checks movement, combat, building, mining, interaction and elytra flight. Against real hacked clients it catches, among others: Flight, Speed (above legal sprint-jump speed), Step, Spider, Jesus, Timer, Blink, Slippy, ElytraFly, KillAura, CrystalAura, Criticals, Nuker, PacketMine, GhostHand and AutoClicker. Legit play (sprint-jumping, wind charges, TNT and crystal knockback, elytra, lag spikes) has produced zero flags in rig runs so far. Not everything is proven: many modules are still untested and the detection runs so far are on 26.2 only. The honest per-module tables are [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) (Meteor) and [docs/coverage.md](docs/coverage.md) (Wurst), and open problems are in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
 
 ## Build
 
@@ -29,7 +27,7 @@ The plan is a `/mesh` command and a small config file with three presets (calm, 
 
 ## Testing
 
-`rig/` has a throwaway server and test clients on a Docker network with no internet. It can run scripted bots and a real Wurst client. See [rig/README.md](rig/README.md).
+`rig/` has a throwaway server and test clients on a Docker network with no internet. It runs real Wurst and Meteor clients, and a lag proxy for testing laggy connections. See [rig/README.md](rig/README.md).
 
 ## License
 

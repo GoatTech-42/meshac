@@ -85,3 +85,6 @@ Files: rig/h/meteor-sweep8.sh, results-meteor-controls2.csv.
 - bow-aimbot: MISS. Zombie 12 blocks away, 6 drawn shots: legit manual bow did 45 damage, Bow Aimbot 49 damage; 0 signals both. It aims like a good player; nothing in the shot packets separates it. Known miss unless a rotation-snap check is added (risk of false flags on legit flicks).
 - anchor-aura: NOT TESTABLE on this rig. The module only targets real players (target-priority setting, no entity filter) and the rig has one client; the fake-player trick gave no placement (anchors 16 to 16). Needs a second real player. Bed-aura only works in the Nether/End and was not set up.
 - velocity: caught for melee knockback, known miss for explosion knockback (decided: leave, protects legit explosion play).
+
+## Anchor / Bed Aura (sweep 16): not tested
+Meteor AnchorAura only targets real players, so a second client is needed as the victim. Two Meteor containers on one Gradle home collide on the cache lock; a copied cache (gh2) hit the same lock error. No anchor-aura result either way. Treat as untested, not caught. Bed Aura needs Nether/End setup and was not attempted. BowAimbot stays a known miss: a rotation-snap check would risk flagging legitimate bow flicks (legit 45 dmg vs aimbot 49 dmg, 0 signals).

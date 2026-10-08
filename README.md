@@ -4,23 +4,23 @@
 
 # meshac
 
-a native anticheat for fabric servers. it runs on the server, players install nothing, and it's free.
+a native anticheat for fabric servers.
 
-it catches what a server can see. it doesn't flag people who are just playing. that second part is the whole point.
+it catches only what a server can see.
 
 > **beta, not released yet.** everything here is what's been tested so far, misses included. numbers marked `[slot]` are still moving and get filled in when they settle.
 
 ## why this exists
 
-the anticheats i tried either missed hacks or banned honest players for having bad wifi. the second one's worse. a missed hack costs you a bad afternoon, a false ban costs you a player who doesn't come back.
+the anticheats i tried either missed hacks or banned honest players for having bad wifi. the second one's worse. a missed hack lets a hacker free, but a false ban costs you a player.
 
-so the bar for meshac is simple. if a cheat leaves a trace the server can see, catch it. if it's a real player lagging, don't touch them. zero false flags is the goal, and every check has to prove it against a clean control before it ships.
+so the quality standard for meshac is simple. if a cheat leaves a trace the server can see, catch it. if it's a real player lagging, don't touch them. zero false flags is the goal, and every check has to prove it against a clean control before it ships.
 
 ## what it does
 
 meshac watches movement, combat, building, mining, interaction and elytra flight. it works out what vanilla physics would allow and steps in when the two don't match.
 
-it doesn't punish one weird packet. every flag adds heat to a player and the heat cools off on its own. a lag spike, or a laggy tunnel bunching packets up, doesn't add up to a removal. real cheating does, fast.
+it doesn't punish one packet. every flag adds heat to a player and the heat cools off on its own. a lag spike, or a laggy tunnel bunching packets up, doesn't add up to a removal. real cheating does, fast.
 
 1. the player gets put back
 2. then held for a moment

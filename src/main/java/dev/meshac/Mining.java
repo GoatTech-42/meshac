@@ -12,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Nuker, Kaboom, FastBreak and friends: breaking blocks no hand could reach, see or break that fast. */
 public final class Mining {
-	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; long brokeCt = -100; Vec3 brokeDir; BlockPos brokePos, nukePos; Vec3 lastLook; int sweep; long retWin; int retStrikes; }
+	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; long digCt; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; long brokeCt = -100; Vec3 brokeDir; BlockPos brokePos, nukePos; Vec3 lastLook; int sweep; long retWin; int retStrikes; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 8; // a hasted, efficiency V player on soft blocks tops out near 5
 
@@ -29,7 +29,7 @@ public final class Mining {
 			if (t0 - s.retWin > 10000) { s.retWin = t0; s.retStrikes = 0; }
 			if (++s.retStrikes >= 3) { s.nukePos = pos; Verdict.signal(pl, "mining", "starts digging a block 40+ degrees away within one tick of the last break", 1); }
 		}
-		s.dig = pos; s.digTick = pl.tickCount; s.early = false; s.digSample = System.currentTimeMillis(); s.off = 0; s.lookOff = !aims(pl, pos, pl.getLookAngle());
+		s.dig = pos; s.digTick = pl.tickCount; s.digCt = Ticks.n(pl); s.early = false; s.digSample = System.currentTimeMillis(); s.off = 0; s.lookOff = !aims(pl, pos, pl.getLookAngle());
 	}
 	/** A client sends STOP only when its own progress reached 1. A STOP in the same tick as the START, with the block far from done, is PacketMine: the server keeps digging on its own after the START and breaks the block with no hand on it. */
 	public static void digStop(ServerPlayer pl, BlockPos pos) {
@@ -37,7 +37,8 @@ public final class Mining {
 		if (Trace.ON) Meshac.LOG.info("[trace] digStop dig={} pos={}", s == null ? null : s.dig, pos);
 		if (s == null || s.dig == null || !s.dig.equals(pos)) return;
 		float delta = pl.level().getBlockState(pos).getDestroyProgress(pl, pl.level(), pos);
-		int ticks = pl.tickCount - s.digTick;
+		// client ticks when the client sends tick-end packets: a lag burst can deliver START and STOP in one server tick although the client spent several ticks between them
+		int ticks = Ticks.active(pl) ? (int) (Ticks.n(pl) - s.digCt) : pl.tickCount - s.digTick;
 		if (delta < 1f && delta * (ticks + 1) < 0.5f) { s.early = true; Verdict.signal(pl, "mining", String.format("stopped digging after %d ticks, progress %.2f", ticks, delta * (ticks + 1)), 1); }
 	}
 	public static void digAbort(ServerPlayer pl) { S s = STATE.get(pl.getUUID()); if (s != null) s.dig = null; }

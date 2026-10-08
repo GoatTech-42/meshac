@@ -38,3 +38,6 @@ Glide.startFly: 6 START_FALL_FLYING commands in 3 s while airborne = signal (hoo
 
 ## Elytra Boost latency (8:50 PM) - code in, NOT proven
 Glide energy-gain signal now weighs 3 when the gain is over 40 (was 1), so a big boost should kick in about 3 signals instead of 8. Built on 4 versions. Rig proof not done: rig/h/meteor-bo.sh cannot yet fire Meteor ElytraBoost (keybind set to 66 = B via .settings, xdotool presses b, but glide traces show plain 30 b/s, so no boost fired). Scenario notes: from y250 the scenario needs slow_falling 6 s, else the player lands before the keys go down (the say commands take about 3 s). Next: find a way to trigger boost (client-side bind check, or key via xdotool keydown with the game window focused, or add a test hook), then measure first-signal to kick and run a legit rocket control.
+
+## GhostHand fix (9:08 PM): Interact.place refuses a click when the outline ray from the eye to the claimed hit point meets another block first
+Rig 26.2: Meteor GhostHand on a chest behind stone: 8 signals, first at 5.3 s (scenario waits 3 s first), hold at 6.0 s, kicked. Legit chest open with no wall: 0 signals. Not yet run: glass/fence/slab legit controls, lag control, other versions. Not deployed to lan.

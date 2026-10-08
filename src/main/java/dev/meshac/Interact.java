@@ -95,6 +95,15 @@ public final class Interact {
 			seen = !box.clip(eye, eye.add(dir.scale(8))).isEmpty();
 		}
 		if (!seen) { Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1); rate(pl); return true; }
+		// GhostHand: the hand aims at the chest, but a wall is in the way. A vanilla click only lands on what the view ray reaches first, so the outline ray from the eye to the claimed hit point must not hit another block before it.
+		{
+			Vec3 target = Packets.hit(p).getLocation();
+			var clicked = Packets.hit(p).getBlockPos();
+			var res = pl.level().clip(new net.minecraft.world.level.ClipContext(eye, target, net.minecraft.world.level.ClipContext.Block.OUTLINE, net.minecraft.world.level.ClipContext.Fluid.NONE, pl));
+			if (res.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK && !res.getBlockPos().equals(clicked) && res.getLocation().distanceTo(eye) < target.distanceTo(eye) - 0.3) {
+				Verdict.signal(pl, "interact", "clicked a block through another block", 1); rate(pl); return true;
+			}
+		}
 		// Human flicks and teleport aim corrections are legal; rotation jumps alone do not prove automation.
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();

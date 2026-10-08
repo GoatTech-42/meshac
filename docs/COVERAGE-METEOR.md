@@ -69,3 +69,6 @@ Files: rig/h/meteor-sweep4.sh, results-meteor-sweep4.csv.
 - kill-aura + criticals (mode Packet): 4 signals, first at 2.0 s, kicked 3.2 s; top category "microhop" (the criticals packet hop). CAUGHT. Criticals alone is not separable from the aura run.
 - anchor-aura: still INCONCLUSIVE (target count unchanged; needs a respawn-anchor setup that the module accepts).
 - windjump legit control: the wind charge did not launch the player (y stayed -60), so the control is INCONCLUSIVE. Wind-charge legit control still owed.
+
+## Wind-charge legit control (2:10 AM, rig 26.2, no hack)
+Real client throws wind charges at its feet (pitch 90, space held, 32 charges, 12 s). Sampled y rose from -60 to -48.5 (12 blocks up) with several launches, 0 signals, connected. Earlier summon-based attempts did not move the player and were dropped. Files: rig/h/meteor-sweep7.sh.

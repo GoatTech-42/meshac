@@ -229,3 +229,5 @@ hold_flick() { echo 'X key 1; X mousedown 1; (for i in $(seq 1 120);do d=$(shuf 
 setup_n8c() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(hold_flick 0.25)"; }
 setup_n8d() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(hold_flick 0.45)"; }
 setup_n8e() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(hold_flick 0.6)"; }
+setup_sign3() { setup_sign; CLICK=0; SECS=5; PRE="X click 3; sleep 2.5; X type hello; sleep 0.5; X key Escape; sleep 1; X mousemove_relative -- 250 0; sleep 0.5; X click 3; sleep 1.5; X key Escape"; }
+measure_sign3() { measure_sign; }

@@ -6,7 +6,7 @@ meshac watches how each player moves, works out what vanilla physics would allow
 
 ## Where it stands
 
-Early beta work, not released yet. It checks movement, combat, building, mining, interaction and elytra flight, and it is built for 1.21.11, 26.1, 26.2 and 26.3.
+Early beta work, not released yet. It checks movement, combat, building, mining, interaction and elytra flight, and it is built for 1.21.11, 26.1.2, 26.2 and 26.3.
 
 What has been tried so far is real hacked clients (Wurst on 26.3, Meteor on 26.2) against a throwaway server, always with a hack-off control run next to it. Caught so far: Flight, Speed above sprint-jump pace, Step, Spider, Jesus, FastClimb, NoSlow, Timer, Blink (0.75 s and up), Slippy, AirJump, HighJump, ElytraFly, Reach, KillAura, Criticals, CrystalAura, Anchor Aura, AutoTotem, Nuker, PacketMine, GhostHand and AutoClicker. Legit play has not produced a flag in any control run: sprint-jumping, wind charges, knockback from TNT and crystals, elytra, hand mining through tunnels, lag spikes.
 
@@ -39,4 +39,4 @@ GNU Affero General Public License v3.0 only (see LICENSE). You can use, change a
 
 ## Versions
 
-One source tree builds for 1.21.11, 26.1.x, 26.2 and 26.3. Run build-all.sh with JDK 25 and the jars land in dist/. The 1.21.11 jar uses the older obfuscated toolchain and runs on Java 21; the rest need Java 25. rig/smoke.sh boots each jar on a real server of its version and checks that meshac loads. So far that is a boot test only; the movement checks have been exercised on 26.1.2.
+One source tree builds for 1.21.11, 26.1.2 (the 26.1 build, dist/meshac-26.1.jar, targets 26.1.2), 26.2 and 26.3. Run build-all.sh with JDK 25 and the jars land in dist/. The 1.21.11 jar uses the older obfuscated toolchain and runs on Java 21; the rest need Java 25. rig/smoke.sh boots each jar on a real server of its version and checks that meshac loads. So far that is a boot test only; the movement checks have been exercised on 26.1.2.

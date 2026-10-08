@@ -7,9 +7,11 @@ meshac watches how each player moves, works out what vanilla physics would allow
 
 ## Where it stands
 
-Early, but it works. Against a real hacked client (Wurst) it catches Flight, SpeedHack, HighJump, Glide and Timer, usually within a second, and it does that before vanilla's own checks do. It is not ready for a live server yet: it only checks movement, and some block types (ice, slime, bubble columns) still need testing. The full list of what is covered and what is not is in [docs/coverage.md](docs/coverage.md).
+Early beta work, not released yet. It checks movement, combat, building, mining, interaction and elytra flight, and it is built for 1.21.11, 26.1.2, 26.2 and 26.3.
 
-Builds for Minecraft 26.1.2 and 26.3. 1.21.11 is next.
+What has been tried so far is real hacked clients (Wurst on 26.3, Meteor on 26.2) against a throwaway server, always with a hack-off control run next to it. Caught so far: Flight, Speed above sprint-jump pace, Step, Spider, Jesus, FastClimb, NoSlow, Timer, Blink (0.75 s and up), Slippy, AirJump, HighJump, ElytraFly, Reach, KillAura, Criticals, CrystalAura, Anchor Aura, AutoTotem, Nuker, PacketMine, GhostHand and AutoClicker. Legit play has not produced a flag in any control run: sprint-jumping, wind charges, knockback from TNT and crystals, elytra, hand mining through tunnels, lag spikes.
+
+It does not catch everything. Known gaps: speed at or below sprint-jump pace (indistinguishable from a fast legit player), short Blink, Surround, BowAimbot, boosts above 45 blocks per second, and explosion knockback is exempt on purpose. Some modules are untested. The per-module tables are in [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) (Meteor) and [docs/coverage.md](docs/coverage.md) (Wurst). Open problems are in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
 
 ## Build
 
@@ -30,7 +32,7 @@ The plan is a `/mesh` command and a small config file with three presets (calm, 
 
 ## Testing
 
-`rig/` has a throwaway server and test clients on a Docker network with no internet. It can run scripted bots and a real Wurst client. See [rig/README.md](rig/README.md).
+`rig/` has a throwaway server and test clients on a Docker network with no internet. It runs real Wurst and Meteor clients, and a lag proxy for testing laggy connections. See [rig/README.md](rig/README.md).
 
 ## License
 
@@ -38,4 +40,4 @@ GNU Affero General Public License v3.0 only (see LICENSE). You can use, change a
 
 ## Versions
 
-One source tree builds for 1.21.11, 26.1.x, 26.2 and 26.3. Run build-all.sh with JDK 25 and the jars land in dist/. The 1.21.11 jar uses the older obfuscated toolchain and runs on Java 21; the rest need Java 25. rig/smoke.sh boots each jar on a real server of its version and checks that meshac loads. So far that is a boot test only; the movement checks have been exercised on 26.1.2.
+One source tree builds for 1.21.11, 26.1.2 (the 26.1 build, dist/meshac-26.1.jar, targets 26.1.2), 26.2 and 26.3. Run build-all.sh with JDK 25 and the jars land in dist/. The 1.21.11 jar uses the older obfuscated toolchain and runs on Java 21; the rest need Java 25. rig/smoke.sh boots each jar on a real server of its version and checks that meshac loads. So far that is a boot test only; the movement checks have been exercised on 26.1.2.

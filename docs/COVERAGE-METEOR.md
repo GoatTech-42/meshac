@@ -18,10 +18,10 @@ Meaning: CAUGHT = signals and the move was held or the player kicked. FLAGGED = 
 | no-slow | CAUGHT (held) | web and soul sand, 5 signals each |
 | no-fall | FLAGGED | 3 signals, not stopped in window |
 | long-jump | FLAGGED weakly | 1 signal, distance same as control, hack may not have acted |
-| speed | MISS at default settings | 0 signals, covered 50.9 blocks vs 35.3 control in 8 s. Needs a fix (earlier vanilla-speed 10 was caught) |
+| speed | default (vanilla-speed 5.6) = legit sprint speed, not a hack. vanilla-speed 8: 1 signal, not stopped (weak). 12: CAUGHT, held. 10: caught earlier. **Strafe mode 1.6: MISS** (61 blocks vs 35 control, 0 signals) |
+| timer | CAUGHT (multiplier 2: kicked 10.5 s) |
 | air-jump, high-jump | INCONCLUSIVE | scenario holds jump on ground; needs a tailored scenario |
 | velocity | INCONCLUSIVE | TNT scenario, player ended same place as without hack |
-| timer | INCONCLUSIVE | default multiplier is 1.0, no effect; needs a setting |
 | entity-control | INCONCLUSIVE | boat scenario, no effect seen |
 | sprint, auto-jump, gui-move, parkour, safe-walk | 0 signals, same result as legit | client conveniences (inputs the server cannot tell from a player) |
 | not run | | click-tp, anti-void, auto-walk, auto-wasp, anchor, reverse-step, trident-boost |
@@ -45,7 +45,7 @@ Meaning: CAUGHT = signals and the move was held or the player kicked. FLAGGED = 
 | module | result | note |
 |---|---|---|
 | auto-clicker | CAUGHT | kicked 3.2 s |
-| kill-aura | MISS at default settings | 0 signals while hitting a tank zombie (55 damage dealt). Needs the older aura scenarios rerun to confirm |
+| kill-aura | CAUGHT | first sweep was a bad run (default targets players only, damage came from the harness clicking). With entities=zombie and no manual clicks: 6 signals, kicked 2.5 s. Control 0 |
 | criticals, hitboxes | INCONCLUSIVE | no hits landed |
 | not run | | crystal-aura, anchor-aura, bed-aura, auto-totem, bow-aimbot, surround, etc. |
 
@@ -53,4 +53,4 @@ Meaning: CAUGHT = signals and the move was held or the player kicked. FLAGGED = 
 Not server-detectable: they change only what the client draws or the chat UI. Checked by source reading only, not rig-run. Exceptions to keep an eye on: xray / wall-hack / tracers / esp (reveal hidden info; Veil layer addresses ore hiding, OFF by default and not in any release jar), packet-canceller, packet-logger, server-spoof (client-side).
 
 ## Open
-speed default MISS, kill-aura default MISS, inconclusive modules above, all of this on 26.2 only, plus Wurst unrun modules in docs/coverage.md.
+Speed Strafe mode MISS, speed 8 weak, inconclusive modules above, all of this on 26.2 only, plus Wurst unrun modules in docs/coverage.md.

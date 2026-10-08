@@ -108,3 +108,9 @@ The 4 signals are all "placed against air": meshac refuses the aura's anchor pla
 - UpdatedNCP: partial. 4 combat signals (7.8/11.6), not kicked; hits landed.
 - OldNCP: CAUGHT, 4 microhop signals, kicked; hits landed.
 - Jump: 4 combat signals, kicked, but the target took no damage, so the hack's hits did not land; counts as flagged, not as a proven catch of a working crit. Legit jump-crit control not run yet (no false-flag check for the combat signal).
+
+## Sweep 23: legit jump-crit control, HoleFiller, Surround, FastUse
+- Legit jump-crit control (manual jump + click on a tanky zombie, 12 s, module off): 0 signals. This is the control for the Criticals rows (UpdatedNCP and Jump combat signals).
+- Surround: MISS. The hack acted (0 to 4 obsidian blocks placed around the player in one go), 0 signals. Placements are on valid floor faces, so a rule would need a rate cap on placements, which risks flagging legit fast block placing. No rule added; documented as known miss.
+- HoleFiller: INCONCLUSIVE. Nothing was placed (hole stayed empty), so the hack did not act in this scenario (range or targeting). Needs a different setup.
+- FastUse: INCONCLUSIVE. The snowball count measure did not move between hack-off and hack-on (16 to 28 in all rows, so the measure is bad). Hack not shown acting.

@@ -188,3 +188,14 @@ measure_airjump() { rc "data get entity $NAME Pos[1]" | grep -o "[-0-9.]*d\?$" |
 # anchorp: legit rapid anchor placing. A hand looking at the floor places anchors 4 times a second (and charges them when it looks back at one).
 setup_anchorp() { X0=100 Y0=-60 Z0=490; KEYS=""; SECS=12; PITCH=40; YAW=0; rc "forceload add 100 490" >/dev/null; rc "fill 90 -60 480 110 -50 500 air" >/dev/null; rc "fill 90 -62 480 110 -61 500 stone" >/dev/null; rc "item replace entity $NAME hotbar.0 with respawn_anchor 16" >/dev/null; rc "item replace entity $NAME hotbar.1 with glowstone 32" >/dev/null; rc "effect give $NAME resistance 120 4 true" >/dev/null; PRE="X key 1; (for i in \$(seq 1 40); do X click 3; sleep 0.25; done) &"; }
 measure_anchorp() { rc "clear $NAME respawn_anchor 0" | grep -o "[0-9]\+" | head -1; }
+# --- tail scenarios (sweep 23) ---
+setup_holefill() { X0=100 Y0=-60 Z0=600; KEYS=""; SECS=8; rc "forceload add 100 600" >/dev/null; rc "fill 90 -60 590 112 -50 612 air" >/dev/null; rc "fill 90 -62 590 112 -61 612 stone" >/dev/null; rc "fill 101 -60 599 103 -59 601 obsidian" >/dev/null; rc "setblock 102 -60 600 air" >/dev/null; rc "setblock 102 -59 600 air" >/dev/null; rc "item replace entity $NAME hotbar.0 with obsidian 64" >/dev/null; rc "item replace entity $NAME hotbar.1 with obsidian 64" >/dev/null; }
+measure_holefill() { rc "execute if block 102 -60 600 obsidian" | grep -c "passed"; }
+setup_surround() { X0=100 Y0=-60 Z0=640; KEYS=""; SECS=6; rc "forceload add 100 640" >/dev/null; rc "fill 90 -60 630 112 -50 652 air" >/dev/null; rc "fill 90 -62 630 112 -61 652 stone" >/dev/null; rc "item replace entity $NAME hotbar.0 with obsidian 64" >/dev/null; }
+measure_surround() { n=0; for c in "101 -60 640" "99 -60 640" "100 -60 641" "100 -60 639"; do rc "execute if block $c obsidian" | grep -q passed && n=$((n+1)); done; echo $n; }
+setup_fastuse() { X0=100 Y0=-60 Z0=680; KEYS=""; SECS=6; PITCH=-30; rc "forceload add 100 680" >/dev/null; rc "fill 90 -60 670 112 -50 692 air" >/dev/null; rc "fill 90 -62 670 112 -61 692 stone" >/dev/null; rc "item replace entity $NAME hotbar.0 with snowball 16" >/dev/null; PRE='X mousedown 3; (sleep 4; X mouseup 3) &'; }
+measure_fastuse() { rc "clear $NAME snowball 0" | grep -o "[0-9]\+" | head -1; }
+setup_fastuseh() { setup_fastuse; PRE='(for i in $(seq 1 16); do X click 3; sleep 0.25; done) &'; }
+measure_fastuseh() { measure_fastuse; }
+setup_critjump() { X0=100 Y0=-60 Z0=20; KEYS=""; SECS=12; CLICK=1; JITTER=1; rc "summon zombie 100.5 -60 23.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null; rc "give $NAME diamond_sword" >/dev/null; PRE='(for i in $(seq 1 8); do X key space; sleep 1; done) &'; }
+measure_critjump() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f\?$" | head -1; }

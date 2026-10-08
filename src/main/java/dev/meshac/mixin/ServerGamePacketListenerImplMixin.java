@@ -93,7 +93,9 @@ public abstract class ServerGamePacketListenerImplMixin {
 	// VERIFY packet class and accessor: ServerboundChatCommandPacket.command() in 1.21.11 and 26.x (signed commands use ServerboundChatCommandSignedPacket, hook it the same way).
 	@Inject(method = "handleChatCommand", at = @At("HEAD"))
 	private void meshac$chatCommand(net.minecraft.network.protocol.game.ServerboundChatCommandPacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) dev.meshac.Chatter.command(player, p.command());
+		// vanilla handles chat commands without hopping to the main thread first, so this hook only ever runs on the network thread
+		String msg = dev.meshac.Chatter.command(player, p.command());
+		if (msg != null) { net.minecraft.server.level.ServerPlayer pl = player; pl.level().getServer().execute(() -> dev.meshac.Verdict.signal(pl, "chat", msg, 1)); }
 	}
 
 	@Inject(method = "handleClientTickEnd", at = @At("HEAD"))

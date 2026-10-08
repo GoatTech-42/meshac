@@ -35,3 +35,6 @@ Post-session: enumerate every Meteor module (combat/movement/player/render/world
 
 ## ElytraFly Packet mode fix (8:28 PM)
 Glide.startFly: 6 START_FALL_FLYING commands in 3 s while airborne = signal (hook handlePlayerCommand). Rig 26.2: Packet mode signalled at 1.6 s, 3 signals/setbacks, flight denied (player stayed put and fell; no kick since the hack stopped). Legit controls (glide from y250, glide with rocket-free elytra from y90): 0 signals. Built on all 4 versions; only 26.2 run so far. Not deployed to lan.
+
+## Elytra Boost latency (8:50 PM) - code in, NOT proven
+Glide energy-gain signal now weighs 3 when the gain is over 40 (was 1), so a big boost should kick in about 3 signals instead of 8. Built on 4 versions. Rig proof not done: rig/h/meteor-bo.sh cannot yet fire Meteor ElytraBoost (keybind set to 66 = B via .settings, xdotool presses b, but glide traces show plain 30 b/s, so no boost fired). Scenario notes: from y250 the scenario needs slow_falling 6 s, else the player lands before the keys go down (the say commands take about 3 s). Next: find a way to trigger boost (client-side bind check, or key via xdotool keydown with the game window focused, or add a test hook), then measure first-signal to kick and run a legit rocket control.

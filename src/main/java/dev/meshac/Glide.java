@@ -60,7 +60,7 @@ public final class Glide {
 		if (Double.isNaN(before) || boosted) { s.hits = 0; return null; }
 		if (Trace.ON) Meshac.LOG.info("[trace] glide v={} e={} before={}", Math.round(v * 10) / 10.0, Math.round(e * 10) / 10.0, Math.round(before * 10) / 10.0);
 		if (e - before > SLACK) {
-			if (++s.hits >= 2) { s.hits = 0; Verdict.signal(pl, "glide", String.format("speeding up in flight without a rocket (%.0f blocks a second)", v), 1); }
+			if (++s.hits >= 2) { s.hits = 0; Verdict.signal(pl, "glide", String.format("speeding up in flight without a rocket (%.0f blocks a second)", v), e - before > 40 ? 3 : 1); }
 		} else s.hits = 0;
 		return null;
 	}

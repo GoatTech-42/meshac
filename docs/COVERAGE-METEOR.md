@@ -18,7 +18,7 @@ Meaning: CAUGHT = signals and the move was held or the player kicked. FLAGGED = 
 | no-slow | CAUGHT (held) | web and soul sand, 5 signals each |
 | no-fall | FLAGGED | 3 signals, not stopped in window |
 | long-jump | FLAGGED weakly | 1 signal, distance same as control, hack may not have acted |
-| speed | default (vanilla-speed 5.6) = legit sprint speed, not a hack. vanilla-speed 8: 1 signal, not stopped (weak). 12: CAUGHT, held. 10: caught earlier. **Strafe mode 1.6: MISS** (61 blocks vs 35 control, 0 signals) |
+| speed | default (vanilla-speed 5.6) = legit sprint speed, not a hack. vanilla-speed 8: 1 signal, not stopped (weak). 12: CAUGHT, held. 10: caught earlier. Strafe 1.6: 0 signals, 61 blocks, but a legit sprint-jump control covers 63.5 blocks in the same scenario, so this speed is inside legal movement and cannot be flagged without false flags (same for vanilla-speed 8 and below). Only speed ABOVE sprint-jump is detectable: 12 caught |
 | timer | CAUGHT (multiplier 2: kicked 10.5 s) |
 | air-jump, high-jump | INCONCLUSIVE | scenario holds jump on ground; needs a tailored scenario |
 | velocity | INCONCLUSIVE | TNT scenario, player ended same place as without hack |
@@ -53,4 +53,4 @@ Meaning: CAUGHT = signals and the move was held or the player kicked. FLAGGED = 
 Not server-detectable: they change only what the client draws or the chat UI. Checked by source reading only, not rig-run. Exceptions to keep an eye on: xray / wall-hack / tracers / esp (reveal hidden info; Veil layer addresses ore hiding, OFF by default and not in any release jar), packet-canceller, packet-logger, server-spoof (client-side).
 
 ## Open
-Speed Strafe mode MISS, speed 8 weak, inconclusive modules above, all of this on 26.2 only, plus Wurst unrun modules in docs/coverage.md.
+Speed hacks at or below legit sprint-jump speed are not detectable by speed alone, inconclusive modules above, all of this on 26.2 only, plus Wurst unrun modules in docs/coverage.md.

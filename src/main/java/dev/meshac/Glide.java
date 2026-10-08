@@ -54,7 +54,8 @@ public final class Glide {
 		boolean clear = !boosted && !pl.horizontalCollision && !pl.verticalCollision && !pl.onGround() && !pl.isInWater() && !pl.isInLava() && pl.level().getBlockState(pl.blockPosition()).isAir() && pl.getY() > pl.level().getMinY() + 2;
 		// Energy input with no rocket. A fast vanilla glide loses about 1.5 blocks of energy per 10 ticks at 31 blocks a second (measured on the rig); real rockets, wind charges, hits and explosions are excluded above. A client-side boost keeps the energy up while no rocket exists on the server.
 		if (!clear || Double.isNaN(s.winE)) s.inputScore = 0;
-		else if (v >= 28 && e - s.winE > -0.6) { if ((s.inputScore += 1) >= 4) { s.inputScore = 0; Verdict.signal(pl, "glide", String.format("flying at %.0f blocks a second with no rocket and no energy loss (boost hack)", v), 3); } }
+		else if (v > 45) s.inputScore = 0; // steep dives pass 60 blocks a second and the simple energy model stops holding there (rig: a legit dive to 67 b/s showed +15 'energy')
+		else if ((v >= 22 && e - s.winE > -0.4 * 1.5 * (v / 31) * (v / 31)) || e - s.winE > 3) { s.inputScore += e - s.winE > 3 ? 2 : 1; if (s.inputScore >= 4) { s.inputScore = 0; Verdict.signal(pl, "glide", String.format("flying at %.0f blocks a second with no rocket and almost no energy loss (boost hack)", v), 3); } }
 		else s.inputScore = Math.max(0, s.inputScore - 0.5);
 		s.winE = clear ? e : Double.NaN;
 		if (!clear || Double.isNaN(s.prevE)) s.noLoss = 0;

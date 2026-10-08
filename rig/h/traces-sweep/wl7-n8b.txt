@@ -1,0 +1,15 @@
+[17:35:15] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=102, y=-59, z=696} turn=151.6 gapMs=1000 gapTicks=20 sweep=0
+[17:35:17] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=96, y=-59, z=699} turn=96.5 gapMs=2150 gapTicks=44 sweep=0
+[17:35:19] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=97, y=-59, z=704} turn=74.2 gapMs=1200 gapTicks=24 sweep=0
+[17:35:21] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=102, y=-59, z=704} turn=63.0 gapMs=2100 gapTicks=41 sweep=0
+[17:35:22] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=96, y=-59, z=700} turn=114.7 gapMs=1200 gapTicks=25 sweep=0
+[17:35:23] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=104, y=-59, z=700} turn=173.4 gapMs=902 gapTicks=17 sweep=0
+[17:35:23] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=97, y=-59, z=696} turn=119.4 gapMs=498 gapTicks=11 sweep=1
+[17:35:24] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=99, y=-59, z=704} turn=128.4 gapMs=1200 gapTicks=24 sweep=0
+[17:35:25] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=99, y=-59, z=696} turn=151.5 gapMs=801 gapTicks=16 sweep=0
+[17:35:27] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=100, y=-59, z=696} turn=17.6 gapMs=1750 gapTicks=35 sweep=0
+[17:35:28] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=96, y=-59, z=702} turn=127.1 gapMs=901 gapTicks=17 sweep=0
+[17:35:30] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=96, y=-59, z=698} turn=57.6 gapMs=2448 gapTicks=50 sweep=0
+[17:35:32] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=98, y=-59, z=704} turn=79.5 gapMs=2100 gapTicks=42 sweep=0
+[17:35:34] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=104, y=-59, z=702} turn=93.9 gapMs=1350 gapTicks=26 sweep=0
+[17:35:36] [Server thread/INFO]: [trace] sweep mcWl09 BlockPos{x=104, y=-59, z=701} turn=20.8 gapMs=2551 gapTicks=51 sweep=0

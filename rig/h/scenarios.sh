@@ -186,7 +186,7 @@ measure_swaphit() { measure_meleetank; }
 setup_airjump() { X0=100 Y0=-60 Z0=940; KEYS=""; SECS=12; rc "forceload add 100 940" >/dev/null; rc "fill 94 -60 934 106 -30 946 air" >/dev/null; rc "fill 94 -61 934 106 -61 946 stone" >/dev/null; PRE="(for i in \$(seq 1 35); do X key space; sleep 0.25; done) &"; }
 measure_airjump() { rc "data get entity $NAME Pos[1]" | grep -o "[-0-9.]*d\?$" | head -1; }
 # anchorp: legit rapid anchor placing. A hand looking at the floor places anchors 4 times a second (and charges them when it looks back at one).
-setup_anchorp() { X0=100 Y0=-60 Z0=490; KEYS=""; SECS=12; PITCH=40; YAW=0; rc "forceload add 100 490" >/dev/null; rc "fill 90 -60 480 110 -50 500 air" >/dev/null; rc "fill 90 -62 480 110 -61 500 stone" >/dev/null; rc "item replace entity $NAME hotbar.0 with respawn_anchor 16" >/dev/null; rc "item replace entity $NAME hotbar.1 with glowstone 32" >/dev/null; rc "effect give $NAME resistance 120 4 true" >/dev/null; PRE="X key 1; (for i in \$(seq 1 40); do X click 3; sleep 0.25; done) &"; }
+setup_anchorp() { X0=100 Y0=-60 Z0=490; KEYS=""; SECS=12; PITCH=40; YAW=0; rc "forceload add 100 490" >/dev/null; rc "fill 90 -60 480 110 -50 500 air" >/dev/null; rc "fill 90 -62 480 110 -61 500 stone" >/dev/null; rc "item replace entity $NAME hotbar.0 with respawn_anchor 16" >/dev/null; rc "item replace entity $NAME hotbar.1 with glowstone 32" >/dev/null; rc "effect give $NAME resistance 120 4 true" >/dev/null; PRE="X key 1; (for i in \$(seq 1 80); do X click 3; sleep 0.25; done) &"; }
 measure_anchorp() { rc "clear $NAME respawn_anchor 0" | grep -o "[0-9]\+" | head -1; }
 # --- tail scenarios (sweep 23) ---
 setup_holefill() { X0=100 Y0=-60 Z0=600; KEYS=""; SECS=8; rc "forceload add 100 600" >/dev/null; rc "fill 90 -60 590 112 -50 612 air" >/dev/null; rc "fill 90 -62 590 112 -61 612 stone" >/dev/null; rc "fill 101 -60 599 103 -59 601 obsidian" >/dev/null; rc "setblock 102 -60 600 air" >/dev/null; rc "setblock 102 -59 600 air" >/dev/null; rc "item replace entity $NAME hotbar.0 with obsidian 64" >/dev/null; rc "item replace entity $NAME hotbar.1 with obsidian 64" >/dev/null; }
@@ -199,3 +199,17 @@ setup_fastuseh() { setup_fastuse; PRE='(for i in $(seq 1 16); do X click 3; slee
 measure_fastuseh() { measure_fastuse; }
 setup_critjump() { X0=100 Y0=-60 Z0=20; KEYS=""; SECS=12; CLICK=1; JITTER=1; rc "summon zombie 100.5 -60 23.5 {NoAI:1b,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null; rc "give $NAME diamond_sword" >/dev/null; PRE='(for i in $(seq 1 8); do X key space; sleep 1; done) &'; }
 measure_critjump() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f\?$" | head -1; }
+setup_fish2() { setup_fish; SECS=110; }
+measure_fish2() { measure_fish; }
+# --- sweep-rule legit controls (N6-N9)
+sweep_room() { rc "fill 94 -61 $(($1-6)) 106 -55 $(($1+6)) $2" >/dev/null; rc "fill 97 -60 $(($1-3)) 103 -57 $(($1+3)) air" >/dev/null; }
+setup_n8() { X0=100 Y0=-60 Z0=700; SECS=22; PITCH=0; YAW=0; sweep_room 700 stone; rc "give $NAME diamond_pickaxe" >/dev/null; rc "effect give $NAME haste 999 1 true" >/dev/null
+ PRE='X key 1; (for i in $(seq 1 80);do d=$(shuf -i 400-800 -n1); [ $((RANDOM%2)) = 0 ] && d=-$d; X mousemove_relative -- $d 0; sleep 0.12; X mousedown 1; sleep 0.3; X mouseup 1; done) &'; }
+setup_n6() { X0=100 Y0=-60 Z0=760; SECS=26; PITCH=0; YAW=0; sweep_room 760 stone; rc "give $NAME diamond_pickaxe" >/dev/null
+ PRE='X key 1; (for i in $(seq 1 20);do rc "fill 99 -59 763 101 -58 763 stone" >/dev/null; sleep 0.3; X mousemove_relative -- -60 0; sleep 0.$((RANDOM%5+1)); X mousedown 1; sleep 0.$((RANDOM%6+3)); X mouseup 1; X mousemove_relative -- 60 0; sleep 0.2; X mousedown 1; sleep 0.$((RANDOM%6+3)); X mouseup 1; done) &'; }
+setup_n7() { X0=100 Y0=-60 Z0=820; SECS=25; PITCH=0; YAW=0; sweep_room 820 dirt; rc "give $NAME diamond_shovel" >/dev/null; rc "effect give $NAME haste 999 1 true" >/dev/null
+ PRE='X key 1; X mousedown 1; (for i in $(seq 1 800);do X mousemove_relative -- 4 0; sleep 0.05; done; X mouseup 1) &'; }
+setup_n9() { X0=100 Y0=-60 Z0=880; SECS=20; PITCH=0; YAW=0; sweep_room 880 stone; rc "fill 96 -59 883 104 -57 884 coal_ore" >/dev/null; rc "give $NAME iron_pickaxe" >/dev/null
+ PRE='X key 1; (for i in $(seq 1 15);do [ $((i%2)) = 0 ] && d=60 || d=-60; X mousemove_relative -- $d 0; sleep 0.2; X mousedown 1; sleep 0.9; X mouseup 1; done) &'; }
+setup_n8b() { X0=100 Y0=-60 Z0=700; SECS=22; PITCH=0; YAW=0; sweep_room 700 stone; rc "give $NAME diamond_pickaxe" >/dev/null; rc "effect give $NAME haste 999 1 true" >/dev/null
+ PRE='X key 1; X mousedown 1; (for i in $(seq 1 60);do d=$(shuf -i 400-800 -n1); [ $((RANDOM%2)) = 0 ] && d=-$d; X mousemove_relative -- $d 0; sleep 0.33; done; X mouseup 1) &'; }

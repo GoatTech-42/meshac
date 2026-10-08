@@ -12,7 +12,7 @@ import net.minecraft.world.item.Items;
  * cannot go up without a firework rocket, a hit or an explosion. A hack that holds forward and keeps speeding up breaks that.
  */
 public final class Glide {
-	private static final class S { int tick0 = -1; double x0, y0, z0, e0 = Double.NaN; long rocketAt; int hits; double prevE = Double.NaN; int noLoss; }
+	private static final class S { int tick0 = -1; double x0, y0, z0, e0 = Double.NaN; long rocketAt, windAt; int hits; double prevE = Double.NaN; int noLoss; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int WINDOW = 10;          // ticks per sample
 	private static final double SLACK = 10.0;      // blocks of energy gained over the lowest point so far. Air drag only loses energy, this covers rounding and packet timing
@@ -22,6 +22,9 @@ public final class Glide {
 	public static void rocket(ServerPlayer pl) {
 		if (pl.getMainHandItem().is(Items.FIREWORK_ROCKET) || pl.getOffhandItem().is(Items.FIREWORK_ROCKET)) STATE.computeIfAbsent(pl.getUUID(), k -> new S()).rocketAt = System.currentTimeMillis();
 	}
+
+	/** A wind charge burst or a mace smash is near the player: a legal vanilla launch, same exemption as a rocket. */
+	public static void wind(ServerPlayer pl) { STATE.computeIfAbsent(pl.getUUID(), k -> new S()).windAt = System.currentTimeMillis(); }
 
 	/** Every position packet. Returns a setback position, or null. */
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
@@ -33,7 +36,7 @@ public final class Glide {
 		if (now - s.tick0 < WINDOW) return null;
 		double secs = (now - s.tick0) * 0.05, d = Math.sqrt((x - s.x0) * (x - s.x0) + (y - s.y0) * (y - s.y0) + (z - s.z0) * (z - s.z0));
 		double v = d / secs, e = v * v / 64.0 + y;
-		boolean boosted = System.currentTimeMillis() - s.rocketAt < ROCKET_MS || pl.hurtTime > 0;
+		boolean boosted = System.currentTimeMillis() - s.rocketAt < ROCKET_MS || System.currentTimeMillis() - s.windAt < ROCKET_MS || pl.hurtTime > 0;
 		// Vanilla gliding always loses energy to air drag (motion x0.99/x0.98 every tick). A flight that holds its speed and height (Meteor/Wurst ElytraFly control, packet and hover modes) never does.
 		boolean clear = !boosted && !pl.horizontalCollision && !pl.verticalCollision && !pl.onGround() && !pl.isInWater() && !pl.isInLava() && pl.level().getBlockState(pl.blockPosition()).isAir() && pl.getY() > pl.level().getMinY() + 2;
 		if (!clear || Double.isNaN(s.prevE)) s.noLoss = 0;

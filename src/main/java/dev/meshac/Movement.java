@@ -197,7 +197,7 @@ public final class Movement {
 	public static void tick(ServerPlayer pl) {
 		S s = STATE.get(pl.getUUID());
 		if (s == null || !s.init) return;
-		if (!pl.level().getEntitiesOfClass(AbstractWindCharge.class, pl.getBoundingBox().inflate(10)).isEmpty()) s.windAt = System.currentTimeMillis();
+		if (!pl.level().getEntitiesOfClass(AbstractWindCharge.class, pl.getBoundingBox().inflate(10)).isEmpty()) { s.windAt = System.currentTimeMillis(); Glide.wind(pl); }
 		double sx = pl.getX(), sy = pl.getY(), sz = pl.getZ();
 		boolean baseExempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger() || pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable()
 			|| pl.hasEffect(MobEffects.LEVITATION) || pl.hasEffect(MobEffects.SLOW_FALLING);
@@ -261,6 +261,6 @@ public final class Movement {
 	}
 
 	/** A mace smash with Wind Burst throws the player upward like a wind charge does. */
-	public static void maceSmash(ServerPlayer pl) { S s = STATE.get(pl.getUUID()); if (s != null) s.windAt = System.currentTimeMillis(); }
+	public static void maceSmash(ServerPlayer pl) { S s = STATE.get(pl.getUUID()); if (s != null) s.windAt = System.currentTimeMillis(); Glide.wind(pl); }
 	public static void forget(UUID id) { STATE.remove(id); }
 }

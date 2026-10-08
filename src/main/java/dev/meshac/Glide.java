@@ -29,6 +29,7 @@ public final class Glide {
 	/** Every position packet. Returns a setback position, or null. */
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		if (Trace.ON && (pl.tickCount % 20) == 0) Meshac.LOG.info("[trace] glidein ff={} pos={} cr={} sp={} g={}", pl.isFallFlying(), p.hasPosition(), pl.isCreative(), pl.isSpectator(), pl.onGround());
 		if (!pl.isFallFlying() || !p.hasPosition() || pl.isCreative() || pl.isSpectator()) { s.tick0 = -1; s.e0 = Double.NaN; s.hits = 0; return null; }
 		int now = pl.tickCount;
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());

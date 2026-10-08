@@ -3,3 +3,4 @@
 2. Walk-around "noclip moving inside solid blocks" setbacks (heat 1-2) at the plains spawn area.
 3. Respawn-anchor explosion knockback flagged (Luke report 7:30 PM); likely the "speed 0.52>0.48 hold" and/or nofall signals. Needs explosion-velocity exemption window.
 4. "nofall ground spoof" setbacks heat 1-3 repeatedly 7:29:54-7:30:09 PM (cause under investigation).
+5. (GAP, false negative, Luke 7:32 PM) Meteor ElytraFly completely bypasses. Cause: Glide.java only catches gaining energy; ElytraFly (Vanilla/control, Packet, hover) holds speed and height, which vanilla drag makes impossible. Candidate fix: "no air drag" check (energy must keep falling in a glide). Written, builds on 26.1, UNPROVEN on rig: needs Meteor repro (all 4 modes) plus legit elytra suite before it ships.

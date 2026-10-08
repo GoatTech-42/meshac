@@ -12,7 +12,7 @@ import net.minecraft.world.item.Items;
  * cannot go up without a firework rocket, a hit or an explosion. A hack that holds forward and keeps speeding up breaks that.
  */
 public final class Glide {
-	private static final class S { int tick0 = -1; double x0, y0, z0, e0 = Double.NaN; long rocketAt; int hits; }
+	private static final class S { int tick0 = -1; double x0, y0, z0, e0 = Double.NaN; long rocketAt; int hits; double prevE = Double.NaN; int noLoss; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int WINDOW = 10;          // ticks per sample
 	private static final double SLACK = 10.0;      // blocks of energy gained over the lowest point so far. Air drag only loses energy, this covers rounding and packet timing
@@ -34,6 +34,13 @@ public final class Glide {
 		double secs = (now - s.tick0) * 0.05, d = Math.sqrt((x - s.x0) * (x - s.x0) + (y - s.y0) * (y - s.y0) + (z - s.z0) * (z - s.z0));
 		double v = d / secs, e = v * v / 64.0 + y;
 		boolean boosted = System.currentTimeMillis() - s.rocketAt < ROCKET_MS || pl.hurtTime > 0;
+		// Vanilla gliding always loses energy to air drag (motion x0.99/x0.98 every tick). A flight that holds its speed and height (Meteor/Wurst ElytraFly control, packet and hover modes) never does.
+		boolean clear = !boosted && !pl.horizontalCollision && !pl.verticalCollision && !pl.onGround() && !pl.isInWater() && !pl.isInLava() && pl.level().getBlockState(pl.blockPosition()).isAir() && pl.getY() > pl.level().getMinY() + 2;
+		if (!clear || Double.isNaN(s.prevE)) s.noLoss = 0;
+		else if (e >= s.prevE - 0.05) s.noLoss++;
+		else if (e < s.prevE - 0.4) s.noLoss = Math.max(0, s.noLoss - 3);
+		s.prevE = clear ? e : Double.NaN;
+		if (s.noLoss >= 8) { s.noLoss = 0; Verdict.signal(pl, "glide", String.format("no air drag in flight, holding %.0f blocks a second", v), 1); }
 		double before = s.e0; s.e0 = boosted ? Double.NaN : Double.isNaN(before) ? e : Math.min(before, e); // lowest energy seen since the glide or the last boost
 		s.tick0 = now; s.x0 = x; s.y0 = y; s.z0 = z;
 		if (Double.isNaN(before) || boosted) { s.hits = 0; return null; }

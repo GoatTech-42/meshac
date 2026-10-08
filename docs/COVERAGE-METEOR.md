@@ -54,3 +54,7 @@ Not server-detectable: they change only what the client draws or the chat UI. Ch
 
 ## Open
 Speed hacks at or below legit sprint-jump speed are not detectable by speed alone, inconclusive modules above, all of this on 26.2 only, plus Wurst unrun modules in docs/coverage.md.
+
+## Sweep 3 (1:13 AM, combat, default settings, existing scenarios)
+All 0 signals and none of them visibly acted, so all INCONCLUSIVE (not misses, not passes): velocity (floor blown out, no horizontal launch), crystal-aura and anchor-aura (target counts unchanged, needs obsidian and real target setup), auto-totem (player at 3 hp ended 0 hp, popped/died check not read), bow-aimbot, bow-spam (no hit on target), auto-weapon, auto-armor, hole-filler, auto-trap, surround (need their own scenarios), criticals (Packet mode without kill-aura, no hit landed; needs a kill-aura plus criticals scenario with a hit).
+Files: rig/h/meteor-sweep3.sh, results-meteor-sweep3.csv.

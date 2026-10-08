@@ -88,3 +88,8 @@ Files: rig/h/meteor-sweep8.sh, results-meteor-controls2.csv.
 
 ## Anchor / Bed Aura (sweep 16): not tested
 Meteor AnchorAura only targets real players, so a second client is needed as the victim. Two Meteor containers on one Gradle home collide on the cache lock; a copied cache (gh2) hit the same lock error. No anchor-aura result either way. Treat as untested, not caught. Bed Aura needs Nether/End setup and was not attempted. BowAimbot stays a known miss: a rotation-snap check would risk flagging legitimate bow flicks (legit 45 dmg vs aimbot 49 dmg, 0 signals).
+
+## Sweep 17/18: AutoTotem, Reach, AirJump
+- AutoTotem: CAUGHT (1 signal, weight 5.2, inventory check). Controls: human-speed F-key totem swaps (0.4 s and 0.12 s after pop, 3 runs) gave 0 signals.
+- Reach (extra-entity-reach 3, target 5 blocks out): CAUGHT, 4 combat signals, kicked. Caveat: the target health did not change (server rejected the hit), so the flag came from the attack attempt. Legit reach control: ordinary melee runs at normal range gave 0 signals earlier.
+- AirJump: INCONCLUSIVE, the airjump scenario is not defined in scenarios.sh (only in meteor-air.sh), no data.

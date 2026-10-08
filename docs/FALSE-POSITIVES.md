@@ -72,3 +72,9 @@ Check now: window energy change above -0.4 times the expected drag loss (1.5 * (
 
 ## Boost check, wind-charge-in-flight control (4:50 AM, rig 26.2)
 Real client gliding from y250 with a wind charge thrown every 1.2 s (10 charges used per run, 2 runs, about 550 blocks flown): 0 signals, connected. Not verified that each charge launched the player. Crossbow rockets (do not boost) and the lag-proxy control are still not run. Files: rig/h/meteor-sweep11.sh.
+
+## Boost check, remaining controls (4:56 AM, rig 26.2, deployed build)
+- Lag proxy (800 ms stall both ways every 4 s, active during the run): legit hand rockets, 17 spent, 720 blocks flown: 0 signals, connected. Bunching was not directly measured, only that the proxy was in the path.
+- Crossbow rockets (a charged firework fired from a crossbow every 1.5 s while gliding, 8 tries, 237 blocks flown): 0 signals, connected. Not verified that each shot fired.
+- A walk through the same proxy: 0 signals. Files: rig/h/meteor-sweep12.sh, results-meteor-boost-lag.csv.
+All planned controls for the boost check are now run. The check is on meshac-lan since 4:52 AM.

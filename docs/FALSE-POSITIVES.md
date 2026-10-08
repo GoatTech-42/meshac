@@ -1,0 +1,5 @@
+# Live false-positive fix list (meshac-lan, Luke, Oct 7 2026, GoombaKid7)
+1. Teleport arrival (635-block /spreadplayers tp): "fly dy 0.000", then "noclip moving inside solid blocks" heat 5 -> auto KICK (case MA-P9HG). Needs teleport grace + no noclip/fly checks until the arrival position is settled and chunks load.
+2. Walk-around "noclip moving inside solid blocks" setbacks (heat 1-2) at the plains spawn area.
+3. Respawn-anchor explosion knockback flagged (Luke report 7:30 PM); likely the "speed 0.52>0.48 hold" and/or nofall signals. Needs explosion-velocity exemption window.
+4. "nofall ground spoof" setbacks heat 1-3 repeatedly 7:29:54-7:30:09 PM (cause under investigation).

@@ -22,7 +22,8 @@ public final class Meshac implements ModInitializer {
 			if (c != null) handler.disconnect(Screens.ban(c)); else Fingerprints.check(handler.player);
 		});
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : new java.util.ArrayList<>(server.getPlayerList().getPlayers())) { Movement.tick(pl); Fingerprints.check(pl); } dev.meshac.veil.Veil.tick(server); });
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Fingerprints.forget(handler.player.getUUID()); Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); dev.meshac.veil.Veil.forgetPlayer(handler.player); Combat.forget(handler.player.getUUID()); Vehicle.forget(handler.player.getUUID()); Mining.forget(handler.player.getUUID()); Interact.forget(handler.player.getUUID()); Inventory.forget(handler.player.getUUID()); Totem.forget(handler.player.getUUID()); Glide.forget(handler.player.getUUID()); });
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(Fish::tick);
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Fingerprints.forget(handler.player.getUUID()); Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); dev.meshac.veil.Veil.forgetPlayer(handler.player); Combat.forget(handler.player.getUUID()); Vehicle.forget(handler.player.getUUID()); Mining.forget(handler.player.getUUID()); Interact.forget(handler.player.getUUID()); Inventory.forget(handler.player.getUUID()); Totem.forget(handler.player.getUUID()); Glide.forget(handler.player.getUUID()); Ticks.forget(handler.player.getUUID()); Chatter.forget(handler.player.getUUID()); Fish.forget(handler.player.getUUID()); });
 		LOG.info("meshac loaded");
 	}
 }

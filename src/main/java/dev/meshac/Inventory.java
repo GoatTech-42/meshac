@@ -27,7 +27,8 @@ public final class Inventory {
 		s.last = now;
 		if (now - s.start > WINDOW_MS) { s.start = now; s.clicks = 0; }
 		if (++s.clicks > MAX_IN_WINDOW) { s.clicks = 0; Verdict.signal(pl, "inventory", "more than " + MAX_IN_WINDOW + " item moves in " + WINDOW_MS + " ms", 1); }
-		if (gap < SLOW_MS && Math.abs(gap - s.lastGap) < EVEN_MS) { if (++s.even >= 5) { s.even = 0; Verdict.signal(pl, "inventory", "item moves on a steady beat of " + gap + " ms", 1); } } else s.even = 0;
+		if (gap < SLOW_MS && Math.abs(gap - s.lastGap) < EVEN_MS) { if (++s.even >= 5) { s.even = 3; // keep counting: a script that keeps the beat signals every 2 more moves instead of every 5 (AutoSteal at 100 ms gave 1 signal on 12 stacks). A hand needs 5 equal gaps from a standing start again after any irregular one.
+			 Verdict.signal(pl, "inventory", "item moves on a steady beat of " + gap + " ms", 1); } } else s.even = 0;
 		s.lastGap = gap;
 		return now;
 	}

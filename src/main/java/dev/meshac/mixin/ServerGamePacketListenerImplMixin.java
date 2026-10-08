@@ -79,15 +79,22 @@ public abstract class ServerGamePacketListenerImplMixin {
 	@Inject(method = "handleUseItem", at = @At("HEAD"), cancellable = true)
 	private void meshac$use(ServerboundUseItemPacket p, CallbackInfo ci) {
 		if (player.level().getServer().isSameThread()) {
+			dev.meshac.Fish.use(player);
 			boolean refused = Interact.use(player);
 			Trace.t(player, "use item=" + player.getMainHandItem().getItem() + (refused ? " REFUSED" : ""));
 			if (refused) { player.connection.ackBlockChangesUpTo(dev.meshac.Packets.seq(p)); player.containerMenu.sendAllDataToRemote(); ci.cancel(); }
 		}
 	}
 
+	// VERIFY packet class and accessor: ServerboundChatCommandPacket.command() in 1.21.11 and 26.x (signed commands use ServerboundChatCommandSignedPacket, hook it the same way).
+	@Inject(method = "handleChatCommand", at = @At("HEAD"))
+	private void meshac$chatCommand(net.minecraft.network.protocol.game.ServerboundChatCommandPacket p, CallbackInfo ci) {
+		if (player.level().getServer().isSameThread()) dev.meshac.Chatter.command(player, p.command());
+	}
+
 	@Inject(method = "handleClientTickEnd", at = @At("HEAD"))
 	private void meshac$tickEnd(net.minecraft.network.protocol.game.ServerboundClientTickEndPacket p, CallbackInfo ci) {
-		if (!player.level().getServer().isSameThread()) Movement.tickEnd(player);
+		if (!player.level().getServer().isSameThread()) Movement.tickEnd(player); else dev.meshac.Ticks.inc(player);
 	}
 
 	@Inject(method = "handlePlayerCommand", at = @At("HEAD"))

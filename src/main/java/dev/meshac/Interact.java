@@ -27,7 +27,28 @@ public final class Interact {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.shotWin > 30000) { s.shotWin = now; s.shots = 0; }
+		bowTrace(pl);
 		if (now - s.flickAt < 1500 && ++s.shots >= 3) { Verdict.signal(pl, "interact", "view snaps onto a target as the bow is let go", 1); }
+	}
+
+	/**
+	 * DATA ONLY, no verdict. Wurst BowAimbot sets the view every client tick: yaw turns toward the target by at most the angle limit, pitch is the exact ballistic solution for the
+	 * current charge (so pitch drifts down by itself while the bow charges), and it aims at the box centre with a 0.2 lead. This logs, at each release, the closest approach of the
+	 * simulated arrow (speed 3*power, drag 0.99, gravity 0.05) to the centre of every living entity near the line of fire. A human baseline run at the same ranges decides if a threshold
+	 * exists; until then nothing is flagged. Trace lines only (MESHAC_TRACE).
+	 */
+	private static void bowTrace(ServerPlayer pl) {
+		if (!Trace.ON) return;
+		float charge = pl.getTicksUsingItem() / 20f; float power = (charge * charge + charge * 2f) / 3f; if (power > 1f) power = 1f; // same curve as BowItem.getPowerForTime
+		Vec3 look = pl.getLookAngle(), eye = pl.getEyePosition();
+		var box = pl.getBoundingBox().expandTowards(look.scale(80)).inflate(6);
+		for (var e : pl.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, box, x -> x != pl && x.isAlive())) {
+			Vec3 c = e.getBoundingBox().getCenter(), p = eye.add(0, -0.1, 0), v = look.scale(power * 3.0);
+			double best = 1e9;
+			for (int i = 0; i < 100; i++) { p = p.add(v); v = new Vec3(v.x * 0.99, v.y * 0.99 - 0.05, v.z * 0.99); best = Math.min(best, p.distanceTo(c)); if (p.distanceTo(eye) > 100) break; }
+			Vec3 mv = e.getDeltaMovement();
+			Trace.t(pl, String.format("bow-release target=%d dist=%.1f power=%.2f miss=%.2f targetSpeed=%.2f pitch=%.1f ticksUsing=%d", e.getId(), eye.distanceTo(c), power, best, Math.hypot(mv.x, mv.z) * 20, pl.getXRot(), pl.getTicksUsingItem())); // VERIFY getTicksUsingItem() on LivingEntity
+		}
 	}
 
 	/** A use-item packet (throw, eat, bow). */
@@ -70,8 +91,10 @@ public final class Interact {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		boolean typed = false;
 		for (String l : lines) typed |= !l.isEmpty();
-		if (!typed || System.currentTimeMillis() - s.clickAt > 1000) return false;
-		Verdict.signal(pl, "interact", "sign text filled in " + (System.currentTimeMillis() - s.clickAt) + " ms after the click", 1);
+		// Typing even one letter and pressing Done takes a hand over 300 ms after the editor opens (about 150 ms to react, then a key, then Done). The editor opens when the click is processed, so the round trip comes first: only the part beyond the ping counts. Tested up to 300 ms ping. Was a flat 1 s, which a fast typist can beat on a short word.
+		long gap = System.currentTimeMillis() - s.clickAt - Math.max(0, Math.min(300, pl.connection.latency())); // VERIFY latency() on ServerGamePacketListenerImpl
+		if (!typed || gap > 300) return false;
+		Verdict.signal(pl, "interact", "sign text filled in " + Math.max(0, gap) + " ms after the editor opened", 1);
 		return true;
 	}
 

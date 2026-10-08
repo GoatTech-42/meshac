@@ -69,10 +69,14 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleSignUpdate", at = @At("HEAD"), cancellable = true)
 	private void meshac$sign(net.minecraft.network.protocol.game.ServerboundSignUpdatePacket p, CallbackInfo ci) {
-		if (player.level().getServer().isSameThread()) {
-			boolean refused = Interact.sign(player, dev.meshac.Packets.lines(p));
-			Trace.t(player, "sign text" + (refused ? " REFUSED" : "") + " lines=" + String.join("|", dev.meshac.Packets.lines(p)));
-			if (refused) ci.cancel();
+		// the vanilla handler does not hop to the main thread before this point, so the hook runs on the network thread
+		String[] lines = dev.meshac.Packets.lines(p);
+		long gap = Interact.signGap(player, lines);
+		Trace.t(player, "sign text" + (gap >= 0 ? " REFUSED gap=" + gap : "") + " lines=" + String.join("|", lines));
+		if (gap >= 0) {
+			ci.cancel();
+			net.minecraft.server.level.ServerPlayer pl = player;
+			pl.level().getServer().execute(() -> dev.meshac.Verdict.signal(pl, "interact", "sign text filled in " + gap + " ms after the editor opened", 1));
 		}
 	}
 

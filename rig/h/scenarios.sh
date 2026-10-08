@@ -231,3 +231,5 @@ setup_n8d() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt
 setup_n8e() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(hold_flick 0.6)"; }
 setup_sign3() { setup_sign; CLICK=0; SECS=5; PRE="X click 3; sleep 2.5; X type hello; sleep 0.5; X key Escape; sleep 1; X mousemove_relative -- 250 0; sleep 0.5; X click 3; sleep 1.5; X key Escape"; }
 measure_sign3() { measure_sign; }
+setup_sign4() { setup_sign; CLICK=0; SECS=5; PRE="X click 3; sleep 2.5; X type hello; sleep 0.5; X key Escape; sleep 1; rc \"tp $NAME 103.5 -60 140.5 0 30\" >/dev/null; sleep 1; X click 3; sleep 1.5; X key Escape"; }
+measure_sign4() { measure_sign; }

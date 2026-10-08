@@ -10,7 +10,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Scaffold, AirPlace, AutoBuild, Throw: using blocks and items faster, or somewhere else, than a hand does. */
 public final class Interact {
-	private static final class S { boolean pairOpen; final long[] rt = new long[6]; final float[] ry = new float[6], rp = new float[6]; int ri; long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; long clickAt, entAt, entWin, swapAt, useWin; int swapUses; int entId = -1, entStrikes; }
+	private static final class S { boolean pairOpen; final long[] rt = new long[6]; final float[] ry = new float[6], rp = new float[6]; int ri; long windowAt; int uses; long lastUse; int burst; double lx, lz, chainDist; long lt, chainMs; int fwd; float pitch, prevPitch, yaw, prevYaw; long snapWin; int snaps; long flickAt, shotWin; int shots; volatile long clickAt; long entAt, entWin, swapAt, useWin; int swapUses; int entId = -1, entStrikes; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 16; // fast bridging is about 8 a second
 
@@ -88,14 +88,21 @@ public final class Interact {
 
 	/** AutoSign: the editor opens when the sign is clicked or placed. Typing a line and pressing Done takes a hand longer than a second; the hack answers in the same tick. Text that arrives sooner is refused. */
 	public static boolean sign(ServerPlayer pl, String[] lines) {
-		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		long gap = signGap(pl, lines);
+		if (gap < 0) return false;
+		Verdict.signal(pl, "interact", "sign text filled in " + gap + " ms after the editor opened", 1);
+		return true;
+	}
+
+	/** The sign-update packet is handled off the main thread by the server (it is only queued there after the text filter), so this check runs on the network thread, where the arrival time is the real one. Returns the gap in ms when the text came too fast, else -1. Does not signal: the caller does that on the main thread. */
+	public static long signGap(ServerPlayer pl, String[] lines) {
+		S s = STATE.get(pl.getUUID());
+		if (s == null) return -1;
 		boolean typed = false;
 		for (String l : lines) typed |= !l.isEmpty();
-		// Typing even one letter and pressing Done takes a hand over 300 ms after the editor opens (about 150 ms to react, then a key, then Done). The editor opens when the click is processed, so the round trip comes first: only the part beyond the ping counts. Tested up to 300 ms ping. Was a flat 1 s, which a fast typist can beat on a short word.
-		long gap = System.currentTimeMillis() - s.clickAt - Math.max(0, Math.min(300, pl.connection.latency())); // VERIFY latency() on ServerGamePacketListenerImpl
-		if (!typed || gap > 300) return false;
-		Verdict.signal(pl, "interact", "sign text filled in " + Math.max(0, gap) + " ms after the editor opened", 1);
-		return true;
+		long gap = System.currentTimeMillis() - s.clickAt - Math.max(0, Math.min(300, pl.connection.latency()));
+		if (!typed || gap > 300) return -1;
+		return Math.max(0, gap);
 	}
 
 	public static boolean place(ServerPlayer pl, ServerboundUseItemOnPacket p) {

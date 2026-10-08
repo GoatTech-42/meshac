@@ -41,4 +41,28 @@ public abstract class ChunkDataMixin {
 			for (Veil.Mod x : m) sec.setBlockState(x.idx() & 15, (x.idx() >> 4) & 15, x.idx() >> 8, x.real(), false);
 		}
 	}
+
+	// The packet buffer is sized from the REAL sections before anything is written. Swapping blocks can grow a palette, so size it from the swapped sections too.
+	@Unique private static final ThreadLocal<LevelChunk> meshac$szChunk = new ThreadLocal<>();
+	@Unique private static final ThreadLocal<int[]> meshac$szIdx = ThreadLocal.withInitial(() -> new int[1]);
+
+	@Inject(method = "calculateChunkSize", at = @At("HEAD"))
+	private static void meshac$szBegin(LevelChunk chunk, org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Integer> ci) { meshac$szChunk.set(chunk); meshac$szIdx.get()[0] = 0; }
+
+	@Inject(method = "calculateChunkSize", at = @At("RETURN"))
+	private static void meshac$szEnd(LevelChunk chunk, org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Integer> ci) { meshac$szChunk.remove(); }
+
+	@Redirect(method = "calculateChunkSize", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/LevelChunkSection;getSerializedSize()I"))
+	private static int meshac$size(LevelChunkSection sec) {
+		LevelChunk c = meshac$szChunk.get();
+		int i = meshac$szIdx.get()[0]++;
+		Veil.Mod[] m = c == null ? null : Veil.mods(c, i, sec);
+		if (m == null || m.length == 0) return sec.getSerializedSize();
+		try {
+			for (Veil.Mod x : m) sec.setBlockState(x.idx() & 15, (x.idx() >> 4) & 15, x.idx() >> 8, x.fake(), false);
+			return sec.getSerializedSize();
+		} finally {
+			for (Veil.Mod x : m) sec.setBlockState(x.idx() & 15, (x.idx() >> 4) & 15, x.idx() >> 8, x.real(), false);
+		}
+	}
 }

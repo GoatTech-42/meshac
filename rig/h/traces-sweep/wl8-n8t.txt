@@ -1,0 +1,17 @@
+[17:48:00] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=104, y=-59, z=699} gap=-1 lookdeg=3 instant=false turnsInWin=0
+[17:48:01] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=104, y=-59, z=701} turn=27.4 gapMs=1200 gapTicks=24 sweep=0
+[17:48:01] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=104, y=-59, z=701} gap=1200 lookdeg=3 instant=false turnsInWin=0
+[17:48:02] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=104, y=-59, z=703} turn=27.0 gapMs=1199 gapTicks=23 sweep=0
+[17:48:02] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=104, y=-59, z=703} gap=1199 lookdeg=2 instant=false turnsInWin=0
+[17:48:04] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=96, y=-59, z=698} turn=173.1 gapMs=1101 gapTicks=23 sweep=0
+[17:48:04] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=96, y=-59, z=698} gap=1101 lookdeg=5 instant=false turnsInWin=0
+[17:48:11] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=96, y=-59, z=701} gap=7649 lookdeg=2 instant=false turnsInWin=0
+[17:48:12] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=96, y=-59, z=699} turn=29.0 gapMs=1101 gapTicks=23 sweep=0
+[17:48:12] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=96, y=-59, z=699} gap=1101 lookdeg=3 instant=false turnsInWin=0
+[17:48:13] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=104, y=-59, z=702} turn=175.6 gapMs=1149 gapTicks=22 sweep=0
+[17:48:13] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=104, y=-59, z=702} gap=1149 lookdeg=6 instant=false turnsInWin=0
+[17:48:15] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=104, y=-59, z=698} turn=42.4 gapMs=1201 gapTicks=24 sweep=0
+[17:48:15] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=104, y=-59, z=698} gap=1201 lookdeg=5 instant=false turnsInWin=0
+[17:48:16] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=96, y=-59, z=697} turn=120.9 gapMs=1100 gapTicks=23 sweep=0
+[17:48:16] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=96, y=-59, z=697} gap=1100 lookdeg=2 instant=false turnsInWin=0
+[17:48:23] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=101, y=-59, z=704} gap=7600 lookdeg=2 instant=false turnsInWin=0

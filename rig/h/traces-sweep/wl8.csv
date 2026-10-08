@@ -1,0 +1,9 @@
+n8s,none,"100.5,-60.0,700.5","100.5,-60.0,700.5",20.0>20.0,">",0,-,-,-,-,connected
+## n8s breaks=11 instant=0 max=2 signals=0
+n8t,none,"100.5,-60.0,700.5","100.5,-60.0,700.5",20.0>20.0,">",0,-,-,-,-,connected
+## n8t breaks=10 instant=0 max=0 signals=0
+n9s,none,"100.5,-60.0,880.5","100.5,-60.0,880.5",20.0>20.0,">",0,-,-,-,-,connected
+## n9s breaks=7 instant=0 max=0 signals=0
+n7s,none,"100.5,-60.0,840.5","100.5,-60.0,840.5",20.0>20.0,">",6,12.2,14.2,-,mining,connected
+## n7s breaks=11 instant=0 max=0 signals=6
+FIN

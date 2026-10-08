@@ -6,7 +6,11 @@ meshac watches how each player moves, works out what vanilla physics would allow
 
 ## Where it stands
 
-Early beta work, not yet released. It checks movement, combat, building, mining, interaction and elytra flight. Against real hacked clients it catches, among others: Flight, Speed (above legal sprint-jump speed), Step, Spider, Jesus, Timer, Blink, Slippy, ElytraFly, KillAura, CrystalAura, Criticals, Nuker, PacketMine, GhostHand and AutoClicker. Legit play (sprint-jumping, wind charges, TNT and crystal knockback, elytra, lag spikes) has produced zero flags in rig runs so far. Not everything is proven: many modules are still untested and the detection runs so far are on 26.2 only. The honest per-module tables are [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) (Meteor) and [docs/coverage.md](docs/coverage.md) (Wurst), and open problems are in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
+Early beta work, not released yet. It checks movement, combat, building, mining, interaction and elytra flight, and it is built for 1.21.11, 26.1, 26.2 and 26.3.
+
+What has been tried so far is real hacked clients (Wurst on 26.3, Meteor on 26.2) against a throwaway server, always with a hack-off control run next to it. Caught so far: Flight, Speed above sprint-jump pace, Step, Spider, Jesus, FastClimb, NoSlow, Timer, Blink (0.75 s and up), Slippy, AirJump, HighJump, ElytraFly, Reach, KillAura, Criticals, CrystalAura, Anchor Aura, AutoTotem, Nuker, PacketMine, GhostHand and AutoClicker. Legit play has not produced a flag in any control run: sprint-jumping, wind charges, knockback from TNT and crystals, elytra, hand mining through tunnels, lag spikes.
+
+It does not catch everything. Known gaps: speed at or below sprint-jump pace (indistinguishable from a fast legit player), short Blink, Surround, BowAimbot, boosts above 45 blocks per second, and explosion knockback is exempt on purpose. Some modules are untested. The per-module tables are in [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) (Meteor) and [docs/coverage.md](docs/coverage.md) (Wurst). Open problems are in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
 
 ## Build
 

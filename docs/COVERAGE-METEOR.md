@@ -21,7 +21,7 @@ Meaning: CAUGHT = signals and the move was held or the player kicked. FLAGGED = 
 | speed | default (vanilla-speed 5.6) = legit sprint speed, not a hack. vanilla-speed 8: 1 signal, not stopped (weak). 12: CAUGHT, held. 10: caught earlier. Strafe 1.6: 0 signals, 61 blocks, but a legit sprint-jump control covers 63.5 blocks in the same scenario, so this speed is inside legal movement and cannot be flagged without false flags (same for vanilla-speed 8 and below). Only speed ABOVE sprint-jump is detectable: 12 caught |
 | timer | CAUGHT (multiplier 2: kicked 10.5 s) |
 | air-jump, high-jump | INCONCLUSIVE | scenario holds jump on ground; needs a tailored scenario |
-| velocity | INCONCLUSIVE | TNT scenario, player ended same place as without hack |
+| velocity | CAUGHT for melee knockback (5 signals, kicked 11.6 s, antiknockback); MISS for explosion knockback | zombie hits with knockback 0: caught, legit control 0 signals (pushed 12 blocks). TNT with explosions 0: player did not move, 0 signals (the check excludes explosions on purpose, to protect anchor/bed/wind legit play) |
 | entity-control | INCONCLUSIVE | boat scenario, no effect seen |
 | sprint, auto-jump, gui-move, parkour, safe-walk | 0 signals, same result as legit | client conveniences (inputs the server cannot tell from a player) |
 | not run | | click-tp, anti-void, auto-walk, auto-wasp, anchor, reverse-step, trident-boost |

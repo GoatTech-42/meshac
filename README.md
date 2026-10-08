@@ -1,4 +1,5 @@
 # meshac
+## this repo is not being updated until the beta is ready in a couple days
 
 An anticheat that runs inside a Fabric server. Players install nothing.
 

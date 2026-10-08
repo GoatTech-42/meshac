@@ -93,6 +93,11 @@ public abstract class ServerGamePacketListenerImplMixin {
 	@Inject(method = "handlePlayerAction", at = @At("HEAD"), cancellable = true)
 	private void meshac$release(ServerboundPlayerActionPacket p, CallbackInfo ci) {
 		if (player.level().getServer().isSameThread()) Trace.t(player, "action " + p.getAction());
+		if (player.level().getServer().isSameThread() && !player.isCreative()) {
+			if (p.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) dev.meshac.Mining.digStart(player, p.getPos());
+			else if (p.getAction() == ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK) dev.meshac.Mining.digStop(player, p.getPos());
+			else if (p.getAction() == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK) dev.meshac.Mining.digAbort(player);
+		}
 		if (p.getAction() == ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND && player.level().getServer().isSameThread() && !player.isCreative() && Totem.refuse(player, System.currentTimeMillis(), 45, true)) { ci.cancel(); player.containerMenu.sendAllDataToRemote(); return; }
 		if (p.getAction() == ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM && player.getUseItem().is(net.minecraft.tags.ItemTags.BOW_ENCHANTABLE) && player.level().getServer().isSameThread()) Interact.release(player);
 	}

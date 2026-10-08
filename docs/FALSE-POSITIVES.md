@@ -41,3 +41,6 @@ Glide energy-gain signal now weighs 3 when the gain is over 40 (was 1), so a big
 
 ## GhostHand fix (9:08 PM): Interact.place refuses a click when the outline ray from the eye to the claimed hit point meets another block first
 Rig 26.2: Meteor GhostHand on a chest behind stone: 8 signals, first at 5.3 s (scenario waits 3 s first), hold at 6.0 s, kicked. Legit chest open with no wall: 0 signals. Not yet run: glass/fence/slab legit controls, lag control, other versions. Not deployed to lan.
+
+## PacketMine fix (9:48 PM), corrects the gap 12 design
+Real behaviour (rig, obsidian + diamond pickaxe): PacketMine sends START and STOP in the same tick (progress about 0.01), then a second properly timed STOP at about 9 s. The server breaks the block at the second STOP, so break time is vanilla, and the hack lets a player mine without holding the button or aiming. Mining.digStart/digStop/refuse: a STOP with progress under 0.5 flags the dig (signal) and the break of that block is refused. Rig 26.2: legit hold-mine on obsidian breaks at about 9 s with 0 signals (3 runs); PacketMine blocked, block stays, 1 signal at 5.4 s (2 runs). Not run: haste/efficiency/water legit controls, lag control, other versions, creative. Not deployed to lan.

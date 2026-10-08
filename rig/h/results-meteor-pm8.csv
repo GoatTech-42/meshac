@@ -1,0 +1,3 @@
+pmine,none,"100.5,-60.0,500.5","100.5,-60.0,500.5",20.0>20.0,"failed>passed",0,-,-,-,-,connected
+pmine,packet-mine,"100.5,-60.0,500.5","100.5,-60.0,500.5",20.0>20.0,"failed>failed",1,5.4,-,-,mining,connected
+DONE

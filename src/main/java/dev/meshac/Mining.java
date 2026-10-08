@@ -12,9 +12,39 @@ import net.minecraft.world.phys.Vec3;
 
 /** Nuker, Kaboom, FastBreak and friends: breaking blocks no hand could reach, see or break that fast. */
 public final class Mining {
-	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; }
+	private static final class S { long windowAt, lastBreak, missWin; int misses; int breaks; long lastAt, turnWin; int turns; Vec3 lastDir; BlockPos dig; int digTick; boolean early; long digSample; long off; boolean lookOff; Vec3 look = null; }
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int MAX_PER_SECOND = 8; // a hasted, efficiency V player on soft blocks tops out near 5
+
+	/** A hand mines by holding the button with the crosshair on the block; the client drops the dig the moment the crosshair leaves. PacketMine keeps the dig alive while the view is elsewhere and turns to the block only for the final packet. Time spent aiming away during a dig is counted. */
+	public static void digStart(ServerPlayer pl, BlockPos pos) {
+		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		s.dig = pos; s.digTick = pl.tickCount; s.early = false; s.digSample = System.currentTimeMillis(); s.off = 0; s.lookOff = !aims(pl, pos, pl.getLookAngle());
+	}
+	/** A client sends STOP only when its own progress reached 1. A STOP in the same tick as the START, with the block far from done, is PacketMine: the server keeps digging on its own after the START and breaks the block with no hand on it. */
+	public static void digStop(ServerPlayer pl, BlockPos pos) {
+		S s = STATE.get(pl.getUUID());
+		if (Trace.ON) Meshac.LOG.info("[trace] digStop dig={} pos={}", s == null ? null : s.dig, pos);
+		if (s == null || s.dig == null || !s.dig.equals(pos)) return;
+		float delta = pl.level().getBlockState(pos).getDestroyProgress(pl, pl.level(), pos);
+		int ticks = pl.tickCount - s.digTick;
+		if (delta < 1f && delta * (ticks + 1) < 0.5f) { s.early = true; Verdict.signal(pl, "mining", String.format("stopped digging after %d ticks, progress %.2f", ticks, delta * (ticks + 1)), 1); }
+	}
+	public static void digAbort(ServerPlayer pl) { S s = STATE.get(pl.getUUID()); if (s != null) s.dig = null; }
+	/** Every rotation packet: yaw and pitch the client is now holding. */
+	public static void look(ServerPlayer pl, float yaw, float pitch) {
+		S s = STATE.get(pl.getUUID());
+		if (s == null || s.dig == null) return;
+		long now = System.currentTimeMillis();
+		if (s.lookOff) s.off += now - s.digSample;
+		s.digSample = now;
+		double yr = Math.toRadians(yaw), pr = Math.toRadians(pitch);
+		s.lookOff = !aims(pl, s.dig, new Vec3(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr)));
+	}
+	private static boolean aims(ServerPlayer pl, BlockPos pos, Vec3 dir) {
+		Vec3 eye = pl.getEyePosition();
+		return !new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(dir.scale(8))).isEmpty();
+	}
 
 	/** True when this break should be refused. */
 	public static boolean refuse(ServerPlayer pl, BlockPos pos) {
@@ -34,6 +64,12 @@ public final class Mining {
 		}
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
+		if (Trace.ON) Meshac.LOG.info("[trace] refuse? dig={} pos={} early={}", s.dig, pos, s.early);
+		if (s.dig != null && s.dig.equals(pos)) {
+			if (s.lookOff) s.off += now - s.digSample;
+			boolean early = s.early; s.dig = null;
+			if (early) return true;
+		}
 		// Nuker turns the view to each block in turn. A tunnel miner keeps pointing the same way; fast successive breaks more than 40 degrees apart are not a hand.
 		Vec3 dir = centre.subtract(eye).normalize();
 		if (!instant && s.lastDir != null && now - s.lastAt < 600 && dir.dot(s.lastDir) < 0.766) {

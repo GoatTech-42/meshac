@@ -51,3 +51,6 @@ Measured on the rig (trace dz per packet): vanilla stone stop decays x0.546 per 
 ## Blink fix (10:30 PM)
 Movement.arrive (netty thread) + new handleClientTickEnd hook: movement packets quiet for 500 ms right after the player was moving, client tick-end packets still arriving (70 percent of expected), then at least max(6, 0.6 x gap/50) movement packets inside 150 ms = signal. Real stalls hold tick-end packets too, so they do not match.
 Rig 26.2 (walk 10 s): control 0 signals. Meteor Blink pulse-delay 15 (0.75 s): 8 signals, kicked at 8.7 s. Pulse 25 (1.25 s): 8 signals, hold at 11.2 s, still connected at the end. Pulse 8 (0.4 s): 0 signals - MISS, under the 500 ms gap floor (it hides about 8 ticks of movement). Not run: lag-injected legit control (needs netem on the rig network), GUI/chunk-lag controls, other versions. Not deployed to lan.
+
+## Lag control for Blink (10:48 PM)
+rig/h/lagproxy.py: TCP proxy between the client and the rig that freezes BOTH directions for 800 ms every 4 s (python:3-alpine container meshac-lagproxy; client target meshac-lagproxy:25565). Legit 24 s walk through it with the Blink check live: 107 blocks, 0 signals, connected. A longer stall (1.2 s) and a one-way stall are not tested yet.

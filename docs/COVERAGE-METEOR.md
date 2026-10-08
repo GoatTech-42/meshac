@@ -10,7 +10,7 @@ Meaning: CAUGHT = signals and the move was held or the player kicked. FLAGGED = 
 | step | CAUGHT | kicked 6.3 s |
 | spider | CAUGHT | kicked 6.7 s |
 | elytra-fly | CAUGHT (Vanilla, Packet) | Packet via Glide.startFly. Pitch40/Bounce not exercised |
-| elytra-boost | UNPROVEN | check coded, boost never confirmed firing on the rig |
+| elytra-boost | CAUGHT (below 45 b/s) | rocket-less energy check, kicked 10.9 s; controls clean (rockets, dives, wind charge, lag proxy, crossbow). Above 45 b/s not covered |
 | blink | CAUGHT for pulses 0.75 s+, MISS at 0.4 s | lag control 0 signals |
 | slippy | CAUGHT (1.0) | 0.6/0.98/1.1 not run |
 | jesus | CAUGHT (held) | 9 signals, no kick in window |

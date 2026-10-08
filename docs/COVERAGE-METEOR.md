@@ -99,3 +99,6 @@ BowAimbot stays a known miss: a rotation-snap check would risk flagging legitima
 ## Sweep 19: AirJump, HighJump
 - AirJump (space tapped mid-air): CAUGHT, 7 air signals (weight 6.7 and 8.6 peaks); control with the hack off: 0 signals. Player took 2 damage (setbacks).
 - HighJump (jump-multiplier 4, walk+jump): CAUGHT, 6 jump signals; control: 0 signals. Player ended at 0 health in the run (fall or setback damage), noted.
+
+## Anchor Aura follow-up (sweep 21)
+The 4 signals are all "placed against air": meshac refuses the aura's anchor placements and sets the player back, so the aura cannot build anchors (victim health stayed 20). Detection is working as a block plus low heat, not a kick. Legit rapid anchor placing (4 clicks a second at the floor, anchors in hand): 0 signals, 3 anchors placed. Together with the earlier legit charge control (0 signals), no false flag found. Raising the weight was not needed to stop the hack; kept as is (no jar change).

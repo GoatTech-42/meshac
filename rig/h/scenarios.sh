@@ -185,3 +185,6 @@ measure_swaphit() { measure_meleetank; }
 # airjump: tap space every 0.25 s over open air-free flat floor; a hack lets the player rise by jumping mid-air (final y reported)
 setup_airjump() { X0=100 Y0=-60 Z0=940; KEYS=""; SECS=12; rc "forceload add 100 940" >/dev/null; rc "fill 94 -60 934 106 -30 946 air" >/dev/null; rc "fill 94 -61 934 106 -61 946 stone" >/dev/null; PRE="(for i in \$(seq 1 35); do X key space; sleep 0.25; done) &"; }
 measure_airjump() { rc "data get entity $NAME Pos[1]" | grep -o "[-0-9.]*d\?$" | head -1; }
+# anchorp: legit rapid anchor placing. A hand looking at the floor places anchors 4 times a second (and charges them when it looks back at one).
+setup_anchorp() { X0=100 Y0=-60 Z0=490; KEYS=""; SECS=12; PITCH=40; YAW=0; rc "forceload add 100 490" >/dev/null; rc "fill 90 -60 480 110 -50 500 air" >/dev/null; rc "fill 90 -62 480 110 -61 500 stone" >/dev/null; rc "item replace entity $NAME hotbar.0 with respawn_anchor 16" >/dev/null; rc "item replace entity $NAME hotbar.1 with glowstone 32" >/dev/null; rc "effect give $NAME resistance 120 4 true" >/dev/null; PRE="X key 1; (for i in \$(seq 1 40); do X click 3; sleep 0.25; done) &"; }
+measure_anchorp() { rc "clear $NAME respawn_anchor 0" | grep -o "[0-9]\+" | head -1; }

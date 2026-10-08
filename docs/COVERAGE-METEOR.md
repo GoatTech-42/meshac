@@ -75,3 +75,8 @@ Real client throws wind charges at its feet (pitch 90, space held, 32 charges, 1
 
 ## Other versions (2:32 AM)
 The dist jars for 1.21.11, 26.1 and 26.3 each load on a dedicated server (log "meshac loaded", server Done, no meshac errors; the only errors are offline Mojang auth lookups). NOT rig-tested with a client: the Meteor build here is 26.2 only, so detection results above hold for 26.2 only. Mixin targets compile on all 4 versions.
+
+## More legit controls (3:08 AM, rig 26.2, no hack, real client)
+- PacketMine controls: hold-mining obsidian with a diamond pickaxe (broke), and the same with Haste II (broke): 0 signals, connected. Water and lag mining not run.
+- GhostHand controls: right-click a chest behind glass (twice) and behind a bottom oak slab: 0 signals, connected. The scenario did not check that the chest opened, so it shows no false flag only. Fence not run.
+Files: rig/h/meteor-sweep8.sh, results-meteor-controls2.csv.

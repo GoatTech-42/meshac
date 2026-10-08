@@ -87,7 +87,7 @@ public final class Movement {
 		if (pl.isFallFlying()) { s.glideAt = nowMs; s.glideH = Math.hypot(dx, dz); }
 		// Only a hit that can throw the player (a mob, a projectile, a blast) buys slack. Fire, poison, wither, starvation and cactus hurt every second and would mask any hack run beside them.
 		var hs = pl.getLastDamageSource();
-		boolean pushed = pl.hurtTime > 0 && hs != null && (hs.getDirectEntity() != null || hs.getEntity() != null || hs.getMsgId().contains("explosion") || hs.getMsgId().contains("fall") || hs.getMsgId().contains("flyIntoWall") || hs.getMsgId().contains("anvil") || hs.getMsgId().contains("fallingBlock"));
+		boolean pushed = pl.hurtTime > 0 && hs != null && (hs.getDirectEntity() != null || hs.getEntity() != null || hs.getMsgId().contains("explosion") || hs.getMsgId().contains("badRespawnPoint") || hs.getMsgId().contains("intentionalGameDesign") || hs.getMsgId().contains("fall") || hs.getMsgId().contains("flyIntoWall") || hs.getMsgId().contains("anvil") || hs.getMsgId().contains("fallingBlock"));
 		boolean exempt = baseExempt || pushed || s.boosted;
 		if (pushed) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime);

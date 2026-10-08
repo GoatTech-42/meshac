@@ -47,3 +47,7 @@ Real behaviour (rig, obsidian + diamond pickaxe): PacketMine sends START and STO
 
 ## Slippy fix (10:12 PM)
 Measured on the rig (trace dz per packet): vanilla stone stop decays x0.546 per tick (0.118, 0.064, 0.035); real ice x0.90 (0.197, 0.177, 0.159); Meteor Slippy 1.0 on stone x0.906 (0.213, 0.194, 0.177) and a slow ramp-up (0.021, 0.040 ...). Movement: five ground ticks in a row that lose 3-20 percent of speed on a block with friction 0.6 (not ice, slime, etc.) = signal. Rig 26.2: Slippy 1.0 signalled at 8.4 s (4 signals, hold at 9.2 s; the 9 s scenario ended before a kick), plain walk-stop control 0 signals, legit blue-ice control 0 signals. Not run: slippy 0.6/0.98/1.1 variants, jump/sprint controls, lag control, other versions. Not deployed to lan.
+
+## Blink fix (10:30 PM)
+Movement.arrive (netty thread) + new handleClientTickEnd hook: movement packets quiet for 500 ms right after the player was moving, client tick-end packets still arriving (70 percent of expected), then at least max(6, 0.6 x gap/50) movement packets inside 150 ms = signal. Real stalls hold tick-end packets too, so they do not match.
+Rig 26.2 (walk 10 s): control 0 signals. Meteor Blink pulse-delay 15 (0.75 s): 8 signals, kicked at 8.7 s. Pulse 25 (1.25 s): 8 signals, hold at 11.2 s, still connected at the end. Pulse 8 (0.4 s): 0 signals - MISS, under the 500 ms gap floor (it hides about 8 ticks of movement). Not run: lag-injected legit control (needs netem on the rig network), GUI/chunk-lag controls, other versions. Not deployed to lan.

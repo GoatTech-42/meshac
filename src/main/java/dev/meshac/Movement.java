@@ -16,7 +16,7 @@ public final class Movement {
 	private static final int SIGNAL_AT = 6;      // buffered violations before a setback
 	private static final int SKIP_TICKS = 20;  // grace after teleport, damage, effects
 
-	private static final class S { double lastH; int slipN; 
+	private static final class S { volatile boolean blinkHit; long lastPosAt, burstStart; int burstN; double burstGap; boolean lastMoving; double ax = Double.NaN, az; long tickEnds, teAtLastPos;  double lastH; int slipN; 
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
 		boolean ground, cground, init, ownTp;
 		long glideAt; double glideH; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
@@ -24,8 +24,28 @@ public final class Movement {
 
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
 	public static void arrive(ServerPlayer pl, ServerboundMovePlayerPacket p) {
-		if (p.hasPosition()) STATE.computeIfAbsent(pl.getUUID(), k -> new S()).arrivals.add(System.nanoTime());
+		if (!p.hasPosition()) return;
+		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		long now = System.nanoTime();
+		s.arrivals.add(now);
+		// Blink: the client holds every movement packet back and releases them in one burst. A real stall (lag, a frozen client) holds the client's tick-end packets back as well; Blink does not touch them. Movement packets quiet for 500 ms right after the player was moving, tick-end packets still arriving on time, then most of the held packets landing inside 150 ms.
+		double x = p.getX(0), z = p.getZ(0);
+		if (s.lastPosAt != 0) {
+			double gapMs = (now - s.lastPosAt) / 1e6;
+			if (gapMs >= 500 && s.lastMoving) {
+				long te = s.tickEnds - s.teAtLastPos;
+				if (te >= 0.7 * gapMs / 50) { s.burstStart = now; s.burstN = 1; s.burstGap = gapMs; } else s.burstStart = 0;
+			} else if (s.burstStart != 0) {
+				if (now - s.burstStart < 150_000_000L) { if (++s.burstN >= Math.max(6, (int) (0.6 * s.burstGap / 50))) { s.blinkHit = true; s.burstStart = 0; } }
+				else s.burstStart = 0;
+			}
+		}
+		s.lastMoving = !Double.isNaN(s.ax) && Math.hypot(x - s.ax, z - s.az) > 0.1;
+		s.ax = x; s.az = z; s.lastPosAt = now; s.teAtLastPos = s.tickEnds;
 	}
+
+	/** The client ended a tick (network thread). */
+	public static void tickEnd(ServerPlayer pl) { STATE.computeIfAbsent(pl.getUUID(), k -> new S()).tickEnds++; }
 
 	/** Whether the server is waiting for the client to confirm a teleport. Set by the packet handler before check(). */
 	public static void awaiting(ServerPlayer pl, boolean waiting) { STATE.computeIfAbsent(pl.getUUID(), k -> new S()).pending = waiting; }
@@ -34,6 +54,7 @@ public final class Movement {
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		if (p.hasRotation()) Interact.look(pl, p.getYRot(pl.getYRot()), p.getXRot(pl.getXRot()));
+		if (s.blinkHit) { s.blinkHit = false; if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly) Verdict.signal(pl, "blink", "held its movement packets back and released them in one burst", 1); }
 		if (!p.hasPosition()) return statusOnly(pl, p, s);
 		if (s.grace > 0 && System.currentTimeMillis() - s.graceAt > 1100) s.grace = 0; // grace is 20 ticks of real time; a player standing still sends few packets
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());

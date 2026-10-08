@@ -84,3 +84,12 @@ A hand mining a 3x3 room at 1.5 blocks, sweeping the view past tunnel walls: 10 
 Fix: the break is only refused if none of 15 points on the block (centre, 8 corners moved inside by 0.03, 6 face centres) can be seen from the eye. Same sweep after the fix: 0 signals over 20 breaks.
 Catch kept: a mineflayer bot digging the stone behind a stone block it faces, 4 digs: 4 of 4 flagged both before and after the fix. Digging the front block: 0. Scripts: rig/bots/thru.mjs, thru2.sh, run on three parallel bot rigs (rig/botrig.sh).
 Deployed to meshac-lan Oct 8 about 11:28 AM while the server was stopped (main commit ea6e972, jar md5 b240645453f49002e155427b0e1baefa; the through-block fix only, none of the unproven Wurst patches). Rollback jars in lan-test: meshac.jar.prev-bb890361 (the jar deployed before), prev-6715e619, prev-fp4-bec60c21. The server was stopped by hand at Luke's request and has not been started since.
+
+## Lag false positives (Oct 8, N10)
+
+Legit flick-mining through the lag proxy (300 ms stall every 3 s, 800 ms every 4 s) gave signals before the fix:
+- "stopped digging after 0 ticks": the old PacketMine rule counted server ticks between START and STOP. A stall puts both in one server tick. Now counted in client ticks (tick-end packets).
+- "broke a block it is not looking at": after a stall the click and the view turn arrive bunched, so the view at server time is not on the block. The check now stays off for 3 s after a backlog (4 tick-end packets inside 5 ms).
+After: 0 signals at both stalls, hand-mining control under stall 0, Wurst Nuker still caught.
+
+Deploy: full stack (wurst leftovers, bow trace, sweep at 10, through-block fix, lag fixes) on meshac-lan, 26.1 jar md5 51102b2f625e556f2b8d859d5bb93ae8, while lan is stopped. Rollback: lan-test/meshac.jar.prev-b2406454 (through-block jar). meshac-lan not restarted. Restart: docker start meshac-lan.

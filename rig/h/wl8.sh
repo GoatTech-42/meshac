@@ -1,9 +1,10 @@
 #!/bin/bash
 cd /home/luke/meshac-work/meshac/rig/h/
 . ./run.sh
-RES=/tmp/wl9.csv
+RES=/tmp/wl8.csv
 : > "$RES"
-NAME=mcWl11
+NAME=mcWl10
+CASES="n8s n8t n9s n7s"
 trap 'docker stop meshac-wurst >/dev/null 2>&1' EXIT
 start_client(){
  docker rm -f meshac-wurst >/dev/null 2>&1
@@ -19,12 +20,12 @@ setup_minefix(){ setup_mine;rc 'fill 96 -61 58 104 -61 62 stone' >/dev/null;PRE=
 measure_minefix(){ measure_mine; }
 setup_minefix(){ setup_mine;rc "fill 96 -61 58 104 -61 62 stone" >/dev/null;PRE="X key 1; X mousedown 1; (sleep 10; X mouseup 1) &"; }
 measure_minefix(){ measure_mine; }
-for pair in "nuke Nuker" "minefix none" ; do
- set -- $pair
- docker stop meshac-wurst >/dev/null 2>&1
+for c in $CASES; do
+ docker stop meshac-wurst >/dev/null 2>&1; start_client || exit 1
+ t0=$(date -u +%Y-%m-%dT%H:%M:%S)
+ run_case $c none
+ docker logs --since $t0 meshac-rig 2>&1 | grep -E "trace\] (sweep|break) $NAME|SIGNAL $NAME" > /tmp/wl8-$c.txt
+ echo "## $c breaks=$(grep -c 'trace\] break' /tmp/wl8-$c.txt) instant=$(grep -c 'instant=true' /tmp/wl8-$c.txt) max=$(grep 'trace\] sweep' /tmp/wl8-$c.txt | sed 's/.*sweep=//' | sort -n | tail -1) signals=$(grep -c SIGNAL /tmp/wl8-$c.txt)" >> /tmp/wl8.csv
  rc "mesh unban $NAME" >/dev/null
- start_client || exit 1
- run_case "$1" "$2"
- docker logs -t meshac-rig > /tmp/wl9-server.log 2>&1
 done
-echo FIN >> /tmp/wl9.csv
+echo FIN >> /tmp/wl8.csv

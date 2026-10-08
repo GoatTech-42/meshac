@@ -213,3 +213,13 @@ setup_n9() { X0=100 Y0=-60 Z0=880; SECS=20; PITCH=0; YAW=0; sweep_room 880 stone
  PRE='X key 1; (for i in $(seq 1 15);do [ $((i%2)) = 0 ] && d=60 || d=-60; X mousemove_relative -- $d 0; sleep 0.2; X mousedown 1; sleep 0.9; X mouseup 1; done) &'; }
 setup_n8b() { X0=100 Y0=-60 Z0=700; SECS=22; PITCH=0; YAW=0; sweep_room 700 stone; rc "give $NAME diamond_pickaxe" >/dev/null; rc "effect give $NAME haste 999 1 true" >/dev/null
  PRE='X key 1; X mousedown 1; (for i in $(seq 1 60);do d=$(shuf -i 400-800 -n1); [ $((RANDOM%2)) = 0 ] && d=-$d; X mousemove_relative -- $d 0; sleep 0.33; done; X mouseup 1) &'; }
+# --- sweep rev4 controls (synced flicker etc)
+sync_flick() { echo 'X key 1; X mousedown 1; (T0=$(date -u +%Y-%m-%dT%H:%M:%S); c=0; for i in $(seq 1 80); do for w in $(seq 1 80); do n=$(docker logs --since $T0 meshac-rig 2>&1 | grep -c "break $NAME"); [ $n -gt $c ] && break; sleep 0.05; done; c=$n; sleep 0.25; d=$(shuf -i '$1'-'$2' -n1); [ $((RANDOM%2)) = 0 ] && d=-$d; X mousemove_relative -- $d 0; done; X mouseup 1) &'; }
+setup_n8s() { X0=100 Y0=-60 Z0=700; SECS=22; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(sync_flick 400 800)"; }
+setup_n8t() { X0=100 Y0=-60 Z0=700; SECS=22; PITCH=0; YAW=0; sweep_room 700 stone; rc "give $NAME iron_pickaxe" >/dev/null; PRE="$(sync_flick 400 800)"; }
+setup_n9s() { X0=100 Y0=-60 Z0=880; SECS=24; PITCH=0; YAW=0; sweep_room 880 stone; rc "give $NAME iron_pickaxe" >/dev/null; PRE="$(sync_flick 130 600)"; }
+setup_n7s() { X0=100 Y0=-60 Z0=840; SECS=26; PITCH=0; YAW=0; rc "fill 94 -61 834 106 -55 846 stone" >/dev/null; rc "fill 99 -60 839 101 -57 841 air" >/dev/null; rc "give $NAME iron_pickaxe" >/dev/null
+ PRE='X key 1; X mousedown 1; (for i in $(seq 1 480);do X mousemove_relative -- 3 0; sleep 0.05; done; X mouseup 1) &'; }
+sync_flick2() { echo 'X key 1; X mousedown 1; X mousemove_relative -- 300 0; (timeout 24 sh -c "docker logs -f --since 0s meshac-rig 2>&1 | grep --line-buffered \"trace\\] break $NAME\"" | while read l; do sleep 0.2; d=$(shuf -i '$1'-'$2' -n1); [ $((RANDOM%2)) = 0 ] && d=-$d; X mousemove_relative -- $d 0; done; X mouseup 1) &'; }
+setup_n8u() { X0=100 Y0=-60 Z0=700; SECS=24; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(sync_flick2 400 800)"; }
+setup_n9u() { X0=100 Y0=-60 Z0=880; SECS=24; PITCH=0; YAW=0; sweep_room 880 stone; rc "give $NAME iron_pickaxe" >/dev/null; PRE="$(sync_flick2 130 600)"; }

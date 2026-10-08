@@ -1,5 +1,5 @@
 # Shared helpers for the meshac scenario harness. Source this file.
-RIG=meshac-rig; CL=meshac-wurst
+RIG=${RIG:-meshac-rig}; CL=${CL:-meshac-wurst}
 IP() { docker inspect $RIG --format '{{(index .NetworkSettings.Networks "meshac-net").IPAddress}}'; }
 rc() { python3 /tmp/rcon.py "$(IP)" 25575 meshacrig "$1"; }
 X() { docker exec -e DISPLAY=:99 $CL xdotool "$@"; }

@@ -80,3 +80,8 @@ The dist jars for 1.21.11, 26.1 and 26.3 each load on a dedicated server (log "m
 - PacketMine controls: hold-mining obsidian with a diamond pickaxe (broke), and the same with Haste II (broke): 0 signals, connected. Water and lag mining not run.
 - GhostHand controls: right-click a chest behind glass (twice) and behind a bottom oak slab: 0 signals, connected. The scenario did not check that the chest opened, so it shows no false flag only. Fence not run.
 Files: rig/h/meteor-sweep8.sh, results-meteor-controls2.csv.
+
+## Sweep 15 (5:17 AM): BowAimbot, AnchorAura
+- bow-aimbot: MISS. Zombie 12 blocks away, 6 drawn shots: legit manual bow did 45 damage, Bow Aimbot 49 damage; 0 signals both. It aims like a good player; nothing in the shot packets separates it. Known miss unless a rotation-snap check is added (risk of false flags on legit flicks).
+- anchor-aura: NOT TESTABLE on this rig. The module only targets real players (target-priority setting, no entity filter) and the rig has one client; the fake-player trick gave no placement (anchors 16 to 16). Needs a second real player. Bed-aura only works in the Nether/End and was not set up.
+- velocity: caught for melee knockback, known miss for explosion knockback (decided: leave, protects legit explosion play).

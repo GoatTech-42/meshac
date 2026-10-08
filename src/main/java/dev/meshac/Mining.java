@@ -46,13 +46,32 @@ public final class Mining {
 		return !new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(dir.scale(8))).isEmpty();
 	}
 
+	/** True when any part of the block can be seen from the eye: its centre, a point inside each corner, or the middle of each face. A hand can aim at a block along the edge of a tunnel wall where the centre line grazes a neighbour. */
+	private static boolean reachable(ServerPlayer pl, Vec3 eye, BlockPos pos) {
+		double e = 0.03;
+		double[] lo = {pos.getX() + e, pos.getY() + e, pos.getZ() + e};
+		double[] hi = {pos.getX() + 1 - e, pos.getY() + 1 - e, pos.getZ() + 1 - e};
+		java.util.List<Vec3> pts = new java.util.ArrayList<>();
+		pts.add(Vec3.atCenterOf(pos));
+		for (int i = 0; i < 8; i++) pts.add(new Vec3((i & 1) == 0 ? lo[0] : hi[0], (i & 2) == 0 ? lo[1] : hi[1], (i & 4) == 0 ? lo[2] : hi[2]));
+		for (int a = 0; a < 3; a++) for (int sgn = 0; sgn < 2; sgn++) {
+			double[] c = {pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5};
+			c[a] = sgn == 0 ? lo[a] : hi[a];
+			pts.add(new Vec3(c[0], c[1], c[2]));
+		}
+		for (Vec3 p : pts) {
+			BlockHitResult h = pl.level().clip(new ClipContext(eye, p, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, pl));
+			if (h.getType() != HitResult.Type.BLOCK || h.getBlockPos().equals(pos)) return true;
+		}
+		return false;
+	}
+
 	/** True when this break should be refused. */
 	public static boolean refuse(ServerPlayer pl, BlockPos pos) {
 		if (pl.isCreative() || pl.isSpectator()) return false;
 		Vec3 eye = pl.getEyePosition();
 		Vec3 centre = Vec3.atCenterOf(pos);
-		BlockHitResult hit = pl.level().clip(new ClipContext(eye, centre, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, pl));
-		if (hit.getType() == HitResult.Type.BLOCK && !hit.getBlockPos().equals(pos)) {
+		if (!reachable(pl, eye, pos)) {
 			Verdict.signal(pl, "mining", "block broken through another block", 1);
 			return true;
 		}

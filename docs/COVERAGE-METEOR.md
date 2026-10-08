@@ -72,3 +72,6 @@ Files: rig/h/meteor-sweep4.sh, results-meteor-sweep4.csv.
 
 ## Wind-charge legit control (2:10 AM, rig 26.2, no hack)
 Real client throws wind charges at its feet (pitch 90, space held, 32 charges, 12 s). Sampled y rose from -60 to -48.5 (12 blocks up) with several launches, 0 signals, connected. Earlier summon-based attempts did not move the player and were dropped. Files: rig/h/meteor-sweep7.sh.
+
+## Other versions (2:32 AM)
+The dist jars for 1.21.11, 26.1 and 26.3 each load on a dedicated server (log "meshac loaded", server Done, no meshac errors; the only errors are offline Mojang auth lookups). NOT rig-tested with a client: the Meteor build here is 26.2 only, so detection results above hold for 26.2 only. Mixin targets compile on all 4 versions.

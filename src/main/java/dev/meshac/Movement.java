@@ -148,6 +148,7 @@ public final class Movement {
 				|| pl.level().getBlockState(pl.blockPosition().above()).is(net.minecraft.world.level.block.Blocks.COBWEB);
 			s.slowTicks = slow < 1.0 ? s.slowTicks + 1 : 0; // the first ticks on a slow block still carry normal momentum
 			double cap = (s.ground && ground ? 0.34 : 0.62) * (pl.getSpeed() / 0.13) * (fr > 0.61 ? 3 : 1) * (s.slowTicks >= 5 ? Math.max(slow, 0.65) : 1.0);
+			cap *= (pl.getGameProfile().name().startsWith(".") ? 1.30 : 1.12); // sprint start lags the speed attribute by a tick; Bedrock movement packets are rounder. A hacker at 1.5x still trips.
 			// One second at no more than the last verified glide speed. No flight,
 			// timer, wall or jump check is exempted, and acceleration is not allowed.
 			if (s.glideAt != 0 && nowMs - s.glideAt < 1000) cap = Math.max(cap, s.glideH + 0.03);

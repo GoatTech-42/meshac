@@ -46,6 +46,9 @@ public final class Config {
 	public int memoryDays() { return offenceMemoryDays != null ? offenceMemoryDays : base()[4]; }
 	public java.util.List<String> exemptPlayers = new java.util.ArrayList<>(); // names (case-insensitive) skipped by the movement and combat checks
 	public boolean exempt(net.minecraft.server.level.ServerPlayer pl) { if (exemptPlayers == null) return false; String n = pl.getGameProfile().name(); for (String e : exemptPlayers) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
+	public Boolean combatLog; public Integer combatLogSeconds; // combat log protection: on by default, tag length 15 s
+	public boolean combatLog() { return combatLog == null || combatLog; }
+	public int combatLogSeconds() { return combatLogSeconds != null ? combatLogSeconds : 15; }
 	public boolean monitor() { return monitorOnly != null && monitorOnly; }
 	public boolean perma() { return permanentBan != null ? permanentBan : false; }
 	public int holdAtI() { return (int) Math.round(holdAtD()); }

@@ -34,8 +34,10 @@ public final class Ladder {
 		double n = 0; for (double a : agesDays) n += Math.pow(0.5, a / halfLifeDays); return n;
 	}
 
+	/** A fresh offence counts 0.99995 after a minute, not 1, because it already started to decay. Without this tolerance floor() put a repeat offence minutes later back on the kick rung. */
+	static final double TOLERANCE = 0.05;
 	/** Rung 1 is a kick. Rung r >= 2 is a tempban of base * growth^(r-2) minutes, capped. Tier A evidence skips one rung. */
-	public static int rung(double effective, int kicks, boolean skip) { return (int) Math.floor(effective + 1e-9) + 1 + (skip ? 1 : 0) - (kicks - 1) * 0; }
+	public static int rung(double effective, int kicks, boolean skip) { return (int) Math.floor(effective + TOLERANCE) + 1 + (skip ? 1 : 0); }
 	public static long tempMinutes(int rung, int kicks, double base, double growth, double max) {
 		int idx = rung - 1 - kicks; // 0 = first tempban
 		return (long) Math.min(max, base * Math.pow(growth, Math.max(0, idx)));

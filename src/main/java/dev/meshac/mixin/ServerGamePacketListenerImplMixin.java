@@ -31,8 +31,8 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleMovePlayer", at = @At("HEAD"), cancellable = true)
 	private void meshac$move(ServerboundMovePlayerPacket p, CallbackInfo ci) {
-		if (dev.meshac.Meshac.skip(player)) return;
-		if (!player.level().getServer().isSameThread()) { Movement.arrive(player, p); return; } // vanilla re-queues this packet onto the main thread
+		if (dev.meshac.Meshac.bedrockUnproven(player)) return;
+				if (!player.level().getServer().isSameThread()) { Movement.arrive(player, p); return; } // vanilla re-queues this packet onto the main thread
 		Movement.awaiting(player, awaitingPositionFromClient != null);
 		double[] back = Glide.check(player, p);
 		if (back == null) back = Movement.check(player, p);
@@ -45,7 +45,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 	@Inject(method = "handleMoveVehicle", at = @At("HEAD"), cancellable = true)
 	private void meshac$vehicle(ServerboundMoveVehiclePacket p, CallbackInfo ci) {
 		if (dev.meshac.Meshac.skip(player)) return;
-		if (player.level().getServer().isSameThread() && Vehicle.check(player, p)) ci.cancel();
+				if (player.level().getServer().isSameThread() && Vehicle.check(player, p)) ci.cancel();
 	}
 
 	@Inject(method = "handleSetCarriedItem", at = @At("HEAD"))

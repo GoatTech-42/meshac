@@ -14,6 +14,11 @@ public final class Meshac implements ModInitializer {
 		return pl.getUUID().getMostSignificantBits() == 0L || pl.getGameProfile().name().startsWith(".");
 	}
 
+	/** Bedrock movement types not yet proven clean with a Bedrock client: gliding, vehicles, climbing, levitation, slow falling, riptide. Movement checks stay off for a Bedrock player while one of these applies. */
+	public static boolean bedrockUnproven(net.minecraft.server.level.ServerPlayer pl) {
+		return skip(pl) && (pl.isFallFlying() || pl.isPassenger() || pl.onClimbable() || pl.isAutoSpinAttack() || pl.hasEffect(net.minecraft.world.effect.MobEffects.LEVITATION) || pl.hasEffect(net.minecraft.world.effect.MobEffects.SLOW_FALLING));
+	}
+
 	@Override
 	public void onInitialize() {
 		Config.load();
@@ -26,7 +31,7 @@ public final class Meshac implements ModInitializer {
 			Cases.Case c = Cases.activeBan(handler.player.getUUID());
 			if (c != null) handler.disconnect(Screens.ban(c)); else Fingerprints.check(handler.player);
 		});
-		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : new java.util.ArrayList<>(server.getPlayerList().getPlayers())) { if (skip(pl)) continue; Movement.tick(pl); Fingerprints.check(pl); } dev.meshac.veil.Veil.tick(server); });
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : new java.util.ArrayList<>(server.getPlayerList().getPlayers())) { if (!bedrockUnproven(pl)) Movement.tick(pl); if (skip(pl)) continue; Fingerprints.check(pl); } dev.meshac.veil.Veil.tick(server); });
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(Fish::tick);
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Fingerprints.forget(handler.player.getUUID()); Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); dev.meshac.veil.Veil.forgetPlayer(handler.player); Combat.forget(handler.player.getUUID()); Vehicle.forget(handler.player.getUUID()); Mining.forget(handler.player.getUUID()); Interact.forget(handler.player.getUUID()); Inventory.forget(handler.player.getUUID()); Totem.forget(handler.player.getUUID()); Glide.forget(handler.player.getUUID()); Ticks.forget(handler.player.getUUID()); Chatter.forget(handler.player.getUUID()); Fish.forget(handler.player.getUUID()); });
 		LOG.info("meshac loaded");

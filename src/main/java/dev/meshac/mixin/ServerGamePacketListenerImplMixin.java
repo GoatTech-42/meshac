@@ -31,6 +31,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleMovePlayer", at = @At("HEAD"), cancellable = true)
 	private void meshac$move(ServerboundMovePlayerPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (!player.level().getServer().isSameThread()) { Movement.arrive(player, p); return; } // vanilla re-queues this packet onto the main thread
 		Movement.awaiting(player, awaitingPositionFromClient != null);
 		double[] back = Glide.check(player, p);
@@ -43,16 +44,19 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleMoveVehicle", at = @At("HEAD"), cancellable = true)
 	private void meshac$vehicle(ServerboundMoveVehiclePacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (player.level().getServer().isSameThread() && Vehicle.check(player, p)) ci.cancel();
 	}
 
 	@Inject(method = "handleSetCarriedItem", at = @At("HEAD"))
 	private void meshac$swap(ServerboundSetCarriedItemPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (player.level().getServer().isSameThread()) { Combat.swapped(player, p.getSlot()); Interact.swap(player); Inventory.hotbar(player); Trace.t(player, "hotbar slot=" + p.getSlot()); }
 	}
 
 	@Inject(method = "handleUseItemOn", at = @At("HEAD"), cancellable = true)
 	private void meshac$place(ServerboundUseItemOnPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (player.level().getServer().isSameThread()) {
 			boolean refused = Interact.place(player, p);
 			Trace.t(player, "use-on" + (refused ? " REFUSED" : "") + " pos=" + dev.meshac.Packets.hit(p).getBlockPos() + " item=" + player.getMainHandItem().getItem());
@@ -69,6 +73,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleSignUpdate", at = @At("HEAD"), cancellable = true)
 	private void meshac$sign(net.minecraft.network.protocol.game.ServerboundSignUpdatePacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		// the vanilla handler does not hop to the main thread before this point, so the hook runs on the network thread
 		String[] lines = dev.meshac.Packets.lines(p);
 		long gap = Interact.signGap(player, lines);
@@ -82,6 +87,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleUseItem", at = @At("HEAD"), cancellable = true)
 	private void meshac$use(ServerboundUseItemPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (player.level().getServer().isSameThread()) {
 			dev.meshac.Fish.use(player);
 			boolean refused = Interact.use(player);
@@ -93,6 +99,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 	// VERIFY packet class and accessor: ServerboundChatCommandPacket.command() in 1.21.11 and 26.x (signed commands use ServerboundChatCommandSignedPacket, hook it the same way).
 	@Inject(method = "handleChatCommand", at = @At("HEAD"))
 	private void meshac$chatCommand(net.minecraft.network.protocol.game.ServerboundChatCommandPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		// vanilla handles chat commands without hopping to the main thread first, so this hook only ever runs on the network thread
 		String msg = dev.meshac.Chatter.command(player, p.command());
 		if (msg != null) { net.minecraft.server.level.ServerPlayer pl = player; pl.level().getServer().execute(() -> dev.meshac.Verdict.signal(pl, "chat", msg, 1)); }
@@ -100,16 +107,19 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleClientTickEnd", at = @At("HEAD"))
 	private void meshac$tickEnd(net.minecraft.network.protocol.game.ServerboundClientTickEndPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (!player.level().getServer().isSameThread()) Movement.tickEnd(player); else dev.meshac.Ticks.inc(player);
 	}
 
 	@Inject(method = "handlePlayerCommand", at = @At("HEAD"))
 	private void meshac$command(net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (p.getAction() == net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket.Action.START_FALL_FLYING && player.level().getServer().isSameThread()) Glide.startFly(player);
 	}
 
 	@Inject(method = "handlePlayerAction", at = @At("HEAD"), cancellable = true)
 	private void meshac$release(ServerboundPlayerActionPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (player.level().getServer().isSameThread()) Trace.t(player, "action " + p.getAction());
 		if (player.level().getServer().isSameThread() && !player.isCreative()) {
 			if (p.getAction() == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) dev.meshac.Mining.digStart(player, p.getPos());
@@ -122,6 +132,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 
 	@Inject(method = "handleContainerClick", at = @At("HEAD"), cancellable = true)
 	private void meshac$click(ServerboundContainerClickPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (!player.level().getServer().isSameThread()) { Inventory.arrive(player); return; }
 		long at = Inventory.click(player);
 		Trace.t(player, "click slot=" + p.slotNum() + " button=" + p.buttonNum() + " arrived=" + at);

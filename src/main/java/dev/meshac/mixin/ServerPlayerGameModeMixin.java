@@ -16,6 +16,6 @@ public abstract class ServerPlayerGameModeMixin {
 
 	@Inject(method = "destroyBlock", at = @At("HEAD"), cancellable = true)
 	private void meshac$break(BlockPos pos, CallbackInfoReturnable<Boolean> cir) {
-		if (Mining.refuse(player, pos)) cir.setReturnValue(false);
+		if (!dev.meshac.Meshac.skip(player) && Mining.refuse(player, pos)) cir.setReturnValue(false);
 	}
 }

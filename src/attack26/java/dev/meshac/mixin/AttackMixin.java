@@ -19,6 +19,7 @@ public abstract class AttackMixin {
 
 	@Inject(method = "handleAttack", at = @At("HEAD"), cancellable = true)
 	private void meshac$attack(ServerboundAttackPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (!player.level().getServer().isSameThread()) return;
 		Entity e = player.level().getEntity(p.entityId());
 		if (e == null) return;
@@ -31,6 +32,7 @@ public abstract class AttackMixin {
 
 	@Inject(method = "handleInteract", at = @At("HEAD"), cancellable = true)
 	private void meshac$interact(net.minecraft.network.protocol.game.ServerboundInteractPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (player.level().getServer().isSameThread() && dev.meshac.Interact.entity(player, p.entityId())) ci.cancel();
 	}
 }

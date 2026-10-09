@@ -21,6 +21,7 @@ public abstract class AttackMixin {
 
 	@Inject(method = "handleInteract", at = @At("HEAD"), cancellable = true)
 	private void meshac$attack(ServerboundInteractPacket p, CallbackInfo ci) {
+		if (dev.meshac.Meshac.skip(player)) return;
 		if (!player.level().getServer().isSameThread()) return;
 		boolean[] attack = {false};
 		p.dispatch(new ServerboundInteractPacket.Handler() {

@@ -12,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
 public final class Combat {
 	private static final java.util.Map<java.util.UUID, long[]> MULTI = new java.util.concurrent.ConcurrentHashMap<>();
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
-	private static final class S { int fakeCrit; long fakeAt; long[] rt = new long[12]; double[] re = new double[12]; int[] ri = new int[12]; int rn; long swapMs, swapWinMs, hitAt, cycleStart; boolean swapDiff; int swapHits, cycles; long g1, g2; int prevSlot = -1; long lastMs, lastId; int lastEntity = -1, weak, fast, perfect, snap, n; float lastYaw; final long[] gaps = new long[6]; final double[] errs = new double[6]; final int[] ids = new int[6]; int en; long windowMs; int hits; double lastErr = -1; }
+	private static final class S { int fakeCrit, missN; long missAt; long fakeAt; long[] rt = new long[12]; double[] re = new double[12]; int[] ri = new int[12]; int rn; long swapMs, swapWinMs, hitAt, cycleStart; boolean swapDiff; int swapHits, cycles; long g1, g2; int prevSlot = -1; long lastMs, lastId; int lastEntity = -1, weak, fast, perfect, snap, n; float lastYaw; final long[] gaps = new long[6]; final double[] errs = new double[6]; final int[] ids = new int[6]; int en; long windowMs; int hits; double lastErr = -1; }
 
 	/** Called when the player picks another hotbar slot. */
 	public static void swapped(ServerPlayer pl, int slot) {
@@ -35,7 +35,7 @@ public final class Combat {
 
 	/** Returns a reason when this attack is not something a person at a keyboard could have sent, else null. */
 	public static String check(ServerPlayer pl, Entity target) {
-		if (pl.isCreative() || pl.isSpectator()) return null;
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return null;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		dev.meshac.veil.Veil.attacked(pl, target, pl.level().getServer().getTickCount());
 		long now = System.currentTimeMillis();
@@ -44,7 +44,7 @@ public final class Combat {
 		double reach = Math.sqrt(box.distanceToSqr(eye));
 		String hit = null;
 		// Reach: vanilla entity interaction range is 3.0. Half a block of slack for latency and the 2-tick rewind.
-		if (reach > 3.6) hit = String.format("reach %.2f", reach);
+		if (reach > 4.2) hit = String.format("reach %.2f", reach);
 		// Line of sight: a wall between the eyes and the target.
 		if (hit == null && reach > 0.5 && !pl.hasLineOfSight(target)) hit = "hit through a block";
 		// Aim: the look ray has to pass through the hitbox (grown a little for the client's rounding).
@@ -52,9 +52,10 @@ public final class Combat {
 		// The client aimed at where the target was a few ticks ago, so a quick mob (spider, a player sprinting) is tested over the ground it just covered.
 		Vec3 mv = target.getDeltaMovement();
 		double bx = Math.max(-2, Math.min(2, mv.x * -4)), bz = Math.max(-2, Math.min(2, mv.z * -4)); // sideways only: gravity is not a reason to look lower
-		AABB aimed = new AABB(box.minX + Math.min(0, bx), box.minY, box.minZ + Math.min(0, bz), box.maxX + Math.max(0, bx), box.maxY, box.maxZ + Math.max(0, bz)).inflate(0.35);
+		AABB aimed = new AABB(box.minX + Math.min(0, bx), box.minY, box.minZ + Math.min(0, bz), box.maxX + Math.max(0, bx), box.maxY, box.maxZ + Math.max(0, bz)).inflate(0.6);
 		var ray = aimed.clip(eye, eye.add(look.scale(6)));
-		if (hit == null && ray.isEmpty() && !aimed.contains(eye) && reach > 0.15) hit = "not looking at target"; // inside the hitbox the ray has no entry point; anywhere else a miss of the box is a miss
+		if (hit == null && ray.isEmpty() && !aimed.contains(eye) && reach > 0.15) { if (now - s.missAt > 4000) s.missN = 0; s.missAt = now; if (++s.missN >= 4) { hit = "not looking at target"; s.missN = 0; } }
+		// // inside the hitbox the ray has no entry point; anywhere else a miss of the box is a miss
 		// Robotic aim: the look ray hits the exact same spot of the box hit after hit. People wobble by a few centimetres.
 		Vec3 centre = box.getCenter();
 		// Closest approach of the look ray to the box centre. Distance from the entry point is nearly constant for any central hit, so it hides wobble.
@@ -78,7 +79,7 @@ public final class Combat {
 		if (!pl.onGround() && fd > 0 && fd < 0.3 && !pl.onClimbable() && !pl.isInWater() && !pl.isPassenger() && !pl.getAbilities().mayfly) {
 			if (now - s.fakeAt > 10000) s.fakeCrit = 0;
 			s.fakeAt = now;
-			if (++s.fakeCrit >= 3 && hit == null) { hit = String.format("critical hits from a %.2f block fall", fd); s.fakeCrit = 0; }
+			if (++s.fakeCrit >= 8 && hit == null) { hit = String.format("critical hits from a %.2f block fall", fd); s.fakeCrit = 0; }
 		}
 		// KillAura: many different targets in a few seconds with the aim ray nowhere near their centres. A hand fights one or two and aims at them.
 		int k = s.rn++ % 12; s.rt[k] = now; s.re[k] = err; s.ri[k] = target.getId();

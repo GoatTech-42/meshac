@@ -44,6 +44,8 @@ public final class Config {
 	public long heatCoolMs() { return (heatCoolSeconds != null ? heatCoolSeconds : base()[2]) * 1000L; }
 	public int kicks() { return kicksBeforeTempban != null ? kicksBeforeTempban : base()[3]; }
 	public int memoryDays() { return offenceMemoryDays != null ? offenceMemoryDays : base()[4]; }
+	public java.util.List<String> exemptPlayers = new java.util.ArrayList<>(); // names (case-insensitive) skipped by the movement and combat checks
+	public boolean exempt(net.minecraft.server.level.ServerPlayer pl) { if (exemptPlayers == null) return false; String n = pl.getGameProfile().name(); for (String e : exemptPlayers) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
 	public boolean monitor() { return monitorOnly != null && monitorOnly; }
 	public boolean perma() { return permanentBan != null ? permanentBan : false; }
 	public int holdAtI() { return (int) Math.round(holdAtD()); }

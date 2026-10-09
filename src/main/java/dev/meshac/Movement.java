@@ -13,7 +13,7 @@ import net.minecraft.world.phys.AABB;
 /** Movement checks: speed, fly (hover/ascend), high jump. Runs on every position packet, before vanilla. */
 public final class Movement {
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
-	private static final int SIGNAL_AT = 6;      // buffered violations before a setback
+	private static final int SIGNAL_AT = 10;      // buffered violations before a setback
 	private static final int SKIP_TICKS = 20;  // grace after teleport, damage, effects
 
 	private static final class S { volatile boolean blinkHit; long lastPosAt, burstStart; int burstN; double burstGap; boolean lastMoving; double ax = Double.NaN, az; long tickEnds, teAtLastPos;  double lastH; int slipN; 
@@ -53,6 +53,7 @@ public final class Movement {
 	/** Returns a setback position, or null if the packet is fine. */
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		if (Config.get().exempt(pl)) return null;
 		if (p.hasRotation()) Interact.look(pl, p.getYRot(pl.getYRot()), p.getXRot(pl.getXRot()));
 		if (s.blinkHit) { s.blinkHit = false; if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly) Verdict.signal(pl, "blink", "held its movement packets back and released them in one burst", 1); }
 		if (!p.hasPosition()) return statusOnly(pl, p, s);
@@ -106,7 +107,7 @@ public final class Movement {
 				else s.slipN = 0;
 			} else s.slipN = 0;
 			s.lastH = h;
-			if (s.slipN >= 5) { s.slipN = 0; Verdict.signal(pl, "movement", "slippery ground: speed barely drops on a normal block", 1); }
+			if (s.slipN >= 20) { s.slipN = 0; Verdict.signal(pl, "movement", "slippery ground: speed barely drops on a normal block", 1); }
 		}
 		boolean baseExempt = pl.isCreative() || pl.isSpectator() || pl.getAbilities().mayfly || pl.isPassenger()
 			|| pl.isFallFlying() || pl.isInWater() || pl.isInLava() || pl.onClimbable()

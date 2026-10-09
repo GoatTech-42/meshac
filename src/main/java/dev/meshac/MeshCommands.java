@@ -23,8 +23,8 @@ public final class MeshCommands {
 				int n = Cases.unban(StringArgumentType.getString(c, "player"));
 				c.getSource().sendSuccess(() -> Component.literal(n > 0 ? "Lifted " + n + " ban(s)." : "No active ban."), true); return n; })))
 			.then(Commands.literal("ban").then(Commands.argument("player", StringArgumentType.word())
-				.then(Commands.argument("minutes", IntegerArgumentType.integer(0)).then(Commands.argument("reason", StringArgumentType.greedyString()).executes(c -> ban(c.getSource(),
-					StringArgumentType.getString(c, "player"), IntegerArgumentType.getInteger(c, "minutes"), StringArgumentType.getString(c, "reason")))))))
+				.then(Commands.argument("duration", StringArgumentType.word()).then(Commands.argument("reason", StringArgumentType.greedyString()).executes(c -> ban(c.getSource(),
+					StringArgumentType.getString(c, "player"), StringArgumentType.getString(c, "duration"), StringArgumentType.getString(c, "reason")))))))
 			.then(Commands.literal("status").then(Commands.argument("player", net.minecraft.commands.arguments.EntityArgument.player()).executes(c -> {
 				ServerPlayer t = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player"); String s = Verdict.status(t);
 				c.getSource().sendSuccess(() -> Component.literal(s), false); return 1; })))
@@ -54,10 +54,21 @@ public final class MeshCommands {
 		return 1;
 	}
 	/** Staff ban: minutes 0 = permanent. Works on offline players only if they have joined before (name lookup via the profile cache). */
-	private static int ban(CommandSourceStack s, String name, int minutes, String reason) {
+	/** Duration: 0 = permanent; plain number = minutes; or number plus s, m, h/hr, d, w (case-insensitive). Returns millis, or -1 if invalid. */
+	static long parseDuration(String t) {
+		java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{1,9})\\s*(s|sec|secs|m|min|mins|h|hr|hrs|d|day|days|w|wk|wks)?").matcher(t.trim().toLowerCase(java.util.Locale.ROOT));
+		if (!m.matches()) return -1;
+		long n = Long.parseLong(m.group(1)); String u = m.group(2) == null ? "m" : m.group(2);
+		long unit = switch (u.charAt(0)) { case 's' -> 1000L; case 'h' -> 3_600_000L; case 'd' -> 86_400_000L; case 'w' -> 604_800_000L; default -> 60_000L; };
+		return n * unit;
+	}
+	private static int ban(CommandSourceStack s, String name, String duration, String reason) {
+		long ms = parseDuration(duration);
+		if (ms < 0) { s.sendFailure(Component.literal("Usage: /mesh ban <player> <duration> <reason>. Duration: 0 = permanent, or 30s, 10m, 3hr, 1d, 2w (plain number = minutes).")); return 0; }
+		int minutes = ms == 0 ? 0 : 1;
 		ServerPlayer p = s.getServer().getPlayerList().getPlayerByName(name);
 		if (p == null) { s.sendFailure(Component.literal("Player must be online.")); return 0; }
-		Cases.Case c = Cases.add(p.getGameProfile().name(), p.getUUID(), minutes == 0 ? "ban" : "tempban", reason, s.getTextName(), minutes == 0 ? 0 : System.currentTimeMillis() + minutes * 60_000L, List.of("staff action"));
+		Cases.Case c = Cases.add(p.getGameProfile().name(), p.getUUID(), minutes == 0 ? "ban" : "tempban", reason, s.getTextName(), ms == 0 ? 0 : System.currentTimeMillis() + ms, List.of("staff action"));
 		p.connection.disconnect(Screens.ban(c));
 		Discord.post(c);
 		s.sendSuccess(() -> Component.literal("Banned " + name + ", case " + c.id), true);

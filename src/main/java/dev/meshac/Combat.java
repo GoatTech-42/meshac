@@ -33,6 +33,19 @@ public final class Combat {
 		s.swapDiff = pl.getInventory().getItem(slot).getItem() != pl.getMainHandItem().getItem();
 	}
 
+	/** True when any of several points on the target can be reached by a straight line from the eyes (closest point, centre, feet, eyes). A wall must hide all of them. */
+	private static boolean visible(ServerPlayer pl, Entity target, Vec3 eye, AABB box) {
+		Vec3[] pts = {
+			new Vec3(Math.max(box.minX, Math.min(eye.x, box.maxX)), Math.max(box.minY, Math.min(eye.y, box.maxY)), Math.max(box.minZ, Math.min(eye.z, box.maxZ))),
+			box.getCenter(), target.getEyePosition(), new Vec3(box.getCenter().x, box.minY + 0.1, box.getCenter().z)
+		};
+		for (Vec3 p : pts) {
+			var r = pl.level().clip(new net.minecraft.world.level.ClipContext(eye, p, net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, pl));
+			if (r.getType() == net.minecraft.world.phys.HitResult.Type.MISS) return true;
+		}
+		return false;
+	}
+
 	/** Returns a reason when this attack is not something a person at a keyboard could have sent, else null. */
 	public static String check(ServerPlayer pl, Entity target) {
 		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return null;
@@ -46,7 +59,7 @@ public final class Combat {
 		// Reach: vanilla entity interaction range is 3.0. Half a block of slack for latency and the 2-tick rewind.
 		if (reach > 4.2) hit = String.format("reach %.2f", reach);
 		// Line of sight: a wall between the eyes and the target.
-		if (hit == null && reach > 0.5 && !pl.hasLineOfSight(target)) hit = "hit through a block";
+		if (hit == null && reach > 0.5 && !visible(pl, target, eye, box)) hit = "hit through a block";
 		// Aim: the look ray has to pass through the hitbox (grown a little for the client's rounding).
 		Vec3 look = pl.getLookAngle();
 		// The client aimed at where the target was a few ticks ago, so a quick mob (spider, a player sprinting) is tested over the ground it just covered.

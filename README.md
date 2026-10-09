@@ -8,13 +8,11 @@ a native anticheat for fabric servers.
 
 it catches only what a server can see.
 
-> **beta, not released yet.** everything here is what's been tested so far, misses included. numbers marked `[slot]` are still moving and get filled in when they settle.
+> **first beta (0.1.0).** everything here is what's been tested so far, misses included.
 
-First beta (0.1.0). It checks movement, combat, building, mining, interaction and elytra flight, and it is built for 1.21.11, 26.1.2, 26.2 and 26.3. Movement and combat checks have been run on 26.1.2 and 26.2 only. The 1.21.11 and 26.3 jars load and boot, nothing more yet.
+## why this exists
 
-What has been tried so far is real hacked clients (Wurst on 26.3, Meteor on 26.2) against a throwaway server, always with a hack-off control run next to it. Caught so far: Flight, Speed above sprint-jump pace, Step, Spider, Jesus, FastClimb, NoSlow, Timer, Blink (0.75 s and up), Slippy, AirJump, HighJump, ElytraFly, Reach, KillAura, Criticals, CrystalAura, Anchor Aura, AutoTotem, Nuker, PacketMine, GhostHand and AutoClicker. Legit play has not produced a flag in any control run: sprint-jumping, wind charges, knockback from TNT and crystals, elytra, hand mining through tunnels, lag spikes.
-
-It does not catch everything. Known gaps: speed at or below sprint-jump pace (indistinguishable from a fast legit player), short Blink, Surround, BowAimbot, boosts above 45 blocks per second, and explosion knockback is exempt on purpose. KillAura is caught on some runs and not others, so treat it as partial. Some modules are untested. The last full sweep (138 cases, 57 legit controls) flagged no legit player, see [docs/FINAL-SWEEP.md](docs/FINAL-SWEEP.md). The chunkveil anti-xray and anti-ESP options are off by default and have only been tested with protocol bots, not a real client. The per-module tables are in [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) (Meteor) and [docs/coverage.md](docs/coverage.md) (Wurst). Open problems are in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
+the anticheats i tried either missed hacks or banned honest players for having bad wifi. the second one's worse. a missed hack lets a hacker free, but a false ban costs you a player.
 
 so the quality standard for meshac is simple. if a cheat leaves a trace the server can see, catch it. if it's a real player lagging, don't touch them. zero false flags is the goal, and every check has to prove it against a clean control before it ships.
 
@@ -123,7 +121,7 @@ the full per-module tables, with times, holds and kicks:
 
 `0 signals` only counts as a miss when the hack visibly acted. if it didn't, the row says unproven, not passed.
 
-`[slot]` final caught / flagged / missed counts go here once the module tail is done.
+the last full sweep ran 138 cases with 57 legit controls on the final jar. no legit control was flagged. kill-aura is only caught on some runs, so treat it as partial. details are in [docs/FINAL-SWEEP.md](docs/FINAL-SWEEP.md).
 
 </details>
 
@@ -154,7 +152,7 @@ every one gets written up: what flagged, why, and what the fix does. the short l
 
 one source tree builds for 1.21.11, 26.1.2, 26.2 and 26.3. the 1.21.11 jar uses the older obfuscated toolchain and runs on java 21, the rest need java 25. `rig/smoke.sh` boots each jar on a real server of its version.
 
-most of the real-client testing is on 26.3 and 26.1.2. the other versions build and boot with meshac loaded, and `[slot]` full client coverage per version gets filled in as it's tested.
+most of the real-client testing is on 26.3 and 26.1.2. the other versions build and boot with meshac loaded, and the 1.21.11 and 26.3 jars have had no full client run yet.
 
 </details>
 
@@ -181,12 +179,6 @@ the jar ends up in `build/libs/`. `build-all.sh` builds every version into `dist
 - [docs/coverage.md](docs/coverage.md) and [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) what's caught
 - [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md) what went wrong and how it got fixed
 
-`rig/` has a throwaway server and test clients on a Docker network with no internet. It runs real Wurst and Meteor clients, and a lag proxy for testing laggy connections. See [rig/README.md](rig/README.md).
+## license
 
-## License
-
-GNU Affero General Public License v3.0 only (see LICENSE). You can use, change and share meshac freely. If you distribute it or run a modified copy for others over a network, you have to share your changes under the same license and keep the copyright notices.
-
-## Versions
-
-One source tree builds for 1.21.11, 26.1.2 (the 26.1 build, dist/meshac-26.1.jar, targets 26.1.2), 26.2 and 26.3. Run build-all.sh with JDK 25 and the jars land in dist/. The 1.21.11 jar uses the older obfuscated toolchain and runs on Java 21; the rest need Java 25. rig/smoke.sh boots each jar on a real server of its version and checks that meshac loads. So far that is a boot test only; the movement checks have been exercised on 26.1.2.
+gnu affero general public license v3.0 only, see [LICENSE](LICENSE). use it, change it, share it. if you distribute it or run a modified copy for others over a network, share your changes under the same license and keep the copyright notices.

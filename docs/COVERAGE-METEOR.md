@@ -123,3 +123,6 @@ These are Meteor client behaviors, not the real Wurst ones.
 
 ## Wurst client, real (26.3 rig, patched jar, EGL image)
 - Nuker: 1 mining signal, 13.0 reported, not kicked. Hack-off control 0; hold-mining control 0.
+
+## kill-aura is intermittent
+caught on some runs and not others (counter based). coverage limit, not a false positive.

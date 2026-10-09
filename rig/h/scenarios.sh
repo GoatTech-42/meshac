@@ -233,3 +233,23 @@ setup_sign3() { setup_sign; CLICK=0; SECS=5; PRE="X click 3; sleep 2.5; X type h
 measure_sign3() { measure_sign; }
 setup_sign4() { setup_sign; CLICK=0; SECS=5; PRE="X click 3; sleep 2.5; X type hello; sleep 0.5; X key Escape; sleep 1; rc \"tp $NAME 103.5 -60 140.5 0 30\" >/dev/null; sleep 1; X click 3; sleep 1.5; X key Escape"; }
 measure_sign4() { measure_sign; }
+setup_mtpa() { X0=100 Y0=-60 Z0=1010; KEYS=""; SECS=25; rc "forceload add 100 1010" >/dev/null; }
+measure_mtpa() { echo 0; }
+# AutoFish: pool in front of the player, lure rod in hand, one cast, 80 s of bites. The hack recasts and reels by itself.
+setup_fish() { X0=100 Y0=-60 Z0=90; KEYS=""; SECS=80; PITCH=20; YAW=180
+  rc "fill 94 -64 80 106 -58 89 stone" >/dev/null; rc "fill 96 -62 82 104 -60 88 water" >/dev/null; rc "fill 94 -60 90 106 -55 93 air" >/dev/null; rc "fill 96 -61 90 104 -61 92 stone" >/dev/null
+  rc "give $NAME fishing_rod[enchantments={\"minecraft:lure\":3}]" >/dev/null; PRE="X click 3;" ; }
+measure_fish() { rc "clear $NAME #minecraft:fishes 0" | grep -o "[0-9]\+ matching\|[0-9]\+" | head -1; }
+# Bow trace: tanky target D blocks south (yaw 0), bow + arrows, six draws of 1.3 s. Wurst BowAimbot should hit the target; the control fires straight ahead.
+bowset() { BD=$1; X0=100 Y0=-60 Z0=20; KEYS=""; SECS=16; PITCH=0; YAW=0
+  rc "fill 90 -61 10 110 -61 90 stone" >/dev/null; rc "fill 90 -60 10 110 -50 90 air" >/dev/null
+  rc "summon zombie 100.5 -60 $((20+BD)).5 {NoAI:$2,Silent:1b,PersistenceRequired:1b,Health:1000f,attributes:[{id:\"minecraft:max_health\",base:1000}]}" >/dev/null
+  rc "effect give $NAME resistance 600 4 true" >/dev/null
+  rc "give $NAME bow" >/dev/null; rc "give $NAME arrow 64" >/dev/null
+  PRE="X key 1; (for i in 1 2 3 4 5 6; do X mousedown 3; sleep 1.3; X mouseup 3; sleep 1.2; done) &"; }
+setup_bow10() { bowset 10 1b; }
+setup_bow25() { bowset 25 1b; }
+setup_bow40() { bowset 40 1b; }
+setup_bowmv() { bowset 20 0b; }
+measure_bow10() { rc "data get entity @e[type=zombie,limit=1] Health" | grep -o "[0-9.]*f\?$" | head -1; }
+measure_bow25() { measure_bow10; }; measure_bow40() { measure_bow10; }; measure_bowmv() { measure_bow10; }

@@ -79,12 +79,12 @@ public final class Mining {
 
 	/** True when this break should be refused. */
 	public static boolean refuse(ServerPlayer pl, BlockPos pos) {
-		if (pl.isCreative() || pl.isSpectator()) return false;
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return false;
 		Vec3 eye = pl.getEyePosition();
 		Vec3 centre = Vec3.atCenterOf(pos);
 		if (!reachable(pl, eye, pos)) {
 			Verdict.signal(pl, "mining", "block broken through another block", 1);
-			return true;
+			return Config.get().enforce("mining");
 		}
 		// A hand breaks what the crosshair is on. Nuker breaks blocks all around without turning.
 		boolean instant = pl.level().getBlockState(pos).getDestroySpeed(pl.level(), pos) == 0f; // grass, ferns, flowers, torches: no hand-timing to judge, and the view often lags the click
@@ -94,22 +94,22 @@ public final class Mining {
 		if (Trace.ON && !instant) Meshac.LOG.info("[trace] aimchk pos={} dig={} active={} n={} aimCt={} recent={} lookingNow={}", pos, sd == null ? null : sd.dig, Ticks.active(pl), Ticks.n(pl), sd == null ? -1 : sd.aimCt, recentAim, !new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty());
 		if (!instant && !recentAim && !Ticks.bunched(pl) && new net.minecraft.world.phys.AABB(pos).inflate(0.3).clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty()) {
 			Verdict.signal(pl, "mining", "broke a block it is not looking at", 1);
-			return true;
+			return Config.get().enforce("mining");
 		}
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
-		if (pos.equals(s.nukePos)) { s.nukePos = null; return true; }
+		if (pos.equals(s.nukePos)) { s.nukePos = null; return Config.get().enforce("mining"); }
 		if (Trace.ON) Meshac.LOG.info("[trace] refuse? dig={} pos={} early={}", s.dig, pos, s.early);
 		if (s.dig != null && s.dig.equals(pos)) {
 			if (s.lookOff) s.off += now - s.digSample;
 			boolean early = s.early; s.dig = null;
-			if (early) return true;
+			if (early) return Config.get().enforce("mining");
 		}
 		// Nuker turns the view to each block in turn. A tunnel miner keeps pointing the same way; fast successive breaks more than 40 degrees apart are not a hand.
 		Vec3 dir = centre.subtract(eye).normalize();
 		if (!instant && s.lastDir != null && now - s.lastAt < 600 && dir.dot(s.lastDir) < 0.766) {
 			if (now - s.turnWin > 3000) { s.turnWin = now; s.turns = 0; }
-			if (++s.turns >= 4) { s.turns = 0; Verdict.signal(pl, "mining", "breaks blocks in every direction", 1); return true; }
+			if (++s.turns >= 4) { s.turns = 0; Verdict.signal(pl, "mining", "breaks blocks in every direction", 1); return Config.get().enforce("mining"); }
 		}
 		// Sweep mining (Wurst Nuker, survival). Rig trace of the real hack: one block every 550-650 ms around a sphere, the view turning 30-170 degrees between every pair of breaks
 		// (it faces each block by packet, so the turn costs it nothing). A hand needs time to flick and settle on each new block, and mining a wall at close range turns only about
@@ -122,7 +122,7 @@ public final class Mining {
 			boolean fast = Ticks.active(pl) ? Ticks.n(pl) - s.brokeCt <= 15 : now - s.lastAt < 750;
 			if (lookTurn >= 60 && fast) s.sweep = Math.min(12, s.sweep + 1); else s.sweep = Math.max(0, s.sweep - 1);
 			if (Trace.ON) Meshac.LOG.info("[trace] sweep {} {} turn={} gapMs={} gapTicks={} sweep={}", pl.getGameProfile().name(), pos, String.format("%.1f", lookTurn), now - s.lastAt, Ticks.n(pl) - s.brokeCt, s.sweep);
-			if (s.sweep >= 10) { Verdict.signal(pl, "mining", "breaks blocks one after another with a 60+ degree view turn each time", 1); return true; }
+			if (s.sweep >= 10) { Verdict.signal(pl, "mining", "breaks blocks one after another with a 60+ degree view turn each time", 1); return Config.get().enforce("mining"); }
 		}
 		if (!instant) s.lastLook = lookNow;
 		if (!instant) { s.lastDir = dir; s.lastAt = now; s.brokeDir = dir; s.brokeCt = Ticks.n(pl); s.brokePos = pos; }
@@ -130,7 +130,7 @@ public final class Mining {
 		if (now - s.windowAt > 1000) { s.windowAt = now; s.breaks = 0; }
 		if (++s.breaks > MAX_PER_SECOND) {
 			Verdict.signal(pl, "mining", "more than " + MAX_PER_SECOND + " blocks in a second", 1);
-			return true;
+			return Config.get().enforce("mining");
 		}
 		return false;
 	}

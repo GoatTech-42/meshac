@@ -58,7 +58,7 @@ public final class Interact {
 	/** AutoPotion and other swap-throw-swap hacks: the item is used in the same tick the slot changes. Pressing a number key and then clicking takes a hand over 40 ms. Returns true when the use must be refused; repeats inside ten seconds are a signal. */
 	public static boolean use(ServerPlayer pl) {
 		Glide.rocket(pl); rate(pl);
-		if (pl.isCreative() || pl.isSpectator()) return false;
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return false;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.swapAt >= 40) return false;
@@ -67,20 +67,20 @@ public final class Interact {
 		if (!(it.contains("potion") || it.contains("pearl") || it.contains("snowball") || it.contains("egg"))) return false;
 		if (now - s.useWin > 10000) { s.useWin = now; s.swapUses = 0; }
 		if (++s.swapUses >= 4) Verdict.signal(pl, "interact", "used an item " + (now - s.swapAt) + " ms after changing slot", 1);
-		return true;
+		return Config.get().enforce("interact");
 	}
 
 	/** A use-item-on-block packet (placing). */
 	/** Returns true when the click must be refused: it hit a block the player is not looking at. */
 	/** FeedAura and other entity auras: a new target every tick. A hand needs time to turn to another animal; an interaction with a different entity inside a quarter second of the last one is refused, and repeats inside three seconds are a signal. */
 	public static boolean entity(ServerPlayer pl, int id) {
-		if (pl.isCreative() || pl.isSpectator()) return false;
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return false;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (s.entId != -1 && s.entId != id && now - s.entAt < 250) {
 			if (now - s.entWin > 3000) { s.entWin = now; s.entStrikes = 0; }
 			if (++s.entStrikes >= 2) Verdict.signal(pl, "interact", "new target " + (now - s.entAt) + " ms after the last one", 1);
-			return true;
+			return Config.get().enforce("interact");
 		}
 		s.entId = id; s.entAt = now;
 		return false;
@@ -91,7 +91,7 @@ public final class Interact {
 		long gap = signGap(pl, lines);
 		if (gap < 0) return false;
 		Verdict.signal(pl, "interact", "sign text filled in " + gap + " ms after the editor opened", 1);
-		return true;
+		return Config.get().enforce("interact");
 	}
 
 	/** The sign-update packet is handled off the main thread by the server (it is only queued there after the text filter), so this check runs on the network thread, where the arrival time is the real one. Returns the gap in ms when the text came too fast, else -1. Does not signal: the caller does that on the main thread. */
@@ -106,12 +106,12 @@ public final class Interact {
 	}
 
 	public static boolean place(ServerPlayer pl, ServerboundUseItemOnPacket p) {
-		if (pl.isCreative() || pl.isSpectator()) return false;
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return false;
 		// Thrown items (wind charge, pearl, snowball, egg) are only thrown when the click lands on a block. The clicked block is not touched, so where the hand looks cannot matter. Wind-charge jumps flick the view down and click in the same instant.
 		var held = pl.getItemInHand(Packets.hand(p));
 		if (held.is(net.minecraft.world.item.Items.WIND_CHARGE) || held.is(net.minecraft.world.item.Items.ENDER_PEARL) || held.is(net.minecraft.world.item.Items.SNOWBALL) || held.is(net.minecraft.world.item.Items.EGG)) return false;
 		// AirPlace: a hand can only click a face of a block that is there. Vanilla places against thin air if the packet says so.
-		if (pl.level().getBlockState(Packets.hit(p).getBlockPos()).isAir()) { Verdict.signal(pl, "interact", "placed against air", 1); rate(pl); return true; }
+		if (pl.level().getBlockState(Packets.hit(p).getBlockPos()).isAir()) { Verdict.signal(pl, "interact", "placed against air", 1); rate(pl); return Config.get().enforce("interact"); }
 		AABB box = new AABB(Packets.hit(p).getBlockPos()).inflate(0.3);
 		Vec3 eye = pl.getEyePosition();
 		boolean seen = !box.clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty();
@@ -124,14 +124,14 @@ public final class Interact {
 			Vec3 dir = new Vec3(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr));
 			seen = !box.clip(eye, eye.add(dir.scale(8))).isEmpty();
 		}
-		if (!seen) { Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1); rate(pl); return true; }
+		if (!seen) { Verdict.signal(pl, "interact", "clicked a block it is not looking at", 1); rate(pl); return Config.get().enforce("interact"); }
 		// GhostHand: the hand aims at the chest, but a wall is in the way. A vanilla click only lands on what the view ray reaches first, so the outline ray from the eye to the claimed hit point must not hit another block before it.
 		{
 			Vec3 target = Packets.hit(p).getLocation();
 			var clicked = Packets.hit(p).getBlockPos();
 			var res = pl.level().clip(new net.minecraft.world.level.ClipContext(eye, target, net.minecraft.world.level.ClipContext.Block.OUTLINE, net.minecraft.world.level.ClipContext.Fluid.NONE, pl));
 			if (res.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK && !res.getBlockPos().equals(clicked) && res.getLocation().distanceTo(eye) < target.distanceTo(eye) - 0.3) {
-				Verdict.signal(pl, "interact", "clicked a block through another block", 1); rate(pl); return true;
+				Verdict.signal(pl, "interact", "clicked a block through another block", 1); rate(pl); return Config.get().enforce("interact");
 			}
 		}
 		// Human flicks and teleport aim corrections are legal; rotation jumps alone do not prove automation.

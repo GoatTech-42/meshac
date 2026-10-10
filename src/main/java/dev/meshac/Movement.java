@@ -176,9 +176,12 @@ public final class Movement {
 				if (s.airY0 == 0) s.airY0 = y; // a fresh state has no takeoff height yet
 				if (dy > 0.05 && y - s.airY0 > room && s.grace == 0 && hit == null && System.currentTimeMillis() - s.exemptAt > 4000) hit = String.format("high jump rose %.2f", y - s.airY0);
 			} else { s.bufFly = 0; s.sinceJump = 99; s.airY0 = s.ground ? sy : y; }
+			// MITIGATION 2026-10-10 (case MA-M9HG stair FP, per Luke): step-accumulator disabled until the stair-tolerant fix passes the zero-FP legit battery.
+			final boolean STEP_ACCUMULATOR_ENABLED = true; // stair-tolerant fix (case MA-M9HG); zero-FP battery on red before ilhsmc deploy
 			// Step: a hack can climb a block with several small rises that all claim ground. Add them up.
-			if (ground && dy > 0.05) { s.rise += dy; s.riseT = 4; } else if (--s.riseT <= 0) { s.rise = 0; s.riseT = 0; }
-			if (s.rise > 0.65 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && hit == null) { hit = String.format("step rose %.2f on the ground", s.rise); s.rise = 0; }
+			if (ground && dy >= 0.42 && dy <= 0.66 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0)) { s.rise = 0; s.riseT = 0; } // one vanilla auto-step (slab/stair) resets the window, never counts - MA-M9HG stair FP
+			else if (ground && dy > 0.05) { s.rise += dy; s.riseT = 4; } else if (--s.riseT <= 0) { s.rise = 0; s.riseT = 0; }
+			if (STEP_ACCUMULATOR_ENABLED && s.rise > 0.65 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && hit == null) { hit = String.format("step rose %.2f on the ground", s.rise); s.rise = 0; }
 			// Step: claiming ground while rising more than a half block. Vanilla only auto-steps 0.6.
 			if (ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && hit == null) hit = String.format("step dy %.3f onGround", dy);
 			// High jump / step: leaving the ground higher than a jump (0.42 + jump boost) or a step (0.6).

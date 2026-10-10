@@ -190,7 +190,11 @@ public final class Movement {
 				if (s.bufJump >= 2 && hit == null) hit = String.format("jump dy %.3f", dy);
 			} else s.bufJump = Math.max(0, s.bufJump - 1);
 			// Micro hop: leaving the ground by less than a jump (0.42) with nothing under the new spot. Criticals (packet and mini jump) and MaceDMG do this on every hit.
-			if (s.ground && dy > 0.005 && dy < 0.30 && !pl.isInWater() && !pl.onClimbable() && !pl.isPassenger() && !pl.getAbilities().flying) {
+			boolean bouncePad = pl.level().getBlockState(pl.blockPosition().below()).is(net.minecraft.world.level.block.Blocks.SLIME_BLOCK)
+			|| pl.level().getBlockState(pl.blockPosition().below()).is(net.minecraft.tags.BlockTags.BEDS)
+			|| pl.level().getBlockState(pl.blockPosition().below(2)).is(net.minecraft.world.level.block.Blocks.SLIME_BLOCK)
+			|| pl.level().getBlockState(pl.blockPosition().below(2)).is(net.minecraft.tags.BlockTags.BEDS); // bed/slime bounces decay through the microhop band - PhilipIsGaming FP 2026-10-10
+		if (s.ground && dy > 0.005 && dy < 0.30 && !bouncePad && !pl.isInWater() && !pl.onClimbable() && !pl.isPassenger() && !pl.getAbilities().flying) {
 				AABB mb = pl.getBoundingBox().move(dx, dy, dz);
 				boolean unsupported = pl.level().noCollision(pl, new AABB(mb.minX, mb.minY - 0.03, mb.minZ, mb.maxX, mb.minY, mb.maxZ));
 				if (TRACE) Meshac.LOG.info("[trace] microhop dy={} unsupported={} buf={}", r(dy), unsupported, s.bufHop);

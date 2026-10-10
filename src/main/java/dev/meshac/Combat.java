@@ -33,6 +33,26 @@ public final class Combat {
 		s.swapDiff = pl.getInventory().getItem(slot).getItem() != pl.getMainHandItem().getItem();
 	}
 
+	/** One (tick, attacker eye, target box) sample per server tick, kept for 750 ms, per attacker and entity within 12 blocks. */
+	private record Sample(long tick, Vec3 eye, AABB box) {}
+	private static final int REWIND_TICKS = 15;
+	private static final Map<UUID, Map<Integer, java.util.ArrayDeque<Sample>>> TRACK = new ConcurrentHashMap<>();
+
+	/** END_SERVER_TICK: remember where this player and each living thing near them stood, so an attack can be judged against what the client could actually see when it clicked. */
+	public static void tick(ServerPlayer pl, int tick) {
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return;
+		Map<Integer, java.util.ArrayDeque<Sample>> m = TRACK.computeIfAbsent(pl.getUUID(), k -> new ConcurrentHashMap<>());
+		Vec3 eye = pl.getEyePosition();
+		java.util.Set<Integer> seen = new java.util.HashSet<>();
+		for (Entity e : pl.level().getEntities(pl, pl.getBoundingBox().inflate(12), x -> x != pl && x instanceof net.minecraft.world.entity.LivingEntity)) {
+			java.util.ArrayDeque<Sample> dq = m.computeIfAbsent(e.getId(), k -> new java.util.ArrayDeque<>());
+			dq.addLast(new Sample(tick, eye, e.getBoundingBox()));
+			while (dq.size() > REWIND_TICKS) dq.pollFirst();
+			seen.add(e.getId());
+		}
+		m.keySet().removeIf(id -> !seen.contains(id));
+	}
+
 	/** True when any of several points on the target can be reached by a straight line from the eyes (closest point, centre, feet, eyes). A wall must hide all of them. */
 	private static boolean visible(ServerPlayer pl, Entity target, Vec3 eye, AABB box) {
 		Vec3[] pts = {
@@ -56,8 +76,17 @@ public final class Combat {
 		AABB box = target.getBoundingBox();
 		double reach = Math.sqrt(box.distanceToSqr(eye));
 		String hit = null;
-		// Reach: vanilla entity interaction range is 3.0. Half a block of slack for latency and the 2-tick rewind.
-		if (reach > 4.2) hit = String.format("reach %.2f", reach);
+		// Reach: vanilla entity interaction range is 3.0 (plus a small margin for hitbox growth and rounding), judged against every (eye, box) pair from the last 750 ms - what the client could actually see when it clicked. Latency widens the window, not the limit: a static target gives no slack, and 750 ms back a slow connection still finds its legal click.
+		double best = reach;
+		Map<Integer, java.util.ArrayDeque<Sample>> track = TRACK.get(pl.getUUID());
+		if (track != null) {
+			java.util.ArrayDeque<Sample> dq = track.get(target.getId());
+			if (dq != null && !dq.isEmpty()) {
+				best = Double.MAX_VALUE;
+				for (Sample sm : dq) best = Math.min(best, Math.sqrt(sm.box.distanceToSqr(sm.eye)));
+			}
+		}
+		if (best > 3.2) hit = String.format("reach %.2f", best);
 		// Line of sight: a wall between the eyes and the target.
 		if (hit == null && reach > 0.5 && !visible(pl, target, eye, box)) hit = "hit through a block";
 		// Aim: the look ray has to pass through the hitbox (grown a little for the client's rounding).
@@ -128,5 +157,5 @@ public final class Combat {
 		return hit;
 	}
 
-	public static void forget(UUID id) { STATE.remove(id); }
+	public static void forget(UUID id) { STATE.remove(id); TRACK.remove(id); }
 }

@@ -33,7 +33,7 @@ public final class MeshCommands {
 				boolean on = Verdict.WATCH.add(me.getUUID()); if (!on) Verdict.WATCH.remove(me.getUUID());
 				c.getSource().sendSuccess(() -> Component.literal(on ? "Watching flags." : "Stopped watching."), false); return 1; }))
 			.then(Commands.literal("monitor").executes(c -> { c.getSource().sendSuccess(() -> Component.literal("Monitor mode is " + (Config.get().monitor() ? "on" : "off") + "."), false); return 1; })
-				.then(Commands.literal("on").executes(c -> { Config.get().monitorOnly = true; c.getSource().sendSuccess(() -> Component.literal("Monitor mode on: flags are logged, nobody is kicked or banned."), true); return 1; }))
+				.then(Commands.literal("on").executes(c -> { Config.get().monitorOnly = true; c.getSource().sendSuccess(() -> Component.literal("Monitor mode on: flags are logged; only egregiousChecks-listed checks enforce."), true); return 1; }))
 				.then(Commands.literal("off").executes(c -> { Config.get().monitorOnly = false; c.getSource().sendSuccess(() -> Component.literal("Monitor mode off."), true); return 1; })))
 			.then(Commands.literal("kick").then(Commands.argument("player", net.minecraft.commands.arguments.EntityArgument.player()).then(Commands.argument("reason", StringArgumentType.greedyString()).executes(c -> {
 				ServerPlayer t = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player"); String why = StringArgumentType.getString(c, "reason");

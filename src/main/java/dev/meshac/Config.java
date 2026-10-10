@@ -45,6 +45,8 @@ public final class Config {
 	public int kicks() { return kicksBeforeTempban != null ? kicksBeforeTempban : base()[3]; }
 	public int memoryDays() { return offenceMemoryDays != null ? offenceMemoryDays : base()[4]; }
 	public java.util.List<String> exemptPlayers = new java.util.ArrayList<>(); // names (case-insensitive) skipped by the movement and combat checks
+	public java.util.List<String> egregiousChecks = new java.util.ArrayList<>(); // in monitor mode only THESE checks enforce (setback/hold/kick); everything else logs only. e.g. ["fly"]
+	public boolean isEgregious(String check) { return egregiousChecks != null && egregiousChecks.contains(check); }
 	public boolean exempt(net.minecraft.server.level.ServerPlayer pl) { if (exemptPlayers == null) return false; String n = pl.getGameProfile().name(); for (String e : exemptPlayers) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
 	public Boolean combatLog; public Integer combatLogSeconds; // combat log protection: on by default, tag length 15 s
 	public boolean combatLog() { return combatLog == null || combatLog; }

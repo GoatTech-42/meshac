@@ -197,8 +197,10 @@ public final class Movement {
 		if (s.ground && dy > 0.005 && dy < 0.30 && !bouncePad && !pl.isInWater() && !pl.onClimbable() && !pl.isPassenger() && !pl.getAbilities().flying) {
 				AABB mb = pl.getBoundingBox().move(dx, dy, dz);
 				boolean unsupported = pl.level().noCollision(pl, new AABB(mb.minX, mb.minY - 0.03, mb.minZ, mb.maxX, mb.minY, mb.maxZ));
-				if (TRACE) Meshac.LOG.info("[trace] microhop dy={} unsupported={} buf={}", r(dy), unsupported, s.bufHop);
-				if (unsupported) s.bufHop += 2;
+				boolean lowCeiling = !pl.level().noCollision(pl, new AABB(mb.minX, mb.maxY, mb.minZ, mb.maxX, mb.maxY + 0.6, mb.maxZ)); // a jump clipped by a ceiling lands in this dy band legitimately - Luke sprint-jump-under-2-block FP 2026-10-11
+				boolean powder = pl.level().getBlockState(pl.blockPosition()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW); // struggle-climbing out of powdered snow repeats dy ~0.2 - Luke FP 2026-10-11
+				if (TRACE) Meshac.LOG.info("[trace] microhop dy={} unsupported={} lowCeiling={} powder={} buf={}", r(dy), unsupported, lowCeiling, powder, s.bufHop);
+				if (unsupported && !lowCeiling && !powder) s.bufHop += 2;
 				if (s.bufHop >= 3 && hit == null) { hit = String.format("microhop dy %.3f", dy); s.bufHop = 0; }
 			}
 			if (++s.hopClock >= 30) { s.hopClock = 0; s.bufHop = Math.max(0, s.bufHop - 1); } // one hop is forgiven, two inside about 1.5 s are not

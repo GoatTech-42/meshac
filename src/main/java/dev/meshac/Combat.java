@@ -88,7 +88,15 @@ public final class Combat {
 		}
 		if (best > 3.2) hit = String.format("reach %.2f", best);
 		// Line of sight: a wall between the eyes and the target.
-		if (hit == null && reach > 0.5 && !visible(pl, target, eye, box)) hit = "hit through a block";
+		if (hit == null && reach > 0.5 && !visible(pl, target, eye, box)) {
+			// Judge LOS against what the client could see in the same 750 ms window the reach check uses - a target that just strafed behind a block edge is hidden NOW but was visible when clicked (crown FP 2026-10-11).
+			boolean los = false;
+			if (track != null) {
+				var dq = track.get(target.getId());
+				if (dq != null) for (Sample sm : dq) if (visible(pl, target, sm.eye, sm.box)) { los = true; break; }
+			}
+			if (!los) hit = "hit through a block";
+		}
 		// Aim: the look ray has to pass through the hitbox (grown a little for the client's rounding).
 		Vec3 look = pl.getLookAngle();
 		// The client aimed at where the target was a few ticks ago, so a quick mob (spider, a player sprinting) is tested over the ground it just covered.

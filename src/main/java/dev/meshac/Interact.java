@@ -58,7 +58,7 @@ public final class Interact {
 	/** AutoPotion and other swap-throw-swap hacks: the item is used in the same tick the slot changes. Pressing a number key and then clicking takes a hand over 40 ms. Returns true when the use must be refused; repeats inside ten seconds are a signal. */
 	public static boolean use(ServerPlayer pl) {
 		Glide.rocket(pl); rate(pl);
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return false;
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl) || Config.get().exemptFrom(pl, "interact")) return false;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.swapAt >= 40) return false;
@@ -72,9 +72,9 @@ public final class Interact {
 
 	/** A use-item-on-block packet (placing). */
 	/** Returns true when the click must be refused: it hit a block the player is not looking at. */
-	/** FeedAura and other entity auras: a new target every tick. A hand needs time to turn to another animal; an interaction with a different entity inside a quarter second of the last one is refused, and repeats inside three seconds are a signal. */
+	/** FeedAura and other entity auras: a new target every tick. A hand needs time to turn to another animal; an interaction with a different entity inside a three-quarter second of the last one is refused, and repeats inside three seconds are a signal. */
 	public static boolean entity(ServerPlayer pl, int id) {
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return false;
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl) || Config.get().exemptFrom(pl, "interact")) return false;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (s.entId != -1 && s.entId != id && now - s.entAt < 250) {
@@ -106,7 +106,7 @@ public final class Interact {
 	}
 
 	public static boolean place(ServerPlayer pl, ServerboundUseItemOnPacket p) {
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return false;
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl) || Config.get().exemptFrom(pl, "interact")) return false;
 		// Thrown items (wind charge, pearl, snowball, egg) are only thrown when the click lands on a block. The clicked block is not touched, so where the hand looks cannot matter. Wind-charge jumps flick the view down and click in the same instant.
 		var held = pl.getItemInHand(Packets.hand(p));
 		if (held.is(net.minecraft.world.item.Items.WIND_CHARGE) || held.is(net.minecraft.world.item.Items.ENDER_PEARL) || held.is(net.minecraft.world.item.Items.SNOWBALL) || held.is(net.minecraft.world.item.Items.EGG)) return false;
@@ -115,11 +115,11 @@ public final class Interact {
 		AABB box = new AABB(Packets.hit(p).getBlockPos()).inflate(0.3);
 		Vec3 eye = pl.getEyePosition();
 		boolean seen = !box.clip(eye, eye.add(pl.getLookAngle().scale(8))).isEmpty();
-		// The click carries the view the client has on screen right now, which can be a few packets newer than the last rotation the server saw. A view held within the last quarter second counts.
+		// The click carries the view the client has on screen right now, which can be a few packets newer than the last rotation the server saw. A view held within the last three-quarter second counts.
 		S sv = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long tnow = System.currentTimeMillis();
 		for (int i = 0; i < sv.rt.length && !seen; i++) {
-			if (sv.rt[i] == 0 || tnow - sv.rt[i] > 250) continue;
+			if (sv.rt[i] == 0 || tnow - sv.rt[i] > 750) continue;
 			double yr = Math.toRadians(sv.ry[i]), pr = Math.toRadians(sv.rp[i]);
 			Vec3 dir = new Vec3(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr));
 			seen = !box.clip(eye, eye.add(dir.scale(8))).isEmpty();

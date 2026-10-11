@@ -48,6 +48,8 @@ public final class Config {
 	public java.util.List<String> egregiousChecks = new java.util.ArrayList<>(); // in monitor mode only THESE checks enforce (setback/hold/kick); everything else logs only. e.g. ["fly"]
 	public boolean isEgregious(String check) { return egregiousChecks != null && egregiousChecks.contains(check); }
 	public boolean enforce(String check) { return !monitor() || isEgregious(check); } // soft mode: raw action refusals (break/click/use) follow the same gate as verdicts
+	public java.util.Map<String, java.util.List<String>> exemptChecks = new java.util.HashMap<>(); // check name -> player names exempt from that check only
+	public boolean exemptFrom(net.minecraft.server.level.ServerPlayer pl, String check) { if (exemptChecks == null) return false; java.util.List<String> l = exemptChecks.get(check); if (l == null) return false; String n = pl.getGameProfile().name(); for (String e : l) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
 	public boolean exempt(net.minecraft.server.level.ServerPlayer pl) { if (exemptPlayers == null) return false; String n = pl.getGameProfile().name(); for (String e : exemptPlayers) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
 	public Boolean combatLog; public Integer combatLogSeconds; // combat log protection: on by default, tag length 15 s
 	public boolean combatLog() { return combatLog == null || combatLog; }

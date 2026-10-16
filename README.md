@@ -96,7 +96,7 @@ there's an optional discord webhook for holds and removals.
 | `monitorOnly` | log and alert, never kick or ban |
 | `permanentBan` | false caps the ladder at the longest tempban |
 | `holdAt`, `removeAt` | heat at which a player is held, and removed |
-| `halfLifeSeconds`, `heatCoolSeconds` | how fast heat cools |
+| `halfLifeSeconds` | how fast heat cools (heat halves every this many seconds, default 8). `heatCoolSeconds` was removed, it never did anything |
 | `kicksBeforeTempban` | kicks before the first tempban |
 | `tempbanBaseMinutes`, `tempbanGrowth`, `tempbanMaxMinutes` | the tempban ladder |
 | `offenceHalfLifeDays`, `offenceMemoryDays` | how long old offences count |

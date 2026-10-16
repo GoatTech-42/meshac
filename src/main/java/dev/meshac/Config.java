@@ -31,7 +31,7 @@ public final class Config {
 	public String warn = "#FFB454";
 	public String serverName = "this server";
 
-	// holdAt, removeAt, heat cool-down s, kicks before the first tempban, memory days, permanent ban (1/0)
+	// holdAt, removeAt, (unused slot, was heat cool-down s), kicks before the first tempban, memory days, permanent ban (1/0)
 	private int[] base() {
 		return switch (preset.toLowerCase()) {
 			case "lenient" -> new int[] {4, 7, 10, 2, 14, 0};
@@ -41,7 +41,6 @@ public final class Config {
 	}
 	
 	
-	public long heatCoolMs() { return (heatCoolSeconds != null ? heatCoolSeconds : base()[2]) * 1000L; }
 	public int kicks() { return kicksBeforeTempban != null ? kicksBeforeTempban : base()[3]; }
 	public int memoryDays() { return offenceMemoryDays != null ? offenceMemoryDays : base()[4]; }
 	public java.util.List<String> exemptPlayers = new java.util.ArrayList<>(); // names (case-insensitive) skipped by the movement and combat checks
@@ -53,16 +52,15 @@ public final class Config {
 	public boolean disabled(String check) { if (disabledChecks == null) return false; for (String d : disabledChecks) if (d != null && d.equalsIgnoreCase(check)) return true; return false; }
 	public boolean exemptFrom(net.minecraft.server.level.ServerPlayer pl, String check) { if (exemptChecks == null) return false; String n = pl.getGameProfile().name(); for (var en : exemptChecks.entrySet()) { if (en.getKey() == null || !en.getKey().equalsIgnoreCase(check) || en.getValue() == null) continue; for (String e : en.getValue()) if (e != null && e.equalsIgnoreCase(n)) return true; } return false; } // keys are matched case-insensitively like names
 	/** Every name Verdict.signal / disabled() / enforce() is called with. Movement sub-checks use the first word of their message (hit.split(" ")[0]). Keep in sync when a check is added. */
-	public static final java.util.Set<String> KNOWN_CHECKS = java.util.Set.of(
-		"fly", "speed", "step", "jump", "air", "high", "ladder", "levitation", "microhop", "timer", "nofall", "noclip", "blink", "movement", "antiknockback",
-		"combat", "interact", "inventory", "mining", "mining-lookray", "glide", "boatfly", "chat");
-	public static boolean knownCheck(String name) { return name != null && KNOWN_CHECKS.contains(name.toLowerCase(java.util.Locale.ROOT)); }
+	public static final java.util.Set<String> KNOWN_CHECKS = CheckNames.ALL;
+	public static boolean knownCheck(String name) { return CheckNames.known(name); }
 	/** Log a warning for every unknown name in disabledChecks, exemptChecks and egregiousChecks: a typo silently does nothing otherwise. Call after load and reload. */
 	public void warnUnknownChecks() {
 		java.util.List<String> all = new java.util.ArrayList<>();
 		if (disabledChecks != null) all.addAll(disabledChecks);
 		if (egregiousChecks != null) all.addAll(egregiousChecks);
 		if (exemptChecks != null) all.addAll(exemptChecks.keySet());
+		if (heatCoolSeconds != null) Meshac.LOG.warn("[meshac] heatCoolSeconds is ignored (it never did anything). Heat cooling is set by halfLifeSeconds; remove heatCoolSeconds from the config.");
 		for (String n : all) if (!knownCheck(n)) Meshac.LOG.warn("[meshac] config names a check that does not exist: \"{}\" (known: {})", n, String.join(", ", new java.util.TreeSet<>(KNOWN_CHECKS)));
 	}
 	/** One answer for "should this check ignore this player": creative/spectator, the global exempt roster, the per-check roster, or the check switched off. Every check and Verdict.signal use it, so no code path can forget one of the four. */
@@ -97,7 +95,7 @@ public final class Config {
 		var root = g.toJsonTree(c).getAsJsonObject();
 		var help = new com.google.gson.JsonObject();
 		help.addProperty("preset", "lenient, default or strict. null overrides below use the preset.");
-		help.addProperty("punishments", "holdAt/removeAt are heat levels; heatCoolSeconds cools heat. kicksBeforeTempban counts removals, offenceMemoryDays sets history. tempbanMinutes is the ladder. permanentBan=false caps it.");
+		help.addProperty("punishments", "holdAt/removeAt are heat levels; heat cools by half every halfLifeSeconds (default 8). kicksBeforeTempban counts removals, offenceMemoryDays sets history. tempbanMinutes is the ladder. permanentBan=false caps it.");
 		help.addProperty("clientFingerprint", "OFF by default. Exact client-provided brand/channel matches only, case-sensitive. Empty lists match nobody. Hints can be spoofed; never proof of cheats. First match kicks, matching rejoin bans separately from behavior. Generic vanilla/fabric/forge/neoforge and minecraft/fabric/forge channels are ignored. Pardon cases to clear history.");
 		help.addProperty("discord", "Empty discordWebhook disables posts. Treat webhook as secret. discordOnHold also posts holds.");
 		help.addProperty("appearance", "accent and warn are #RRGGBB colors. serverName and appeal appear on removal screens.");

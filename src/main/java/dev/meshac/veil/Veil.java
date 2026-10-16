@@ -112,8 +112,7 @@ public final class Veil {
 	private static ServerLevel lvlOf(LevelChunk c) { return c.getLevel() instanceof ServerLevel l ? l : null; }
 	/** True when every planned position still holds the state the plan was computed from. */
 	private static boolean fresh(net.minecraft.world.level.chunk.LevelChunkSection sec, Mod[] m) {
-		for (Mod x : m) if (sec.getBlockState(x.idx() & 15, (x.idx() >> 4) & 15, x.idx() >> 8) != x.real()) return false;
-		return true;
+		return PlanFresh.fresh(m.length, i -> m[i].idx(), i -> m[i].real(), p -> sec.getBlockState(p & 15, (p >> 4) & 15, p >> 8));
 	}
 	private static Mod[] modsCached(LevelChunk c, int secIdx, net.minecraft.world.level.chunk.LevelChunkSection sec) {
 		if (!xrayOn || !(c.getLevel() instanceof ServerLevel lvl) || !onServerThread()) return null;

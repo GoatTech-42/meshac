@@ -38,7 +38,7 @@ version properties live in `versions/`. `build-all.sh` passes `remap=1` for 1.21
 
 for a new or changed check, include both a run that catches the tested action and a clean control that stays unflagged. test lag, packet bunching, teleports and knockback when they affect the code you touched.
 
-use a disposable server you control. set `monitorOnly` to true and leave `egregiousChecks` empty before testing. never use someone else's server as a test rig.
+use a disposable server you control. set `monitorOnly` to true, leave `egregiousChecks` empty, leave client fingerprinting off and set `combatLog` to false before testing. the last two act even in monitor mode. never use someone else's server as a test rig.
 
 [rig/README.md](rig/README.md) describes the local setup. those scripts are for a prepared rig, not a one-command ci suite. do not run scripts that create containers, change server files or accept the minecraft eula until you have read them and agreed to the eula yourself.
 

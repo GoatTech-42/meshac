@@ -19,6 +19,7 @@ async def handle(cr, cw):
     sr, sw = await asyncio.open_connection("meshac-rig", 25565)
     await asyncio.gather(pipe(cr, sw), pipe(sr, cw))
 async def main():
+    # binds all interfaces on purpose: the bots and clients reach it over the rig docker network, so it must run in that isolated container only
     s = await asyncio.start_server(handle, "0.0.0.0", 25565)
     async with s: await s.serve_forever()
 asyncio.run(main())

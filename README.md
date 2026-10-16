@@ -20,7 +20,7 @@ so the quality standard for meshac is simple. if a cheat leaves a trace the serv
 
 meshac watches movement, combat, building, mining, interaction and elytra flight. it works out what vanilla physics would allow and steps in when the two don't match.
 
-every flag adds heat, and heat cools off on its own. a few signals get a setback. a steady run of them gets a hold and then a removal. we test with lag on purpose, but that can't promise a lagging player never gets flagged.
+with enforcement on, every flag can add heat, and heat cools off on its own. a few signals can get a setback. a steady run of them can get a hold and then a removal. we test with lag on purpose, but that can't promise a lagging player never gets flagged.
 
 1. the player gets put back
 2. then held for a moment
@@ -57,7 +57,7 @@ the sign text rule and the chat command rule were hooked on the wrong thread, so
 
 players install nothing.
 
-**start in monitor mode.** set `monitorOnly` to `true` and leave `egregiousChecks` empty so monitor-mode enforcement exceptions are not enabled. leave client fingerprinting off too. watch the logs on your own server before enabling punishment.
+**start in monitor mode.** set `monitorOnly` to `true` and leave `egregiousChecks` empty so monitor-mode enforcement exceptions are not enabled. leave client fingerprinting off, and set `combatLog` to `false`, because the fingerprint rule and combat log protection both act even in monitor mode. watch the logs on your own server before enabling punishment.
 
 | minecraft | local build file | java |
 | --- | --- | --- |
@@ -97,7 +97,8 @@ there's an optional discord webhook for holds and removals.
 | `egregiousChecks` | checks that still enforce in monitor mode; leave empty for log-only testing |
 | `permanentBan` | false caps the ladder at the longest tempban |
 | `holdAt`, `removeAt` | heat at which a player is held, and removed |
-| `halfLifeSeconds`, `heatCoolSeconds` | how fast heat cools |
+| `halfLifeSeconds` | how fast heat cools. `heatCoolSeconds` is still in the config but nothing reads it |
+| `combatLog`, `combatLogSeconds` | on by default. a player who disconnects while combat-tagged is killed. monitor mode does not stop it |
 | `kicksBeforeTempban` | kicks before the first tempban |
 | `tempbanBaseMinutes`, `tempbanGrowth`, `tempbanMaxMinutes` | the tempban ladder |
 | `offenceHalfLifeDays`, `offenceMemoryDays` | how long old offences count |

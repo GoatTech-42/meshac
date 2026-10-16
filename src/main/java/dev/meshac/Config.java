@@ -51,7 +51,20 @@ public final class Config {
 	public java.util.Map<String, java.util.List<String>> exemptChecks = new java.util.HashMap<>(); // check name -> player names exempt from that check only
 	public java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off (Luke "Exempt that check rn" 2026-10-11)
 	public boolean disabled(String check) { if (disabledChecks == null) return false; for (String d : disabledChecks) if (d != null && d.equalsIgnoreCase(check)) return true; return false; }
-	public boolean exemptFrom(net.minecraft.server.level.ServerPlayer pl, String check) { if (exemptChecks == null) return false; java.util.List<String> l = exemptChecks.get(check); if (l == null) return false; String n = pl.getGameProfile().name(); for (String e : l) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
+	public boolean exemptFrom(net.minecraft.server.level.ServerPlayer pl, String check) { if (exemptChecks == null) return false; String n = pl.getGameProfile().name(); for (var en : exemptChecks.entrySet()) { if (en.getKey() == null || !en.getKey().equalsIgnoreCase(check) || en.getValue() == null) continue; for (String e : en.getValue()) if (e != null && e.equalsIgnoreCase(n)) return true; } return false; } // keys are matched case-insensitively like names
+	/** Every name Verdict.signal / disabled() / enforce() is called with. Movement sub-checks use the first word of their message (hit.split(" ")[0]). Keep in sync when a check is added. */
+	public static final java.util.Set<String> KNOWN_CHECKS = java.util.Set.of(
+		"fly", "speed", "step", "jump", "air", "high", "ladder", "levitation", "microhop", "timer", "nofall", "noclip", "blink", "movement", "antiknockback",
+		"combat", "interact", "inventory", "mining", "mining-lookray", "glide", "boatfly", "chat");
+	public static boolean knownCheck(String name) { return name != null && KNOWN_CHECKS.contains(name.toLowerCase(java.util.Locale.ROOT)); }
+	/** Log a warning for every unknown name in disabledChecks, exemptChecks and egregiousChecks: a typo silently does nothing otherwise. Call after load and reload. */
+	public void warnUnknownChecks() {
+		java.util.List<String> all = new java.util.ArrayList<>();
+		if (disabledChecks != null) all.addAll(disabledChecks);
+		if (egregiousChecks != null) all.addAll(egregiousChecks);
+		if (exemptChecks != null) all.addAll(exemptChecks.keySet());
+		for (String n : all) if (!knownCheck(n)) Meshac.LOG.warn("[meshac] config names a check that does not exist: \"{}\" (known: {})", n, String.join(", ", new java.util.TreeSet<>(KNOWN_CHECKS)));
+	}
 	/** One answer for "should this check ignore this player": creative/spectator, the global exempt roster, the per-check roster, or the check switched off. Every check and Verdict.signal use it, so no code path can forget one of the four. */
 	public boolean skips(net.minecraft.server.level.ServerPlayer pl, String check) { return pl.isCreative() || pl.isSpectator() || exempt(pl) || exemptFrom(pl, check) || disabled(check); }
 	public boolean exempt(net.minecraft.server.level.ServerPlayer pl) { if (exemptPlayers == null) return false; String n = pl.getGameProfile().name(); for (String e : exemptPlayers) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }

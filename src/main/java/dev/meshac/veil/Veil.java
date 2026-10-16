@@ -99,6 +99,23 @@ public final class Veil {
 
 	/** Compute (cached) modifications for one section. secIdx = index in chunk.getSections(). */
 	public static Mod[] mods(LevelChunk c, int secIdx, net.minecraft.world.level.chunk.LevelChunkSection sec) {
+		Mod[] m = modsCached(c, secIdx, sec);
+		if (m == null || m.length == 0 || fresh(sec, m)) return m;
+		// Cached plan no longer matches the live section (a block changed without an invalidate: no-update setblock, piston, other mod, worldedit). Drop ONLY this section and rebuild once.
+		// veiled() still skips any entry that is stale at copy time, so a race after this check fails open. This replaces the CACHE.clear() the stale path used, which threw away every section on every miss.
+		if (lvlOf(c) != null) CACHE.remove(new Key(lvlOf(c), c.getPos().getMinBlockX() >> 4, c.getPos().getMinBlockZ() >> 4, secIdx));
+		staleRebuilds++;
+		return modsCached(c, secIdx, sec);
+	}
+	/** Count of sections rebuilt because the cache was stale. Shown by /mesh veil; a steady climb means an invalidate() call is missing somewhere. */
+	public static volatile long staleRebuilds = 0;
+	private static ServerLevel lvlOf(LevelChunk c) { return c.getLevel() instanceof ServerLevel l ? l : null; }
+	/** True when every planned position still holds the state the plan was computed from. */
+	private static boolean fresh(net.minecraft.world.level.chunk.LevelChunkSection sec, Mod[] m) {
+		for (Mod x : m) if (sec.getBlockState(x.idx() & 15, (x.idx() >> 4) & 15, x.idx() >> 8) != x.real()) return false;
+		return true;
+	}
+	private static Mod[] modsCached(LevelChunk c, int secIdx, net.minecraft.world.level.chunk.LevelChunkSection sec) {
 		if (!xrayOn || !(c.getLevel() instanceof ServerLevel lvl) || !onServerThread()) return null;
 		if (sec.hasOnlyAir() || !sec.maybeHas(Veil::hidden)) return null; // VERIFY maybeHas(Predicate<BlockState>)
 		if (CACHE.size() > CACHE_MAX) CACHE.clear();
@@ -139,7 +156,7 @@ public final class Veil {
 				copy.setBlockState(lx, ly, lz, x.fake(), false); // false = no lock; fine, the copy is private to this thread
 				applied++;
 			}
-			if (stale) CACHE.clear();
+			if (stale) staleRebuilds++; // mods() already revalidates; reaching this means a change landed between the plan and the copy. Skip the entry (done above), keep the cache, next packet rebuilds.
 			return applied == 0 ? null : copy;
 		} catch (Throwable t) {
 			dev.meshac.Meshac.LOG.warn("[meshac] chunkveil could not build a veiled section, sending it unveiled: {}", t.toString());

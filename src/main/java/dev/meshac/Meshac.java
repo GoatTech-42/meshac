@@ -22,6 +22,7 @@ public final class Meshac implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		Config.load();
+		Config.get().warnUnknownChecks();
 		Config.applyVeil();
 		Cases.load();
 		CommandRegistrationCallback.EVENT.register((d, reg, env) -> MeshCommands.register(d));

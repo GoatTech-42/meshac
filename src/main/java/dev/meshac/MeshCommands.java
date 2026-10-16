@@ -53,17 +53,18 @@ public final class MeshCommands {
 				.executes(c -> { var l = Config.get().disabledChecks; c.getSource().sendSuccess(() -> Component.literal("Disabled checks: " + (l == null || l.isEmpty() ? "none" : String.join(", ", l))), false); return 1; })
 				.then(Commands.argument("name", StringArgumentType.word()).then(Commands.literal("off").executes(c -> setCheck(c.getSource(), StringArgumentType.getString(c, "name"), false)))
 					.then(Commands.literal("on").executes(c -> setCheck(c.getSource(), StringArgumentType.getString(c, "name"), true)))))
-			.then(Commands.literal("reload").executes(c -> { Config.load(); Config.applyVeil(); Cases.load(); c.getSource().sendSuccess(() -> Component.literal("meshac reloaded."), true); return 1; })));
+			.then(Commands.literal("reload").executes(c -> { Config.load(); Config.applyVeil(); Cases.load(); Config.get().warnUnknownChecks(); c.getSource().sendSuccess(() -> Component.literal("meshac reloaded."), true); return 1; })));
 	}
 
 
-	private static String veilLine() { return "chunkveil: anti-xray " + (dev.meshac.veil.Veil.xrayOn ? "ON" : "off") + ", anti-ESP " + (dev.meshac.veil.Veil.espOn ? "ON" : "off") + ", config veilXray=" + Config.get().veilXray + " veilEsp=" + Config.get().veilEsp; }
+	private static String veilLine() { return "chunkveil (stale plan rebuilds " + dev.meshac.veil.Veil.staleRebuilds + "): anti-xray " + (dev.meshac.veil.Veil.xrayOn ? "ON" : "off") + ", anti-ESP " + (dev.meshac.veil.Veil.espOn ? "ON" : "off") + ", config veilXray=" + Config.get().veilXray + " veilEsp=" + Config.get().veilEsp; }
 	/** Runtime switch for one sub-check (same list as config disabledChecks). Not written to disk; /mesh reload restores the config's list. */
 	private static int setCheck(CommandSourceStack s, String name, boolean on) {
+		if (!Config.knownCheck(name)) { s.sendFailure(Component.literal("No check called " + name + ". Known: " + String.join(", ", new java.util.TreeSet<>(Config.KNOWN_CHECKS)))); return 0; }
 		var l = Config.get().disabledChecks; if (l == null) { l = new java.util.ArrayList<>(); Config.get().disabledChecks = l; }
 		l.removeIf(d -> d != null && d.equalsIgnoreCase(name));
 		if (!on) l.add(name);
-		s.sendSuccess(() -> Component.literal("Check " + name + (on ? " enabled." : " disabled until reload or restart.") + " (a name no check uses changes nothing)"), true); return 1;
+		s.sendSuccess(() -> Component.literal("Check " + name + (on ? " enabled." : " disabled until reload or restart: no flags, no heat, no setbacks or refusals from it for anyone.") + ""), true); return 1;
 	}
 	private static int list(CommandSourceStack s, List<Cases.Case> cs) {
 		if (cs.isEmpty()) { s.sendSuccess(() -> Component.literal("No cases."), false); return 0; }

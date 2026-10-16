@@ -29,7 +29,7 @@ public final class Glide {
 
 	/** A start-gliding command. A real glide starts once per take-off. ElytraFly Packet mode re-sends it with every move packet to keep the server flag up (the flag flaps, so the glide checks above rarely run). Six starts inside three seconds while airborne is that. */
 	public static void startFly(ServerPlayer pl) {
-		if (pl.isCreative() || pl.isSpectator() || pl.onGround()) return;
+		if (Config.get().skips(pl, "glide") || pl.onGround()) return;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		s.st[s.sti] = now; s.sti = (s.sti + 1) % s.st.length;
@@ -41,7 +41,7 @@ public final class Glide {
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		if (Trace.ON && (pl.tickCount % 20) == 0) Meshac.LOG.info("[trace] glidein ff={} pos={} cr={} sp={} g={}", pl.isFallFlying(), p.hasPosition(), pl.isCreative(), pl.isSpectator(), pl.onGround());
-		if (!pl.isFallFlying() || !p.hasPosition() || pl.isCreative() || pl.isSpectator() || pl.hasEffect(net.minecraft.world.effect.MobEffects.SLOW_FALLING)) { s.tick0 = -1; s.e0 = Double.NaN; s.hits = 0; return null; } // slow falling changes elytra drag/gravity - the energy model does not apply
+		if (!pl.isFallFlying() || !p.hasPosition() || Config.get().skips(pl, "glide") || pl.hasEffect(net.minecraft.world.effect.MobEffects.SLOW_FALLING)) { s.tick0 = -1; s.e0 = Double.NaN; s.hits = 0; return null; } // slow falling changes elytra drag/gravity - the energy model does not apply
 		int now = pl.tickCount;
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());
 		if (s.tick0 < 0) { s.tick0 = now; s.x0 = x; s.y0 = y; s.z0 = z; return null; }

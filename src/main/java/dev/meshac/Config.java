@@ -52,6 +52,8 @@ public final class Config {
 	public java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off (Luke "Exempt that check rn" 2026-10-11)
 	public boolean disabled(String check) { if (disabledChecks == null) return false; for (String d : disabledChecks) if (d != null && d.equalsIgnoreCase(check)) return true; return false; }
 	public boolean exemptFrom(net.minecraft.server.level.ServerPlayer pl, String check) { if (exemptChecks == null) return false; java.util.List<String> l = exemptChecks.get(check); if (l == null) return false; String n = pl.getGameProfile().name(); for (String e : l) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
+	/** One answer for "should this check ignore this player": creative/spectator, the global exempt roster, the per-check roster, or the check switched off. Every check and Verdict.signal use it, so no code path can forget one of the four. */
+	public boolean skips(net.minecraft.server.level.ServerPlayer pl, String check) { return pl.isCreative() || pl.isSpectator() || exempt(pl) || exemptFrom(pl, check) || disabled(check); }
 	public boolean exempt(net.minecraft.server.level.ServerPlayer pl) { if (exemptPlayers == null) return false; String n = pl.getGameProfile().name(); for (String e : exemptPlayers) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
 	public Boolean combatLog; public Integer combatLogSeconds; // combat log protection: on by default, tag length 15 s
 	public boolean combatLog() { return combatLog == null || combatLog; }

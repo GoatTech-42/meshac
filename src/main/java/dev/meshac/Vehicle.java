@@ -18,7 +18,7 @@ public final class Vehicle {
 	/** True when the move should be refused. */
 	public static boolean check(ServerPlayer pl, ServerboundMoveVehiclePacket p) {
 		Entity v = pl.getRootVehicle();
-		if (!(v instanceof AbstractBoat) || pl.isCreative() || pl.isSpectator()) { RISING.remove(pl.getUUID()); return false; }
+		if (!(v instanceof AbstractBoat) || Config.get().skips(pl, "boatfly")) { RISING.remove(pl.getUUID()); return false; }
 		boolean lift = v.isInWater() || v.onGround() || v.level().getBlockState(v.blockPosition()).is(Blocks.BUBBLE_COLUMN)
 			|| v.level().getBlockState(v.blockPosition().below()).is(Blocks.BUBBLE_COLUMN) || v.level().getFluidState(v.blockPosition().below()).is(FluidTags.WATER);
 		if (lift || Packets.pos(p).y - v.getY() < 0.05) { RISING.remove(pl.getUUID()); return false; }

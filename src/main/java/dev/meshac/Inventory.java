@@ -20,7 +20,7 @@ public final class Inventory {
 
 	/** The same click, run on the server thread. Returns when it reached the network. */
 	public static long click(ServerPlayer pl) {
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return System.currentTimeMillis();
+		if (Config.get().skips(pl, "inventory")) return System.currentTimeMillis();
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		Long at = s.arrivals.poll();
 		long now = at != null ? at : System.currentTimeMillis(), gap = now - s.last;

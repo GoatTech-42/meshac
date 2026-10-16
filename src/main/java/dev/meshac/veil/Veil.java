@@ -191,16 +191,32 @@ public final class Veil {
 		return e instanceof net.minecraft.world.entity.Mob;
 	}
 
+	/**
+	 * Foliage-aware ray. Vanilla ClipContext.Block.VISUAL stops on leaves (their visual shape is a full cube), so a player standing behind a bush was culled although a real client sees
+	 * him through the gaps and the sprite cut-outs. This walks the voxels itself and only an OCCLUDING block with a visual shape the ray really crosses blocks it. Leaves, glass, ice,
+	 * slime, vines, fences, doors, scaffolding and cobwebs (anything where canOcclude() is false) let the ray through. The cost is that a tree line no longer hides players from a wallhack;
+	 * that is the point: a missed cull is invisible, a wrong cull is a vanished player. Walls, stone, dirt, wood and the like still block as before.
+	 * UNCOMPILED. VERIFY: BlockGetter.traverseBlocks(Vec3, Vec3, T, BiFunction, Function) and VoxelShape.clip(Vec3, Vec3, BlockPos) exist under those names in 26.x.
+	 */
+	private static boolean rayClear(ServerLevel l, Vec3 from, Vec3 to) {
+		Boolean blocked = net.minecraft.world.level.BlockGetter.traverseBlocks(from, to, l, (lv, pos) -> {
+			BlockState st = lv.getBlockState(pos);
+			if (st.isAir() || !st.canOcclude() || st.is(net.minecraft.tags.BlockTags.LEAVES)) return null;
+			var shape = st.getVisualShape(lv, pos, net.minecraft.world.phys.shapes.CollisionContext.empty()); // VERIFY signature
+			if (shape.isEmpty()) return null;
+			return shape.clip(from, to, pos) != null ? Boolean.TRUE : null;
+		}, lv -> Boolean.FALSE);
+		return !Boolean.TRUE.equals(blocked);
+	}
+
 	/** Multi-point LOS: visible if any sample point of the target is reachable from the eye (or from the eye shifted by the viewer's velocity over 6 ticks). */
 	private static boolean visible(ServerLevel l, ServerPlayer v, Entity e) {
 		AABB b = e.getBoundingBox();
 		double[] pts = EspCore.samplePoints(b.minX, b.minY, b.minZ, b.maxX, b.maxY, b.maxZ);
 		Vec3 eye = v.getEyePosition(), vel = v.getDeltaMovement();
-		Vec3[] eyes = { eye, eye.add(vel.x * 6, 0, vel.z * 6) };
+		Vec3[] eyes = { eye, eye.add(vel.x * 6, 0, vel.z * 6), eye.add(0, -0.4, 0) }; // third origin: a crouch or a step down changes the eye by about this much
 		for (Vec3 o : eyes) for (int i = 0; i < pts.length; i += 3) {
-			Vec3 t = new Vec3(pts[i], pts[i + 1], pts[i + 2]);
-			var r = l.clip(new net.minecraft.world.level.ClipContext(o, t, net.minecraft.world.level.ClipContext.Block.VISUAL, net.minecraft.world.level.ClipContext.Fluid.NONE, v)); // VISUAL: glass, leaves, fences do not block like solid ones; VERIFY it is enough for leaves/glass (see test E5)
-			if (r.getType() == net.minecraft.world.phys.HitResult.Type.MISS) return true;
+			if (rayClear(l, o, new Vec3(pts[i], pts[i + 1], pts[i + 2]))) return true;
 		}
 		return false;
 	}
@@ -217,13 +233,14 @@ public final class Veil {
 			for (ServerPlayer v : l.players()) {
 				if ((v.getId() + tick) % TICK_PERIOD != 0) continue; // stagger players across ticks
 				for (Entity e : l.getAllEntities()) { // VERIFY cheaper: iterate the tracked set via an accessor on ChunkMap.entityMap
-					if (budget <= 0) return;
 					if (!cullable(e) || e == v || e.level() != l) continue;
+					boolean wasHidden = ESP.hidden(v.getId(), e.getId());
+					if (budget <= 0 && !wasHidden) continue; // out of budget: skip NEW culls only. The old "return" left already hidden entities hidden (and starved every later viewer) until the next tick had budget, which under load meant until relog.
 					double d = Math.sqrt(e.getBoundingBox().distanceToSqr(v.getEyePosition()));
 					if (d > 128) continue;
 					boolean ex = exempt(v, e, tick);
 					boolean vis = ex || d <= 8 || visible(l, v, e);
-					if (!ex && d > 8) budget--;
+					if (!ex && d > 8 && !wasHidden) budget--; // re-show checks of hidden pairs are free: they must never be skipped
 					var a = ESP.update(v.getId(), e.getId(), tick, d, ex, vis);
 					if (a == EspCore.Action.HIDE) hide(cm, v, e);
 					else if (a == EspCore.Action.SHOW) show(cm, v, e);

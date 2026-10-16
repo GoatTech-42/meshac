@@ -79,7 +79,7 @@ public final class Mining {
 
 	/** True when this break should be refused. */
 	public static boolean refuse(ServerPlayer pl, BlockPos pos) {
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return false;
+		if (Config.get().skips(pl, "mining")) return false;
 		Vec3 eye = pl.getEyePosition();
 		Vec3 centre = Vec3.atCenterOf(pos);
 		if (!reachable(pl, eye, pos)) {

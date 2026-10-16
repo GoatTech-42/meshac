@@ -58,7 +58,7 @@ public final class Interact {
 	/** AutoPotion and other swap-throw-swap hacks: the item is used in the same tick the slot changes. Pressing a number key and then clicking takes a hand over 40 ms. Returns true when the use must be refused; repeats inside ten seconds are a signal. */
 	public static boolean use(ServerPlayer pl) {
 		Glide.rocket(pl); rate(pl);
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl) || Config.get().exemptFrom(pl, "interact")) return false;
+		if (Config.get().skips(pl, "interact")) return false;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.swapAt >= 40) return false;
@@ -74,7 +74,7 @@ public final class Interact {
 	/** Returns true when the click must be refused: it hit a block the player is not looking at. */
 	/** FeedAura and other entity auras: a new target every tick. A hand needs time to turn to another animal; an interaction with a different entity inside a three-quarter second of the last one is refused, and repeats inside three seconds are a signal. */
 	public static boolean entity(ServerPlayer pl, int id) {
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl) || Config.get().exemptFrom(pl, "interact")) return false;
+		if (Config.get().skips(pl, "interact")) return false;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (s.entId != -1 && s.entId != id && now - s.entAt < 250) {
@@ -106,7 +106,7 @@ public final class Interact {
 	}
 
 	public static boolean place(ServerPlayer pl, ServerboundUseItemOnPacket p) {
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl) || Config.get().exemptFrom(pl, "interact")) return false;
+		if (Config.get().skips(pl, "interact")) return false;
 		// Thrown items (wind charge, pearl, snowball, egg) are only thrown when the click lands on a block. The clicked block is not touched, so where the hand looks cannot matter. Wind-charge jumps flick the view down and click in the same instant.
 		var held = pl.getItemInHand(Packets.hand(p));
 		if (held.is(net.minecraft.world.item.Items.WIND_CHARGE) || held.is(net.minecraft.world.item.Items.ENDER_PEARL) || held.is(net.minecraft.world.item.Items.SNOWBALL) || held.is(net.minecraft.world.item.Items.EGG)) return false;
@@ -156,7 +156,7 @@ public final class Interact {
 	}
 
 	private static void rate(ServerPlayer pl) {
-		if (pl.isCreative() || pl.isSpectator()) return;
+		if (Config.get().skips(pl, "interact")) return;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.windowAt > 1000) { s.windowAt = now; s.uses = 0; }

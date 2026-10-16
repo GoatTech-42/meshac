@@ -22,6 +22,7 @@ public final class Totem {
 
 	/** True when this click is a repeat of an impossible off-hand fill: the click is refused. */
 	public static boolean refuse(ServerPlayer pl, long arrivedAt, int slot, boolean toOffhand) {
+		if (Config.get().skips(pl, "inventory")) return false;
 		long[] s = state(pl);
 		long gap = arrivedAt - s[1], since = arrivedAt - s[0];
 		boolean pair = toOffhand && s[2] != 45 && gap >= 0 && gap < TOO_FAST_MS;

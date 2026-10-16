@@ -40,7 +40,7 @@ public final class Combat {
 
 	/** END_SERVER_TICK: remember where this player and each living thing near them stood, so an attack can be judged against what the client could actually see when it clicked. */
 	public static void tick(ServerPlayer pl, int tick) {
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return;
+		if (Config.get().skips(pl, "combat")) return;
 		Map<Integer, java.util.ArrayDeque<Sample>> m = TRACK.computeIfAbsent(pl.getUUID(), k -> new ConcurrentHashMap<>());
 		Vec3 eye = pl.getEyePosition();
 		java.util.Set<Integer> seen = new java.util.HashSet<>();
@@ -68,7 +68,7 @@ public final class Combat {
 
 	/** Returns a reason when this attack is not something a person at a keyboard could have sent, else null. */
 	public static String check(ServerPlayer pl, Entity target) {
-		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return null;
+		if (Config.get().skips(pl, "combat")) return null;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		dev.meshac.veil.Veil.attacked(pl, target, pl.level().getServer().getTickCount());
 		long now = System.currentTimeMillis();

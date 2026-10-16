@@ -102,20 +102,16 @@ public final class MeshCommands {
 	/**
 	 * Offline ban. Resolves name to UUID from the server's own name cache (players who have joined), else from this plugin's case history. Never invents a UUID:
 	 * an offline-mode UUID would be wrong on an online-mode server and the ban would silently never match.
-	 * API (read from the vanilla server jars of 1.21.11, 26.1.2, 26.2, 26.3, identical in all four):
-	 * MinecraftServer.services() -> Services.nameToIdCache() -> UserNameToIdResolver.get(String) -> Optional<NameAndId>; NameAndId.id() / name().
+	 * Lookup is SeenNames (usercache.json read-only, then case history); no Minecraft resolver API, so no per-version differences.
 	 * Join enforcement already runs Cases.activeBan(uuid) in Meshac's JOIN handler, so a case with the right UUID is enough.
 	 */
 	private static int banOffline(CommandSourceStack s, String name, String reason, long ms, int minutes) {
 		java.util.UUID id = null; String real = name;
-		try {
-			var hit = s.getServer().services().nameToIdCache().get(name);
-			if (hit.isPresent()) { id = hit.get().id(); real = hit.get().name(); }
-		} catch (Throwable t) { Meshac.LOG.warn("[meshac] name cache lookup failed: {}", t.toString()); }
-		if (id == null) { // fall back to the newest case recorded for this name
-			var past = Cases.of(name);
-			for (int i = past.size() - 1; i >= 0 && id == null; i--) try { id = java.util.UUID.fromString(past.get(i).uuid); real = past.get(i).player; } catch (Exception ignored) {}
-		}
+		// Read-only: vanilla nameToIdCache().get(name) invents and stores an offline UUID for unknown names, so it is not used here.
+		java.util.List<SeenNames.Past> past = new java.util.ArrayList<>();
+		for (Cases.Case k : Cases.of(name)) past.add(new SeenNames.Past(k.player, k.uuid));
+		SeenNames.Hit hit = SeenNames.find(net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("usercache.json"), past, name);
+		if (hit != null) { id = hit.id(); real = hit.name(); }
 		if (id == null) { s.sendFailure(Component.literal("Never seen " + name + " on this server (not in the name cache or case history), so there is no UUID to ban. Ask them to join once, or check the spelling.")); return 0; }
 		if (Cases.activeBan(id) != null) { s.sendFailure(Component.literal(real + " already has an active ban.")); return 0; }
 		final String shown = real;

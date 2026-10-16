@@ -42,7 +42,7 @@ public abstract class ChunkDataMixin {
 
 	// ---- write pass ----
 	@Inject(method = "extractChunkData", at = @At("HEAD"))
-	private static void meshac$begin(FriendlyByteBuf buf, LevelChunk chunk, CallbackInfo ci) { meshac$idx.get()[0] = 0; }
+	private static void meshac$begin(FriendlyByteBuf buf, LevelChunk chunk, CallbackInfo ci) { meshac$idx.get()[0] = 0; Plan p = meshac$plan.get(); if (p != null && p.chunk != chunk) meshac$plan.remove(); } // a plan left over from another chunk (exception or reentrant construction) is never used
 
 	@Inject(method = "extractChunkData", at = @At("RETURN"))
 	private static void meshac$end(FriendlyByteBuf buf, LevelChunk chunk, CallbackInfo ci) { meshac$plan.remove(); }

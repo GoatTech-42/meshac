@@ -9,23 +9,23 @@ import java.util.function.UnaryOperator;
  * Invariant: for every section, the object whose size was counted is the object that is written.
  */
 public final class PacketPlan<S> {
-	private final Object[] veiled;
-	public PacketPlan(int sections) { veiled = new Object[sections]; }
+	private final Object[] chosen; private final boolean[] sized;
+	public PacketPlan(int sections) { chosen = new Object[sections]; sized = new boolean[sections]; }
 
 	/** Size pass for section i. veil returns the replacement or null for "use live". Exceptions in veil mean live (fail open). */
 	public int size(int i, S live, UnaryOperator<S> veil, ToIntFunction<S> sizer) {
 		S v = null;
 		if (i >= 0 && i < veiled.length) {
 			try { v = veil.apply(live); } catch (RuntimeException e) { v = null; }
-			veiled[i] = v;
 		}
-		return sizer.applyAsInt(v != null ? v : live);
+		S sel = v != null ? v : live;
+		if (i >= 0 && i < chosen.length) { chosen[i] = sel; sized[i] = true; } // remember the object that was sized, live or veiled, so the write pass writes exactly that one
+		return sizer.applyAsInt(sel);
 	}
 
 	/** Write pass for section i: the object to write. */
 	@SuppressWarnings("unchecked")
 	public S forWrite(int i, S live) {
-		S v = i >= 0 && i < veiled.length ? (S) veiled[i] : null;
-		return v != null ? v : live;
+		return i >= 0 && i < chosen.length && sized[i] ? (S) chosen[i] : live; // a slot that was never sized falls back to the caller's section
 	}
 }

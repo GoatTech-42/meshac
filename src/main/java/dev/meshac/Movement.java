@@ -87,16 +87,18 @@ public final class Movement {
 		}
 		// NoClip: the body sits inside solid blocks. Vanilla only refuses moves that newly collide, so a player who starts inside a wall walks on through it.
 		if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && s.grace == 0 && !pl.level().noCollision(pl, pl.getBoundingBox().deflate(0.1))) {
-			if (++s.inBlock >= 10) { s.inBlock = 0; Verdict.signal(pl, "noclip", "moving inside solid blocks", 1); s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ; return new double[] {s.goodX, s.goodY, s.goodZ, 0}; }
+			if (++s.inBlock >= 10) { s.inBlock = 0; Verdict.Step st = Verdict.signal(pl, "noclip", "moving inside solid blocks", 1); if (st != Verdict.Step.LOG) { s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ; return new double[] {s.goodX, s.goodY, s.goodZ, 0}; } } // LOG = exempt, disabled, or log-only mode: record, never correct
 		} else s.inBlock = 0;
 		double dx = x - sx, dy = y - sy, dz = z - sz;
 		// NoClip, Teleport, Blink. No exemption (damage, grace) covers these; only a teleport the server itself ordered does.
 		// Any move over 1.5 blocks must not pass through solid blocks on the way (vanilla only tests where the packet ends); a move over 10 blocks is refused whatever is in between.
 		double d2 = dx * dx + dy * dy + dz * dz;
 		if (!s.pending && !pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && (d2 > 100 || d2 > 2.25 && blocked(pl, dx, dy, dz))) {
-			Verdict.signal(pl, "noclip", d2 > 100 ? String.format("jumped %.0f blocks in one packet", Math.sqrt(d2)) : String.format("moved %.1f blocks through solid blocks", Math.sqrt(d2)), 2);
-			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
-			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
+			Verdict.Step st = Verdict.signal(pl, "noclip", d2 > 100 ? String.format("jumped %.0f blocks in one packet", Math.sqrt(d2)) : String.format("moved %.1f blocks through solid blocks", Math.sqrt(d2)), 2);
+			if (st != Verdict.Step.LOG) { // LOG = exempt, disabled, or log-only mode: record, never correct
+				s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
+				return new double[] {s.goodX, s.goodY, s.goodZ, 0};
+			}
 		}
 		// Slippy: client-side friction override. On a normal block (0.6) a stopping player loses about 45 percent of the speed every tick; ice keeps 89 percent. Five ground ticks in a row that lose only 3 to 20 percent on a block that is not ice, slime or the like is a changed friction.
 		{

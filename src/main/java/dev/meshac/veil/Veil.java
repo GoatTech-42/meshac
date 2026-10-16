@@ -238,11 +238,23 @@ public final class Veil {
 		return false;
 	}
 
+	/** Anti-ESP was switched off (command or config) while pairs were hidden: put every hidden entity back for its viewer, then drop the state. Runs on the next tick after the switch. */
+	private static void restoreAll(MinecraftServer srv) {
+		for (ServerLevel l : srv.getAllLevels()) {
+			var cm = l.getChunkSource().chunkMap;
+			for (ServerPlayer v : l.players()) for (Entity e : l.getAllEntities()) {
+				if (!ESP.hidden(v.getId(), e.getId())) continue;
+				ESP.forget(v.getId(), e.getId()); // forget first: isHidden() must be false when updatePlayer runs, or the mixin removes it again
+				show(cm, v, e);
+			}
+		}
+		ESP.clear(); // pairs for entities that are gone or viewers that left
+	}
 	private static int rr = 0;
 	/** Called once per server tick (END_SERVER_TICK). Every pair is checked once per TICK_PERIOD, budgeted. */
 	public static void tick(MinecraftServer srv) {
 		srvRef = srv;
-		if (!espOn) return;
+		if (!espOn) { if (ESP.anyHidden()) restoreAll(srv); return; }
 		long tick = srv.getTickCount();
 		int budget = RAYS_PER_TICK;
 		for (ServerLevel l : srv.getAllLevels()) {

@@ -20,9 +20,9 @@ public final class Inventory {
 
 	/** The same click, run on the server thread. Returns when it reached the network. */
 	public static long click(ServerPlayer pl) {
-		if (Config.get().skips(pl, "inventory")) return System.currentTimeMillis();
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
-		Long at = s.arrivals.poll();
+		Long at = s.arrivals.poll(); // always consume the arrival that belongs to this click, skipped or not, or the queue grows for the whole session
+		if (Config.get().skips(pl, "inventory")) { s.start = 0; s.clicks = 0; s.even = 0; s.lastGap = 0; s.last = 0; return at != null ? at : System.currentTimeMillis(); } // and start clean when the check comes back
 		long now = at != null ? at : System.currentTimeMillis(), gap = now - s.last;
 		s.last = now;
 		if (now - s.start > WINDOW_MS) { s.start = now; s.clicks = 0; }

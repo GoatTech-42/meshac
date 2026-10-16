@@ -26,6 +26,9 @@ public final class EspCore {
 
 	public void attacked(int viewer, int entity, long tick) { pairs.computeIfAbsent(key(viewer, entity), k -> new Pair()).lastCombat = tick; }
 	public boolean hidden(int viewer, int entity) { Pair s = pairs.get(key(viewer, entity)); return s != null && s.hidden; }
+	/** True while any pair is hidden. */
+	public boolean anyHidden() { for (Pair s : pairs.values()) if (s.hidden) return true; return false; }
+	public void clear() { pairs.clear(); }
 	public void forget(int viewer, int entity) { pairs.remove(key(viewer, entity)); }
 
 	/**

@@ -96,6 +96,7 @@ public final class Interact {
 
 	/** The sign-update packet is handled off the main thread by the server (it is only queued there after the text filter), so this check runs on the network thread, where the arrival time is the real one. Returns the gap in ms when the text came too fast, else -1. Does not signal: the caller does that on the main thread. */
 	public static long signGap(ServerPlayer pl, String[] lines) {
+		if (Config.get().skips(pl, "interact")) return -1; // exempt, disabled, creative, spectator: never "too fast", so no caller can refuse
 		S s = STATE.get(pl.getUUID());
 		if (s == null) return -1;
 		boolean typed = false;

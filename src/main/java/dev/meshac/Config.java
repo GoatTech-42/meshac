@@ -46,7 +46,7 @@ public final class Config {
 	public int memoryDays() { return offenceMemoryDays != null ? offenceMemoryDays : base()[4]; }
 	public java.util.List<String> exemptPlayers = new java.util.ArrayList<>(); // names (case-insensitive) skipped by the movement and combat checks
 	public java.util.List<String> egregiousChecks = new java.util.ArrayList<>(); // in monitor mode only THESE checks enforce (setback/hold/kick); everything else logs only. e.g. ["fly"]
-	public boolean isEgregious(String check) { return egregiousChecks != null && egregiousChecks.contains(check); }
+	public boolean isEgregious(String check) { if (egregiousChecks == null) return false; for (String e : egregiousChecks) if (e != null && e.equalsIgnoreCase(check)) return true; return false; } // case-insensitive like the other check lists
 	public boolean enforce(String check) { return !monitor() || isEgregious(check); } // soft mode: raw action refusals (break/click/use) follow the same gate as verdicts
 	public java.util.Map<String, java.util.List<String>> exemptChecks = new java.util.HashMap<>(); // check name -> player names exempt from that check only
 	public java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off (Luke "Exempt that check rn" 2026-10-11)

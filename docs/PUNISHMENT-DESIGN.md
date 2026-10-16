@@ -16,7 +16,7 @@ Each flag is evidence that the player is cheating. Weight of a flag from check c
     H(t) = H(t0) * 2^( -(t - t0) / T_half ),    H += w at each flag      (default T_half = 8 s)
 Hold at H >= 3, remove at H >= R (default R = 6 bits). Setback below that.
 
-## 3. Why a legit player cannot reach R
+## 3. Why a legit player should not reach R (an estimate from the clean controls, not a guarantee)
 If a legit player trips flags as a Poisson process with rate L per second (summed over checks, weight-weighted), reaching R inside the decay window needs about k = R / w_avg flags inside about 2 * T_half. P(legit removal) per window = P(Poisson(mu) >= k), mu = L * 2 * T_half. With L from the controls (<= 3 per 60 clean hours per check, 10 checks): mu = 0.0003 * 16 -> 0.005, k = 6 for tier C: P ~ mu^k / k! ~ 1e-17 per window. The live false positives were NOT independent: one lag stall tripped several checks at once. So add the independence rule:
 
     Remove requires heat >= R from >= 3 independent causes, or >= 2 independent tier-A causes.

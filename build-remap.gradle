@@ -26,4 +26,4 @@ java {
 	targetCompatibility = JavaVersion.VERSION_21
 }
 
-sourceSets.main.java.srcDir src/+folder+/java
+sourceSets.main.java.srcDir "src/slot1211/java"

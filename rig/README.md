@@ -20,3 +20,9 @@ The real clients are the expensive part. A Wurst or Meteor client takes about 2 
 - Wurst 26.3 needs the 26.3 server (`smoke-26.3`); the Meteor client only exists for 26.2.
 - Give every rig run a fresh player name.
 - Scenario scripts are in `h/`; `h/scenarios.sh` has the setups, and each run writes a csv plus the server trace lines.
+
+## workspace paths
+
+scripts that used a hardcoded home path now use `WORKSPACE`. it defaults to `HOME` outside sudo. set it explicitly when running through sudo or without `HOME`. it must be an absolute path containing the prepared `meshac-work/meshac/rig/h` directory and readable `run.sh` and `lib.sh`. empty paths, quotes, dollar signs, backticks and newlines are rejected.
+
+this replaces only the former hardcoded paths. it is not a portability rewrite: `run.sh` output defaults are unchanged, and the harness still needs its prepared tools, clients and containers. read each script before running it.

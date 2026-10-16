@@ -1,13 +1,36 @@
 #!/bin/bash
+# Resolve the workspace without baking a user name into the script.
+if [ "${WORKSPACE+x}" != x ]; then
+  if [ -n "${SUDO_USER:-}" ] || [ -z "${HOME:-}" ]; then
+    printf '%s\n' 'set WORKSPACE explicitly when HOME is unset or running through sudo' >&2
+    exit 1
+  fi
+  WORKSPACE="$HOME"
+fi
+case "$WORKSPACE" in
+  ''|*[\"\'\$\`]*|*'
+'*)
+    printf '%s\n' 'WORKSPACE is empty or contains unsafe shell characters' >&2
+    exit 1 ;;
+  /*) ;;
+  *) printf '%s\n' 'WORKSPACE must be an absolute path' >&2; exit 1 ;;
+esac
+if [ ! -d "$WORKSPACE/meshac-work/meshac/rig/h" ] ||
+   [ ! -r "$WORKSPACE/meshac-work/meshac/rig/h/run.sh" ] ||
+   [ ! -r "$WORKSPACE/meshac-work/meshac/rig/h/lib.sh" ]; then
+  printf '%s\n' 'WORKSPACE must contain the prepared rig/h directory and readable run.sh/lib.sh' >&2
+  exit 1
+fi
+export WORKSPACE
 # GIF 1: Wurst Flight on the rig with /mesh watch on. Records frames from the client display.
-cd /home/luke/meshac-work/meshac/rig/h/
+cd -- "${WORKSPACE}/meshac-work/meshac/rig/h/" || exit 1
 . ./lib.sh
 NAME=mcGif$(date +%s); TAG=${1:-fly}
 trap "docker stop meshac-wurst >/dev/null 2>&1" EXIT
 mkdir -p /tmp/gif-$TAG; rm -f /tmp/gif-$TAG/*
 sh ./world.sh >/dev/null
 reset_hacks; docker rm -f $CL >/dev/null 2>&1
-(cd /home/luke/meshac-work/meshac/rig/client && ./run-client.sh /home/luke/meshac-work/clients/wurst /home/luke/meshac-work/clients/gh $NAME >/dev/null)
+(cd "${WORKSPACE}/meshac-work/meshac/rig/client" && ./run-client.sh "${WORKSPACE}/meshac-work/clients/wurst" "${WORKSPACE}/meshac-work/clients/gh" $NAME >/dev/null)
 for i in $(seq 1 45); do sleep 4; connected && [ -n "$(hp)" ] && break; done; sleep 10
 rc "time set day" >/dev/null; rc "gamerule advance_time false" >/dev/null; rc "op $NAME" >/dev/null; rc "gamemode survival $NAME" >/dev/null; rc "effect clear $NAME" >/dev/null
 rc "tp $NAME 100.5 -60 0.5 0 15" >/dev/null; sleep 3

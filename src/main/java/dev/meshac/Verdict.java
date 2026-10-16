@@ -46,7 +46,7 @@ public final class Verdict {
 			why = top + " " + h.detail.get(top);
 			if (step == Step.REMOVE) { h.heat = 0; h.lh.reset(); h.weight.clear(); h.detail.clear(); }
 		}
-		if (Config.get().monitor() && !Config.get().isEgregious(check)) step = Step.LOG; // soft mode (Luke 2026-10-10): everything logs; only egregiousChecks enforce
+		if (Config.get().monitor() && !Config.get().isEgregious(check)) step = Step.LOG; // soft mode: everything logs; only egregiousChecks enforce
 		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> {}", pl.getGameProfile().name(), check, detail, h.heat, step.name().toLowerCase());
 		alert(pl, check + " " + detail + " heat " + h.heat + " " + step.name().toLowerCase());
 		if (step == Step.HOLD && h.heat - weight < Config.get().holdAtI()) Discord.hold(pl.getGameProfile().name(), check, detail);

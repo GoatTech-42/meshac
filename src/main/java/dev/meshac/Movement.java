@@ -176,10 +176,10 @@ public final class Movement {
 				if (s.airY0 == 0) s.airY0 = y; // a fresh state has no takeoff height yet
 				if (dy > 0.05 && y - s.airY0 > room && s.grace == 0 && hit == null && System.currentTimeMillis() - s.exemptAt > 4000) hit = String.format("high jump rose %.2f", y - s.airY0);
 			} else { s.bufFly = 0; s.sinceJump = 99; s.airY0 = s.ground ? sy : y; }
-			// MITIGATION 2026-10-10 (case MA-M9HG stair FP, per Luke): step-accumulator disabled until the stair-tolerant fix passes the zero-FP legit battery.
-			final boolean STEP_ACCUMULATOR_ENABLED = true; // stair-tolerant fix (case MA-M9HG); zero-FP battery on red before ilhsmc deploy
+			// Historical mitigation: the step accumulator was disabled while a stair-tolerant fix was tested.
+			final boolean STEP_ACCUMULATOR_ENABLED = true; // stair-tolerant fix clean-control battery on the isolated rig before deployment
 			// Step: a hack can climb a block with several small rises that all claim ground. Add them up.
-			if (ground && dy >= 0.42 && dy <= 0.66 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0)) { s.rise = 0; s.riseT = 0; } // one vanilla auto-step (slab/stair) resets the window, never counts - MA-M9HG stair FP
+			if (ground && dy >= 0.42 && dy <= 0.66 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0)) { s.rise = 0; s.riseT = 0; } // one vanilla auto-step (slab/stair) resets the window, never counts
 			else if (ground && dy > 0.05) { s.rise += dy; s.riseT = 4; } else if (--s.riseT <= 0) { s.rise = 0; s.riseT = 0; }
 			if (STEP_ACCUMULATOR_ENABLED && s.rise > 0.65 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && hit == null) { hit = String.format("step rose %.2f on the ground", s.rise); s.rise = 0; }
 			// Step: claiming ground while rising more than a half block. Vanilla only auto-steps 0.6.
@@ -200,8 +200,8 @@ public final class Movement {
 		if (s.ground && dy > 0.005 && dy < 0.30 && !bouncePad && !pl.isInWater() && !pl.onClimbable() && !pl.isPassenger() && !pl.getAbilities().flying) {
 				AABB mb = pl.getBoundingBox().move(dx, dy, dz);
 				boolean unsupported = pl.level().noCollision(pl, new AABB(mb.minX, mb.minY - 0.03, mb.minZ, mb.maxX, mb.minY, mb.maxZ));
-				boolean lowCeiling = !pl.level().noCollision(pl, new AABB(mb.minX, mb.maxY, mb.minZ, mb.maxX, mb.maxY + 0.6, mb.maxZ)); // a jump clipped by a ceiling lands in this dy band legitimately - Luke sprint-jump-under-2-block FP 2026-10-11
-				boolean powder = pl.level().getBlockState(pl.blockPosition()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW); // struggle-climbing out of powdered snow repeats dy ~0.2 - Luke FP 2026-10-11
+				boolean lowCeiling = !pl.level().noCollision(pl, new AABB(mb.minX, mb.maxY, mb.minZ, mb.maxX, mb.maxY + 0.6, mb.maxZ)); // a jump clipped by a ceiling lands in this dy band legitimately - sprint-jump-under-2-block false positive
+				boolean powder = pl.level().getBlockState(pl.blockPosition()).is(net.minecraft.world.level.block.Blocks.POWDER_SNOW); // struggle-climbing out of powdered snow repeats dy ~0.2 - powder-snow false positive
 				if (TRACE) Meshac.LOG.info("[trace] microhop dy={} unsupported={} lowCeiling={} powder={} buf={}", r(dy), unsupported, lowCeiling, powder, s.bufHop);
 				if (unsupported && !lowCeiling && !powder) s.bufHop += 2;
 				if (s.bufHop >= 3 && hit == null) { hit = String.format("microhop dy %.3f", dy); s.bufHop = 0; }

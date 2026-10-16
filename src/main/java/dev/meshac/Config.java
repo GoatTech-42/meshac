@@ -49,7 +49,7 @@ public final class Config {
 	public boolean isEgregious(String check) { return egregiousChecks != null && egregiousChecks.contains(check); }
 	public boolean enforce(String check) { return !monitor() || isEgregious(check); } // soft mode: raw action refusals (break/click/use) follow the same gate as verdicts
 	public java.util.Map<String, java.util.List<String>> exemptChecks = new java.util.HashMap<>(); // check name -> player names exempt from that check only
-	public java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off (Luke "Exempt that check rn" 2026-10-11)
+	public java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off
 	public boolean disabled(String check) { if (disabledChecks == null) return false; for (String d : disabledChecks) if (d != null && d.equalsIgnoreCase(check)) return true; return false; }
 	public boolean exemptFrom(net.minecraft.server.level.ServerPlayer pl, String check) { if (exemptChecks == null) return false; java.util.List<String> l = exemptChecks.get(check); if (l == null) return false; String n = pl.getGameProfile().name(); for (String e : l) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }
 	public boolean exempt(net.minecraft.server.level.ServerPlayer pl) { if (exemptPlayers == null) return false; String n = pl.getGameProfile().name(); for (String e : exemptPlayers) if (e != null && e.equalsIgnoreCase(n)) return true; return false; }

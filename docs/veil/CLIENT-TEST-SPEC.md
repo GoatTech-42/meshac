@@ -1,4 +1,4 @@
-# Veil client test spec (rig, isolated from live world; protocol bots plus Luke's real clients Wurst, Meteor)
+# Veil client test spec (rig, isolated from live world; protocol bots plus real test clients Wurst, Meteor)
 World: flat-stone arena, 20x20x20 buried ore block field at y=-30..-10 (diamond, iron, ancient debris equivalents as per dimension), cave pocket with 3 exposed ores, 3 chests buried, 3 chests in a lit room.
 ## Xray (hack: Meteor Xray, Wurst X-Ray, both with ore lists on)
 X1 Stand inside the cave pocket, enable xray. Pass: only the 3 exposed ores render. The buried 20-block field shows real ores only where an exposed neighbour exists. Count rendered ores via screenshot or the client's block state query (protocol bot: read chunk, count ore states).

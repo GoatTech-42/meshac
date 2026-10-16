@@ -7,7 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * AutoTotem: the off hand is filled inside a window no hand can hit, either right after a totem pops or right after
- * a click on another slot. Calibrated with Luke, a crystal PvP player: he has beaten 25 ms once by anticipating a pop,
+ * a click on another slot. Calibrated with a test player: the player has beaten 25 ms once by anticipating a pop,
  * never twice running; 10 ms or less is not a human. So 10 ms or less is refused at once, and 10 to 25 ms is a strike:
  * the first is only noted, the second in a row is refused and signalled, the third reaches the kick level. A fill at
  * normal speed ends the streak, and one stray fast packet on a laggy line never acts on its own.

@@ -9,7 +9,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-/** /mesh for staff: cases, case, pardon, unban, ban, kick, status, watch, monitor, reload. */
+/** /mesh for staff: cases, case, pardon, unban, ban, kick, status, watch, monitor, veil, check, reload. */
 public final class MeshCommands {
 	public static void register(CommandDispatcher<CommandSourceStack> d) {
 		d.register(Commands.literal("mesh").requires(Perm.admin())
@@ -39,9 +39,32 @@ public final class MeshCommands {
 				ServerPlayer t = net.minecraft.commands.arguments.EntityArgument.getPlayer(c, "player"); String why = StringArgumentType.getString(c, "reason");
 				Cases.Case cs = Cases.add(t.getGameProfile().name(), t.getUUID(), "kick", why, c.getSource().getTextName(), 0, List.of("Staff kick")); t.connection.disconnect(Screens.kick(why, cs));
 				c.getSource().sendSuccess(() -> Component.literal("Kicked " + t.getGameProfile().name() + ", case " + cs.id), true); return 1; }))))
+			.then(Commands.literal("veil")
+				.executes(c -> { c.getSource().sendSuccess(() -> Component.literal(veilLine()), false); return 1; })
+				.then(Commands.literal("xray").then(Commands.argument("on", com.mojang.brigadier.arguments.BoolArgumentType.bool()).executes(c -> {
+					boolean on = com.mojang.brigadier.arguments.BoolArgumentType.getBool(c, "on"); dev.meshac.veil.Veil.xrayOn = on; dev.meshac.veil.Veil.clear();
+					c.getSource().sendSuccess(() -> Component.literal("Anti-xray " + (on ? "on" : "off") + " until reload or restart (config veilXray is unchanged). Players see it on the next chunk they load."), true); return 1; })))
+				.then(Commands.literal("esp").then(Commands.argument("on", com.mojang.brigadier.arguments.BoolArgumentType.bool()).executes(c -> {
+					boolean on = com.mojang.brigadier.arguments.BoolArgumentType.getBool(c, "on"); dev.meshac.veil.Veil.espOn = on;
+					c.getSource().sendSuccess(() -> Component.literal("Anti-ESP " + (on ? "on" : "off") + " until reload or restart (config veilEsp is unchanged)."), true); return 1; })))
+				.then(Commands.literal("off").executes(c -> { dev.meshac.veil.Veil.xrayOn = false; dev.meshac.veil.Veil.espOn = false; dev.meshac.veil.Veil.clear();
+					c.getSource().sendSuccess(() -> Component.literal("Chunkveil fully off until reload or restart."), true); return 1; })))
+			.then(Commands.literal("check")
+				.executes(c -> { var l = Config.get().disabledChecks; c.getSource().sendSuccess(() -> Component.literal("Disabled checks: " + (l == null || l.isEmpty() ? "none" : String.join(", ", l))), false); return 1; })
+				.then(Commands.argument("name", StringArgumentType.word()).then(Commands.literal("off").executes(c -> setCheck(c.getSource(), StringArgumentType.getString(c, "name"), false)))
+					.then(Commands.literal("on").executes(c -> setCheck(c.getSource(), StringArgumentType.getString(c, "name"), true)))))
 			.then(Commands.literal("reload").executes(c -> { Config.load(); Config.applyVeil(); Cases.load(); c.getSource().sendSuccess(() -> Component.literal("meshac reloaded."), true); return 1; })));
 	}
 
+
+	private static String veilLine() { return "chunkveil: anti-xray " + (dev.meshac.veil.Veil.xrayOn ? "ON" : "off") + ", anti-ESP " + (dev.meshac.veil.Veil.espOn ? "ON" : "off") + ", config veilXray=" + Config.get().veilXray + " veilEsp=" + Config.get().veilEsp; }
+	/** Runtime switch for one sub-check (same list as config disabledChecks). Not written to disk; /mesh reload restores the config's list. */
+	private static int setCheck(CommandSourceStack s, String name, boolean on) {
+		var l = Config.get().disabledChecks; if (l == null) { l = new java.util.ArrayList<>(); Config.get().disabledChecks = l; }
+		l.removeIf(d -> d != null && d.equalsIgnoreCase(name));
+		if (!on) l.add(name);
+		s.sendSuccess(() -> Component.literal("Check " + name + (on ? " enabled." : " disabled until reload or restart.") + " (a name no check uses changes nothing)"), true); return 1;
+	}
 	private static int list(CommandSourceStack s, List<Cases.Case> cs) {
 		if (cs.isEmpty()) { s.sendSuccess(() -> Component.literal("No cases."), false); return 0; }
 		for (Cases.Case c : cs) s.sendSuccess(() -> Component.literal(c.id + "  " + c.action + "  " + c.player + "  " + c.reason + (c.pardoned ? "  (pardoned)" : c.lifted ? "  (lifted)" : "")), false);

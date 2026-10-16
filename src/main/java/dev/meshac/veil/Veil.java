@@ -64,10 +64,21 @@ public final class Veil {
 
 	/** One modification: local index (x | y<<4 | z<<8) and the state to write while encoding. */
 	public record Mod(int idx, BlockState fake, BlockState real) {}
-	private static final Map<Long, Mod[]> CACHE = new ConcurrentHashMap<>();
-	private static long ck(ChunkPos p, int sec) { return ((((long) (p.getMinBlockX() >> 4)) << 32 | ((p.getMinBlockZ() >> 4) & 0xffffffffL)) << 5) ^ (sec & 31); }
-	public static void invalidate(ChunkPos p) { for (int i = 0; i < 32; i++) CACHE.remove(ck(p, i)); }
+	/** Cache key includes the level: the old key was (chunk x, z, section) only, so the overworld and the nether shared entries and a swap list computed for one dimension was applied to another (wrong "real" state restored into live terrain). */
+	private record Key(ServerLevel level, int cx, int cz, int sec) {}
+	private static final Map<Key, Mod[]> CACHE = new ConcurrentHashMap<>();
+	private static final Mod[] NONE = new Mod[0];
+	private static final int CACHE_MAX = 20000;
+	private static volatile MinecraftServer srvRef;
+	public static void invalidate(ServerLevel l, ChunkPos p) { int cx = p.getMinBlockX() >> 4, cz = p.getMinBlockZ() >> 4; for (int i = 0; i < 32; i++) CACHE.remove(new Key(l, cx, cz, i)); }
 	public static void clear() { CACHE.clear(); }
+	/** Kill switch: any detected inconsistency turns anti-xray off for the rest of the run and says so once. */
+	public static void fail(String why) {
+		if (xrayOn) { xrayOn = false; dev.meshac.Meshac.LOG.error("[meshac] chunkveil anti-xray DISABLED: {}", why); }
+		CACHE.clear();
+	}
+	/** Chunk packets are only veiled on the server thread. The swap mutates live sections, so another thread would race the game. */
+	public static boolean onServerThread() { MinecraftServer s = srvRef; return s != null && s.isSameThread(); }
 
 	private static BlockState stoneFor(ServerLevel l, int y) {
 		if (l.dimension() == Level.NETHER) return Blocks.NETHERRACK.defaultBlockState();
@@ -88,9 +99,10 @@ public final class Veil {
 
 	/** Compute (cached) modifications for one section. secIdx = index in chunk.getSections(). */
 	public static Mod[] mods(LevelChunk c, int secIdx, net.minecraft.world.level.chunk.LevelChunkSection sec) {
-		if (!xrayOn || !(c.getLevel() instanceof ServerLevel lvl)) return null;
+		if (!xrayOn || !(c.getLevel() instanceof ServerLevel lvl) || !onServerThread()) return null;
 		if (sec.hasOnlyAir() || !sec.maybeHas(Veil::hidden)) return null; // VERIFY maybeHas(Predicate<BlockState>)
-		return CACHE.computeIfAbsent(ck(c.getPos(), secIdx), k -> {
+		if (CACHE.size() > CACHE_MAX) CACHE.clear();
+		return CACHE.computeIfAbsent(new Key(lvl, c.getPos().getMinBlockX() >> 4, c.getPos().getMinBlockZ() >> 4, secIdx), k -> {
 			View v = new View(c);
 			int baseY = (c.getMinSectionY() + secIdx) << 4, bx = c.getPos().getMinBlockX(), bz = c.getPos().getMinBlockZ(); // VERIFY getMinSectionY
 			long salt = lvl.getSeed() * 0x2545F4914F6CDD1DL; // VERIFY getSeed on ServerLevel
@@ -105,20 +117,51 @@ public final class Veil {
 					if (f != null) out.add(new Mod(idx, f, s));
 				}
 			}
-			return out.toArray(new Mod[0]);
+			return out.isEmpty() ? NONE : out.toArray(new Mod[0]);
 		});
 	}
 	private static boolean isStone(BlockState s) { return s.is(Blocks.STONE) || s.is(Blocks.DEEPSLATE) || s.is(Blocks.NETHERRACK) || s.is(Blocks.END_STONE); }
 
+
+	/**
+	 * Swap the planned positions to their fakes inside the live section and return what was actually there (parallel to mods). Entries whose current state no longer equals the
+	 * cached "real" state are stale: they are skipped (and the cache is dropped) so we never write a fake over something else or restore an outdated state.
+	 * Always pair with restore() in a finally block.
+	 */
+	public static BlockState[] swap(net.minecraft.world.level.chunk.LevelChunkSection sec, Mod[] m) {
+		BlockState[] orig = new BlockState[m.length];
+		boolean stale = false;
+		for (int i = 0; i < m.length; i++) {
+			Mod x = m[i]; int lx = x.idx() & 15, ly = (x.idx() >> 4) & 15, lz = x.idx() >> 8;
+			BlockState cur = sec.getBlockState(lx, ly, lz);
+			if (cur != x.real()) { stale = true; continue; } // orig[i] stays null = untouched
+			orig[i] = cur;
+			sec.setBlockState(lx, ly, lz, x.fake(), false);
+		}
+		if (stale) CACHE.clear();
+		return orig;
+	}
+	/** Put back exactly what swap() saw. Verifies the section ended identical; on any mismatch it repairs from the saved states and trips the kill switch. */
+	public static void restore(net.minecraft.world.level.chunk.LevelChunkSection sec, Mod[] m, BlockState[] orig) {
+		boolean bad = false;
+		for (int i = 0; i < m.length; i++) {
+			if (orig[i] == null) continue;
+			Mod x = m[i]; int lx = x.idx() & 15, ly = (x.idx() >> 4) & 15, lz = x.idx() >> 8;
+			sec.setBlockState(lx, ly, lz, orig[i], false);
+			if (sec.getBlockState(lx, ly, lz) != orig[i]) bad = true;
+		}
+		if (bad) fail("section did not restore cleanly after a packet encode");
+	}
+
 	/** Block at (x,y,z) just changed to a see-through state: re-send now-exposed hidden neighbours to everyone tracking the chunk. */
 	public static void reveal(ServerLevel l, BlockPos pos, BlockState now) {
 		if (!xrayOn) return;
-		invalidate(new ChunkPos(pos.getX() >> 4, pos.getZ() >> 4));
+		invalidate(l, new ChunkPos(pos.getX() >> 4, pos.getZ() >> 4));
 		if (!transparent(now)) return;
 		for (int[] o : XrayCore.NEIGHBOURS) {
 			BlockPos n = pos.offset(o[0], o[1], o[2]);
 			// neighbour may be in an adjacent chunk whose cached mods also changed
-			invalidate(new ChunkPos(n.getX() >> 4, n.getZ() >> 4));
+			invalidate(l, new ChunkPos(n.getX() >> 4, n.getZ() >> 4));
 			BlockState s = l.getBlockState(n);
 			if (!hidden(s)) continue;
 			var pk = new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(n, s);
@@ -171,6 +214,7 @@ public final class Veil {
 	private static int rr = 0;
 	/** Called once per server tick (END_SERVER_TICK). Every pair is checked once per TICK_PERIOD, budgeted. */
 	public static void tick(MinecraftServer srv) {
+		srvRef = srv;
 		if (!espOn) return;
 		long tick = srv.getTickCount();
 		int budget = RAYS_PER_TICK;

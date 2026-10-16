@@ -1,8 +1,8 @@
 # Generic scenario runner. Each scenario defines setup_<name> (rcon world/inventory setup, sets X0 Y0 Z0 KEYS SECS CLICK)
 # and optionally measure_<name> (prints one extra field describing whether the hack did its job).
 # usage: . run.sh; run_case <scenario> <hack|none>
-. "$(dirname "$0")/lib.sh"
-. "$(dirname "$0")/scenarios.sh"
+. "$(dirname "$0")/lib.sh" || return 1
+. "$(dirname "$0")/scenarios.sh" || return 1
 RES=${RES:-$HOME/meshac-work/results.csv}
 run_case() {
   S=$1; H=$2; PRE=""; KEYS=""; SECS=8; CLICK=0; JITTER=0; YAW=0; PITCH=0

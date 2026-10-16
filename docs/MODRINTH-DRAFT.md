@@ -53,4 +53,4 @@ Built and tested against real hacked clients (Wurst and Meteor) on an isolated t
 3. /mesh status on a flagged player
 4. /mesh watch flag feed during a test
 
-Status: draft only. Screenshots 1-4 still need to be captured on meshac-lan. Nothing is published.
+Status: draft only. Screenshots 1-4 still need to be captured on an isolated test server. Nothing is published.

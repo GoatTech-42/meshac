@@ -24,7 +24,7 @@ import net.minecraft.world.phys.Vec3;
  * UNCOMPILED: written against the 26.1.2 Mojang names the server agent listed. Lines marked VERIFY use a method not on that list.
  */
 public final class Veil {
-	// TODO wire to Config.veil (presets). Defaults per Luke: fake ores on, mobs culled.
+	// TODO wire to Config.veil (presets). Current intended defaults: fake ores on, mobs culled.
 	public static volatile boolean xrayOn = true, espOn = true, cullMobs = true;
 	public static volatile double fakeRatio = 0.02;
 	public static final int TICK_PERIOD = 4, RAYS_PER_TICK = 200, JOIN_GRACE_TICKS = 40;

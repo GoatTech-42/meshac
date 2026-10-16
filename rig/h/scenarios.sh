@@ -1,3 +1,26 @@
+# Resolve the workspace without baking a user name into the script.
+if [ "${WORKSPACE+x}" != x ]; then
+  if [ -n "${SUDO_USER:-}" ] || [ -z "${HOME:-}" ]; then
+    printf '%s\n' 'set WORKSPACE explicitly when HOME is unset or running through sudo' >&2
+    return 1
+  fi
+  WORKSPACE="$HOME"
+fi
+case "$WORKSPACE" in
+  ''|*[\"\'\$\`]*|*'
+'*)
+    printf '%s\n' 'WORKSPACE is empty or contains unsafe shell characters' >&2
+    return 1 ;;
+  /*) ;;
+  *) printf '%s\n' 'WORKSPACE must be an absolute path' >&2; return 1 ;;
+esac
+if [ ! -d "$WORKSPACE/meshac-work/meshac/rig/h" ] ||
+   [ ! -r "$WORKSPACE/meshac-work/meshac/rig/h/run.sh" ] ||
+   [ ! -r "$WORKSPACE/meshac-work/meshac/rig/h/lib.sh" ]; then
+  printf '%s\n' 'WORKSPACE must contain the prepared rig/h directory and readable run.sh/lib.sh' >&2
+  return 1
+fi
+export WORKSPACE
 # Scenario setups. Standing height on the flat world is y=-60. Lanes for the movement course are built by world.sh.
 count() { rc "execute if entity @e[type=$1]" | grep -o "ount: [0-9]*" | grep -o "[0-9]*" || echo 0; }
 setup_walk()     { X0=100 Y0=-60 Z0=0; KEYS="w space"; SECS=8; }
@@ -223,8 +246,8 @@ setup_n7s() { X0=100 Y0=-60 Z0=840; SECS=26; PITCH=0; YAW=0; rc "fill 94 -61 834
 sync_flick2() { echo 'X key 1; X mousedown 1; X mousemove_relative -- 300 0; (timeout 24 sh -c "docker logs -f --since 0s meshac-rig 2>&1 | grep --line-buffered \"trace\\] break $NAME\"" | while read l; do sleep 0.2; d=$(shuf -i '$1'-'$2' -n1); [ $((RANDOM%2)) = 0 ] && d=-$d; X mousemove_relative -- $d 0; done; X mouseup 1) &'; }
 setup_n8u() { X0=100 Y0=-60 Z0=700; SECS=24; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(sync_flick2 400 800)"; }
 setup_n9u() { X0=100 Y0=-60 Z0=880; SECS=24; PITCH=0; YAW=0; sweep_room 880 stone; rc "give $NAME iron_pickaxe" >/dev/null; PRE="$(sync_flick2 130 600)"; }
-setup_n8v() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="bash /home/luke/meshac-work/meshac/rig/h/sync_flick.sh $NAME 400 800 25 &"; }
-setup_n9v() { X0=100 Y0=-60 Z0=880; SECS=26; PITCH=0; YAW=0; sweep_room 880 stone; rc "give $NAME iron_pickaxe" >/dev/null; PRE="bash /home/luke/meshac-work/meshac/rig/h/sync_flick.sh $NAME 130 600 25 &"; }
+setup_n8v() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE='bash "$WORKSPACE/meshac-work/meshac/rig/h/sync_flick.sh" $NAME 400 800 25 &'; }
+setup_n9v() { X0=100 Y0=-60 Z0=880; SECS=26; PITCH=0; YAW=0; sweep_room 880 stone; rc "give $NAME iron_pickaxe" >/dev/null; PRE='bash "$WORKSPACE/meshac-work/meshac/rig/h/sync_flick.sh" $NAME 130 600 25 &'; }
 hold_flick() { echo 'X key 1; X mousedown 1; (for i in $(seq 1 120);do d=$(shuf -i 400-800 -n1); [ $((RANDOM%2)) = 0 ] && d=-$d; X mousemove_relative -- $d 0; sleep '$1'; done; X mouseup 1) &'; }
 setup_n8c() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(hold_flick 0.25)"; }
 setup_n8d() { X0=100 Y0=-60 Z0=700; SECS=26; PITCH=0; YAW=0; sweep_room 700 dirt; rc "give $NAME iron_shovel" >/dev/null; PRE="$(hold_flick 0.45)"; }

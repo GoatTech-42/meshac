@@ -1,15 +1,38 @@
 #!/bin/bash
-cd /home/luke/meshac-work/meshac/rig/h/
-. ./run.sh
+# Resolve the workspace without baking a user name into the script.
+if [ "${WORKSPACE+x}" != x ]; then
+  if [ -n "${SUDO_USER:-}" ] || [ -z "${HOME:-}" ]; then
+    printf '%s\n' 'set WORKSPACE explicitly when HOME is unset or running through sudo' >&2
+    exit 1
+  fi
+  WORKSPACE="$HOME"
+fi
+case "$WORKSPACE" in
+  ''|*[\"\'\$\`]*|*'
+'*)
+    printf '%s\n' 'WORKSPACE is empty or contains unsafe shell characters' >&2
+    exit 1 ;;
+  /*) ;;
+  *) printf '%s\n' 'WORKSPACE must be an absolute path' >&2; exit 1 ;;
+esac
+if [ ! -d "$WORKSPACE/meshac-work/meshac/rig/h" ] ||
+   [ ! -r "$WORKSPACE/meshac-work/meshac/rig/h/run.sh" ] ||
+   [ ! -r "$WORKSPACE/meshac-work/meshac/rig/h/lib.sh" ]; then
+  printf '%s\n' 'WORKSPACE must contain the prepared rig/h directory and readable run.sh/lib.sh' >&2
+  exit 1
+fi
+export WORKSPACE
+cd -- "${WORKSPACE}/meshac-work/meshac/rig/h/" || exit 1
+. ./run.sh || exit 1
 RES=/tmp/multi56.csv
 : > "$RES"
 NAME=mcMulti56
 trap 'docker stop meshac-wurst >/dev/null 2>&1' EXIT
 start_client(){
  docker rm -f meshac-wurst >/dev/null 2>&1
- mkdir -p /home/luke/meshac-work/clients/wurst/run/wurst
- echo [] > /home/luke/meshac-work/clients/wurst/run/wurst/enabled-hacks.json
- (cd /home/luke/meshac-work/meshac/rig/client && ./run-client.sh /home/luke/meshac-work/clients/wurst /home/luke/meshac-work/clients/gh $NAME >/dev/null)
+ mkdir -p "${WORKSPACE}/meshac-work/clients/wurst/run/wurst"
+ echo [] > "${WORKSPACE}/meshac-work/clients/wurst/run/wurst/enabled-hacks.json"
+ (cd "${WORKSPACE}/meshac-work/meshac/rig/client" && ./run-client.sh "${WORKSPACE}/meshac-work/clients/wurst" "${WORKSPACE}/meshac-work/clients/gh" $NAME >/dev/null)
  for i in $(seq 1 45);do sleep 4;h=$(hp); connected && [ -n "$h" ] && [ "$h" != 0.0 ] && { sleep 8;return 0;};done;return 1
 }
 

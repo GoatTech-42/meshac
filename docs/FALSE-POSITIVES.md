@@ -1,6 +1,7 @@
 # false positives and coverage gaps
 
 these are historical findings and rig checks, not a claim that every later build is fixed. server deployment notes and player identifiers are omitted.
+
 1. Teleport arrival (635-block /spreadplayers tp): "fly dy 0.000", then "noclip moving inside solid blocks" heat 5 -> auto KICK. Needs teleport grace + no noclip/fly checks until the arrival position is settled and chunks load.
 2. Walk-around "noclip moving inside solid blocks" setbacks (heat 1-2) at the plains spawn area.
 3. Respawn-anchor explosion knockback flagged (player report); likely the "speed 0.52>0.48 hold" and/or nofall signals. Needs explosion-velocity exemption window.

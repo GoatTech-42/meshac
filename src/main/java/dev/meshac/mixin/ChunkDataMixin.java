@@ -11,68 +11,49 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Anti-xray: while the chunk is encoded into the packet, the buried hidden blocks are swapped for stone (or a fake ore) in the section, written, and put back.
- * Sections are touched with the no-lock setBlockState variant on the packet-building thread only; the world is restored before the method returns.
- * UNCOMPILED. Assumes extractChunkData loops the sections in order and calls section.write(buf) once per section.
+ * Anti-xray, section-copy variant. The packet constructor calls calculateChunkSize(chunk) to size the buffer and then extractChunkData(buf, chunk) to fill it.
+ * For each section with buried hidden blocks we build ONE veiled private copy during the size pass and keep it in a per-packet plan; the write pass writes that same copy.
+ * Size and bytes come from the same object, and the live section is never modified.
+ * Targets checked in the server jars of 1.21.11, 26.1.2, 26.2 and 26.3: ClientboundLevelChunkPacketData.calculateChunkSize(LevelChunk)I, extractChunkData(FriendlyByteBuf, LevelChunk)V,
+ * LevelChunkSection.getSerializedSize()I, write(FriendlyByteBuf)V and copy() all exist. UNCOMPILED, see TEST-PLAN.
  */
 @Mixin(ClientboundLevelChunkPacketData.class)
 public abstract class ChunkDataMixin {
-	@Unique private static final ThreadLocal<LevelChunk> meshac$chunk = new ThreadLocal<>();
+	/** Per packet: the chunk, and the veiled copy (or null = send live) for each section index. */
+	@Unique private static final class Plan { final LevelChunk chunk; final LevelChunkSection[] veiled; Plan(LevelChunk c) { chunk = c; veiled = new LevelChunkSection[c.getSections().length]; } }
+	@Unique private static final ThreadLocal<Plan> meshac$plan = new ThreadLocal<>();
 	@Unique private static final ThreadLocal<int[]> meshac$idx = ThreadLocal.withInitial(() -> new int[1]);
 
+	// ---- size pass ----
+	@Inject(method = "calculateChunkSize", at = @At("HEAD"))
+	private static void meshac$szBegin(LevelChunk chunk, CallbackInfoReturnable<Integer> ci) { meshac$plan.set(new Plan(chunk)); meshac$idx.get()[0] = 0; }
+
+	@Redirect(method = "calculateChunkSize", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/LevelChunkSection;getSerializedSize()I"))
+	private static int meshac$size(LevelChunkSection sec) {
+		Plan p = meshac$plan.get();
+		int i = meshac$idx.get()[0]++;
+		if (p == null || i >= p.veiled.length) return sec.getSerializedSize();
+		Veil.Mod[] m = Veil.mods(p.chunk, i, sec);
+		LevelChunkSection v = m == null || m.length == 0 ? null : Veil.veiled(sec, m);
+		p.veiled[i] = v;
+		return (v != null ? v : sec).getSerializedSize();
+	}
+
+	// ---- write pass ----
 	@Inject(method = "extractChunkData", at = @At("HEAD"))
-	private static void meshac$begin(FriendlyByteBuf buf, LevelChunk chunk, CallbackInfo ci) { meshac$chunk.set(chunk); meshac$idx.get()[0] = 0; }
+	private static void meshac$begin(FriendlyByteBuf buf, LevelChunk chunk, CallbackInfo ci) { meshac$idx.get()[0] = 0; }
 
 	@Inject(method = "extractChunkData", at = @At("RETURN"))
-	private static void meshac$end(FriendlyByteBuf buf, LevelChunk chunk, CallbackInfo ci) { meshac$chunk.remove(); meshac$plan.remove(); }
+	private static void meshac$end(FriendlyByteBuf buf, LevelChunk chunk, CallbackInfo ci) { meshac$plan.remove(); }
 
 	@Redirect(method = "extractChunkData", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/LevelChunkSection;write(Lnet/minecraft/network/FriendlyByteBuf;)V"))
 	private static void meshac$write(LevelChunkSection sec, FriendlyByteBuf buf) {
-		LevelChunk c = meshac$chunk.get();
+		Plan p = meshac$plan.get();
 		int i = meshac$idx.get()[0]++;
-		Veil.Mod[] m = meshac$planFor(c, i, sec);
-		if (m == null || m.length == 0) { sec.write(buf); return; }
-		net.minecraft.world.level.block.state.BlockState[] orig = Veil.swap(sec, m);
-		try { sec.write(buf); } finally { Veil.restore(sec, m, orig); }
-	}
-
-	/**
-	 * One plan per packet: calculateChunkSize runs first and records the Mod[] it used for each section; extractChunkData then uses those exact arrays.
-	 * Before, each phase looked the cache up itself, so an invalidation between them (or a stale entry) made the buffer size and the written bytes disagree.
-	 */
-	@Unique private static final ThreadLocal<Object[]> meshac$plan = new ThreadLocal<>(); // [LevelChunk, Veil.Mod[][]]
-	@Unique private static Veil.Mod[] meshac$planFor(LevelChunk c, int i, LevelChunkSection sec) {
-		if (c == null) return null;
-		Object[] p = meshac$plan.get();
-		if (p != null && p[0] == c) { Veil.Mod[][] a = (Veil.Mod[][]) p[1]; return i < a.length ? a[i] : null; }
-		return null; // no size plan for this chunk: send it unveiled rather than risk a size mismatch (fail open)
-	}
-
-	// The packet buffer is sized from the REAL sections before anything is written. Swapping blocks can grow a palette, so size it from the swapped sections too.
-	@Unique private static final ThreadLocal<LevelChunk> meshac$szChunk = new ThreadLocal<>();
-	@Unique private static final ThreadLocal<int[]> meshac$szIdx = ThreadLocal.withInitial(() -> new int[1]);
-
-	@Inject(method = "calculateChunkSize", at = @At("HEAD"))
-	private static void meshac$szBegin(LevelChunk chunk, org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Integer> ci) {
-		meshac$szChunk.set(chunk); meshac$szIdx.get()[0] = 0;
-		meshac$plan.set(new Object[] { chunk, new Veil.Mod[chunk.getSections().length][] });
-	}
-
-	@Inject(method = "calculateChunkSize", at = @At("RETURN"))
-	private static void meshac$szEnd(LevelChunk chunk, org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Integer> ci) { meshac$szChunk.remove(); }
-
-	/** extractChunkData's own RETURN also clears the plan (see meshac$end). */
-	@Redirect(method = "calculateChunkSize", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/chunk/LevelChunkSection;getSerializedSize()I"))
-	private static int meshac$size(LevelChunkSection sec) {
-		LevelChunk c = meshac$szChunk.get();
-		int i = meshac$szIdx.get()[0]++;
-		Veil.Mod[] m = c == null ? null : Veil.mods(c, i, sec);
-		Object[] p = meshac$plan.get();
-		if (p != null && p[0] == c && i < ((Veil.Mod[][]) p[1]).length) ((Veil.Mod[][]) p[1])[i] = m;
-		if (m == null || m.length == 0) return sec.getSerializedSize();
-		net.minecraft.world.level.block.state.BlockState[] orig = Veil.swap(sec, m);
-		try { return sec.getSerializedSize(); } finally { Veil.restore(sec, m, orig); }
+		LevelChunkSection v = p == null || i >= p.veiled.length ? null : p.veiled[i];
+		(v != null ? v : sec).write(buf);
 	}
 }

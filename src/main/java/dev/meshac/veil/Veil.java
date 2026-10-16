@@ -124,33 +124,27 @@ public final class Veil {
 
 
 	/**
-	 * Swap the planned positions to their fakes inside the live section and return what was actually there (parallel to mods). Entries whose current state no longer equals the
-	 * cached "real" state are stale: they are skipped (and the cache is dropped) so we never write a fake over something else or restore an outdated state.
-	 * Always pair with restore() in a finally block.
+	 * Build the version of a section that goes on the wire: a private COPY of the live section with the planned positions swapped to their fakes.
+	 * The live section is never written, so there is nothing to restore, no race with the game thread, and a bug here can only change what one packet shows.
+	 * Returns null when nothing was applied or the copy failed (caller then sends the real section: fail open).
+	 * Entries whose current state no longer equals the cached "real" state are stale: skipped, and the cache is dropped.
 	 */
-	public static BlockState[] swap(net.minecraft.world.level.chunk.LevelChunkSection sec, Mod[] m) {
-		BlockState[] orig = new BlockState[m.length];
-		boolean stale = false;
-		for (int i = 0; i < m.length; i++) {
-			Mod x = m[i]; int lx = x.idx() & 15, ly = (x.idx() >> 4) & 15, lz = x.idx() >> 8;
-			BlockState cur = sec.getBlockState(lx, ly, lz);
-			if (cur != x.real()) { stale = true; continue; } // orig[i] stays null = untouched
-			orig[i] = cur;
-			sec.setBlockState(lx, ly, lz, x.fake(), false);
+	public static net.minecraft.world.level.chunk.LevelChunkSection veiled(net.minecraft.world.level.chunk.LevelChunkSection sec, Mod[] m) {
+		try {
+			net.minecraft.world.level.chunk.LevelChunkSection copy = sec.copy(); // public on all 4 versions (checked in the server jars)
+			int applied = 0; boolean stale = false;
+			for (Mod x : m) {
+				int lx = x.idx() & 15, ly = (x.idx() >> 4) & 15, lz = x.idx() >> 8;
+				if (copy.getBlockState(lx, ly, lz) != x.real()) { stale = true; continue; }
+				copy.setBlockState(lx, ly, lz, x.fake(), false); // false = no lock; fine, the copy is private to this thread
+				applied++;
+			}
+			if (stale) CACHE.clear();
+			return applied == 0 ? null : copy;
+		} catch (Throwable t) {
+			dev.meshac.Meshac.LOG.warn("[meshac] chunkveil could not build a veiled section, sending it unveiled: {}", t.toString());
+			return null;
 		}
-		if (stale) CACHE.clear();
-		return orig;
-	}
-	/** Put back exactly what swap() saw. Verifies the section ended identical; on any mismatch it repairs from the saved states and trips the kill switch. */
-	public static void restore(net.minecraft.world.level.chunk.LevelChunkSection sec, Mod[] m, BlockState[] orig) {
-		boolean bad = false;
-		for (int i = 0; i < m.length; i++) {
-			if (orig[i] == null) continue;
-			Mod x = m[i]; int lx = x.idx() & 15, ly = (x.idx() >> 4) & 15, lz = x.idx() >> 8;
-			sec.setBlockState(lx, ly, lz, orig[i], false);
-			if (sec.getBlockState(lx, ly, lz) != orig[i]) bad = true;
-		}
-		if (bad) fail("section did not restore cleanly after a packet encode");
 	}
 
 	/** Block at (x,y,z) just changed to a see-through state: re-send now-exposed hidden neighbours to everyone tracking the chunk. */

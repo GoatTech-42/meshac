@@ -22,8 +22,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(ClientboundLevelChunkPacketData.class)
 public abstract class ChunkDataMixin {
-	/** Per packet: the chunk, and the veiled copy (or null = send live) for each section index. */
-	@Unique private static final class Plan { final LevelChunk chunk; final LevelChunkSection[] veiled; Plan(LevelChunk c) { chunk = c; veiled = new LevelChunkSection[c.getSections().length]; } }
+	/** Per packet: the chunk and the pure plan (see dev.meshac.veil.PacketPlan, unit tested in sim/veil/SizeBytesInvariantTest). */
+	@Unique private static final class Plan { final LevelChunk chunk; final dev.meshac.veil.PacketPlan<LevelChunkSection> plan; Plan(LevelChunk c) { chunk = c; plan = new dev.meshac.veil.PacketPlan<>(c.getSections().length); } }
 	@Unique private static final ThreadLocal<Plan> meshac$plan = new ThreadLocal<>();
 	@Unique private static final ThreadLocal<int[]> meshac$idx = ThreadLocal.withInitial(() -> new int[1]);
 
@@ -35,11 +35,9 @@ public abstract class ChunkDataMixin {
 	private static int meshac$size(LevelChunkSection sec) {
 		Plan p = meshac$plan.get();
 		int i = meshac$idx.get()[0]++;
-		if (p == null || i >= p.veiled.length) return sec.getSerializedSize();
+		if (p == null) return sec.getSerializedSize();
 		Veil.Mod[] m = Veil.mods(p.chunk, i, sec);
-		LevelChunkSection v = m == null || m.length == 0 ? null : Veil.veiled(sec, m);
-		p.veiled[i] = v;
-		return (v != null ? v : sec).getSerializedSize();
+		return p.plan.size(i, sec, x -> m == null || m.length == 0 ? null : Veil.veiled(x, m), LevelChunkSection::getSerializedSize);
 	}
 
 	// ---- write pass ----
@@ -53,7 +51,6 @@ public abstract class ChunkDataMixin {
 	private static void meshac$write(LevelChunkSection sec, FriendlyByteBuf buf) {
 		Plan p = meshac$plan.get();
 		int i = meshac$idx.get()[0]++;
-		LevelChunkSection v = p == null || i >= p.veiled.length ? null : p.veiled[i];
-		(v != null ? v : sec).write(buf);
+		(p == null ? sec : p.plan.forWrite(i, sec)).write(buf);
 	}
 }

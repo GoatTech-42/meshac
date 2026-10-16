@@ -20,21 +20,21 @@ so the quality standard for meshac is simple. if a cheat leaves a trace the serv
 
 meshac watches movement, combat, building, mining, interaction and elytra flight. it works out what vanilla physics would allow and steps in when the two don't match.
 
-it doesn't punish one packet. every flag adds heat to a player and the heat cools off on its own. a lag spike, or a laggy tunnel bunching packets up, doesn't add up to a removal. real cheating does, fast.
+every flag adds heat, and heat cools off on its own. a few signals get a setback. a steady run of them gets a hold and then a removal. we test with lag on purpose, but that can't promise a lagging player never gets flagged.
 
 1. the player gets put back
 2. then held for a moment
-3. then kicked, and repeat offenders get tempbans that grow each time (10 minutes, 1 hour, 6 hours, 36 hours, up to 7 days)
+3. then kicked, and repeat offenders get tempbans that grow each time (on the default preset: 10 minutes, 1 hour, 6 hours, 36 hours, up to 7 days)
 
 permanent bans are off unless you turn them on.
 
 ## what it's caught so far
 
-tested against real hacked clients (wurst on 26.3 and 26.1.2, meteor on 26.2) on a throwaway server, with a clean hack-off run next to every one.
+the reports linked below say what was tested, how, and what is still missing.
 
 flight, speed above sprint-jump pace, step, spider, jesus, fast climb, no slow, timer, blink (0.75 s and up), slippy, air jump, high jump, elytra fly and boost, reach, kill aura, criticals, crystal aura, anchor aura, auto totem, nuker, packet mine, ghost hand, auto clicker.
 
-legit play hasn't flagged in any control run: sprint-jumping, wind charges, tnt and crystal knockback, elytra, hand mining through tunnels, lag spikes and a laggy proxy.
+clean controls that ran without a flag: sprint-jumping, wind charges, tnt and crystal knockback, elytra, hand mining through tunnels, lag spikes and a laggy proxy.
 
 ## what it doesn't catch
 
@@ -47,7 +47,7 @@ legit play hasn't flagged in any control run: sprint-jumping, wind charges, tnt 
 
 some modules just haven't been run yet. that list lives in [docs/coverage.md](docs/coverage.md).
 
-i also found checks of my own that never fired. the sign text rule and the chat command rule were hooked on the wrong thread, so they sat there doing nothing. both are fixed now and tested with scripted bots. that's written up in the false-positives doc because it's the exact kind of thing that makes a clean test run meaningless.
+the sign text rule and the chat command rule were hooked on the wrong thread, so they never fired. the linked coverage report records the fixes and scripted-bot checks. a quiet test is not proof that its hook ran.
 
 ## install
 
@@ -57,16 +57,16 @@ i also found checks of my own that never fired. the sign text rule and the chat 
 
 players install nothing.
 
-**start in monitor mode.** set `monitorOnly` to `true`. it logs and alerts but never kicks or bans. watch what it flags on your own server for a bit, then turn punishment on.
+**start in monitor mode.** set `monitorOnly` to `true` and leave `egregiousChecks` empty so monitor-mode enforcement exceptions are not enabled. leave client fingerprinting off too. watch the logs on your own server before enabling punishment.
 
-| minecraft | jar | java |
+| minecraft | local build file | java |
 | --- | --- | --- |
 | 1.21.11 | `meshac-1.21.11.jar` | 21 |
 | 26.1.2 | `meshac-26.1.jar` | 25 |
 | 26.2 | `meshac-26.2.jar` | 25 |
 | 26.3 | `meshac-26.3.jar` | 25 |
 
-fabric api is required on all of them. no releases are published yet. to build one yourself, see [building](#building).
+fabric api is required on all of them. [the 0.1.0 beta](https://github.com/GoatTech-42/meshac/releases/tag/v0.1.0-beta) is available. the file names in the table are what a local build makes. the release files have the mod version in the name too. to build one yourself, see [building](#building).
 
 ## for admins
 
@@ -78,7 +78,7 @@ all `/mesh` commands are op only.
 | `/mesh case <id>` | what happened and why |
 | `/mesh status <player>` | a player's heat, offences and what happens next |
 | `/mesh watch` | flags in chat as they happen |
-| `/mesh monitor` | shows whether monitor mode is on |
+| `/mesh monitor`, `/mesh monitor on`, `/mesh monitor off` | show or switch monitor mode |
 | `/mesh kick`, `/mesh ban` | manual removal |
 | `/mesh pardon <case id>`, `/mesh unban <player>` | lift a case or a ban |
 | `/mesh reload` | reload the config |
@@ -93,7 +93,8 @@ there's an optional discord webhook for holds and removals.
 | key | what it does |
 | --- | --- |
 | `preset` | `lenient`, `default` or `strict` |
-| `monitorOnly` | log and alert, never kick or ban |
+| `monitorOnly` | log and alert unless a check is listed in `egregiousChecks` |
+| `egregiousChecks` | checks that still enforce in monitor mode; leave empty for log-only testing |
 | `permanentBan` | false caps the ladder at the longest tempban |
 | `holdAt`, `removeAt` | heat at which a player is held, and removed |
 | `halfLifeSeconds`, `heatCoolSeconds` | how fast heat cools |
@@ -105,9 +106,9 @@ there's an optional discord webhook for holds and removals.
 | `appeal`, `serverName`, `accent`, `warn` | the text and colours players see |
 | `fixPistonWater` | patches MC-130183, the sticky piston flood machine bug. off by default |
 | `veilXray`, `veilEsp` | anti-xray and anti-esp. off until proven on a real client |
-| `clientFingerprintEnabled` | optional client brand hints. off by default, and it never punishes anyone on its own |
+| `clientFingerprintEnabled` | optional match on client brand or channel names. a client can fake both. off by default. if you turn it on, a match removes the player even if no check flagged anything |
 
-how removal actually works, and why a legit player can't reach it, is in [docs/PUNISHMENT-DESIGN.md](docs/PUNISHMENT-DESIGN.md).
+how removal actually works, and its limits, is in [docs/PUNISHMENT-DESIGN.md](docs/PUNISHMENT-DESIGN.md).
 
 </details>
 
@@ -121,7 +122,7 @@ the full per-module tables, with times, holds and kicks:
 
 `0 signals` only counts as a miss when the hack visibly acted. if it didn't, the row says unproven, not passed.
 
-the last full sweep ran 138 cases with 57 legit controls on the final jar. no legit control was flagged. kill-aura is only caught on some runs, so treat it as partial. details are in [docs/FINAL-SWEEP.md](docs/FINAL-SWEEP.md).
+the last full sweep ran 138 cases with 57 legit controls on the recorded 26.2 jar. no legit control was flagged. kill-aura is only caught on some runs, so treat it as partial. details are in [docs/FINAL-SWEEP.md](docs/FINAL-SWEEP.md).
 
 </details>
 
@@ -136,14 +137,14 @@ the rules for any new check:
 - and a test that shows it leaving legit play alone
 - measure first, never tune blind
 
-see [rig/README.md](rig/README.md). the false positives we found and fixed, with the numbers, are in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
+see [rig/README.md](rig/README.md).
 
 </details>
 
 <details>
 <summary>false positives we've hit</summary>
 
-every one gets written up: what flagged, why, and what the fix does. the short list so far is tunnel mining that looked like a nuker, a block broken "through" another when the hand just grazed a wall edge, and mining checks that tripped under lag. the long version is in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
+every one gets written up: what flagged, why, and what the fix does. the short list so far is tunnel mining that looked like a nuker, a block broken "through" another when the hand just grazed a wall edge, and mining checks that tripped under lag. each fix needs a matching clean control.
 
 </details>
 
@@ -152,7 +153,7 @@ every one gets written up: what flagged, why, and what the fix does. the short l
 
 one source tree builds for 1.21.11, 26.1.2, 26.2 and 26.3. the 1.21.11 jar uses the older obfuscated toolchain and runs on java 21, the rest need java 25. `rig/smoke.sh` boots each jar on a real server of its version.
 
-most of the real-client testing is on 26.3 and 26.1.2. the other versions build and boot with meshac loaded, and the 1.21.11 and 26.3 jars have had no full client run yet.
+real-client runs: wurst on 26.1.2, meteor on 26.2. 26.3 only has a few wurst checks (a nuker run and the tunnel-mining false positive), not a full sweep. 1.21.11 has been built and booted on a server, nothing more. these results are for the jars we tested, not every later commit.
 
 </details>
 
@@ -162,7 +163,7 @@ you need java 25.
 
     ./gradlew build
 
-the jar ends up in `build/libs/`. `build-all.sh` builds every version into `dist/`. to build for one version, pass `-Pminecraft_version=... -Pfabric_api_version=...` (see `gradle.properties` and `versions/`).
+the jar ends up in `build/libs/`. `build-all.sh` builds every version into `dist/`. for one version, pass every line of its file in `versions/` as a `-P` flag, the way `build-all.sh` does. the 1.21.11 file includes `remap=1`, so don't leave that one out.
 
 ## the words
 
@@ -177,7 +178,6 @@ the jar ends up in `build/libs/`. `build-all.sh` builds every version into `dist
 - [docs/PUNISHMENT-DESIGN.md](docs/PUNISHMENT-DESIGN.md) the heat and ladder math
 - [docs/IDENTITY.md](docs/IDENTITY.md) how it should feel
 - [docs/coverage.md](docs/coverage.md) and [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) what's caught
-- [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md) what went wrong and how it got fixed
 
 ## license
 

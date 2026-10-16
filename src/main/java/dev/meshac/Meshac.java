@@ -29,10 +29,10 @@ public final class Meshac implements ModInitializer {
 		// A banned player who reconnects is shown the ban screen again with the time that is left.
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			dev.meshac.veil.Veil.grace(handler.player, server.getTickCount());
-			Cases.Case c = Cases.activeBan(handler.player.getUUID());
-			if (c != null) handler.disconnect(Screens.ban(c)); else Fingerprints.check(handler.player);
+            // JOIN fires before vanilla finishes registering the player. Disconnecting here can
+            // leave a ghost player and block the next login. Enforce at the next server tick instead.
 		});
-		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : new java.util.ArrayList<>(server.getPlayerList().getPlayers())) { if (!bedrockUnproven(pl)) Movement.tick(pl); if (skip(pl)) continue; Combat.tick(pl, server.getTickCount()); Fingerprints.check(pl); } dev.meshac.veil.Veil.tick(server); });
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : new java.util.ArrayList<>(server.getPlayerList().getPlayers())) { if (!pl.connection.isAcceptingMessages()) continue; Cases.Case activeBan = Cases.activeBan(pl.getUUID()); if (activeBan != null) { pl.connection.disconnect(Screens.ban(activeBan)); continue; } if (!bedrockUnproven(pl)) Movement.tick(pl); if (skip(pl)) continue; Combat.tick(pl, server.getTickCount()); Fingerprints.check(pl); } dev.meshac.veil.Veil.tick(server); });
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(Fish::tick);
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> { Fingerprints.forget(handler.player.getUUID()); Movement.forget(handler.player.getUUID()); Verdict.forget(handler.player.getUUID()); dev.meshac.veil.Veil.forgetPlayer(handler.player); Combat.forget(handler.player.getUUID()); Vehicle.forget(handler.player.getUUID()); Mining.forget(handler.player.getUUID()); Interact.forget(handler.player.getUUID()); Inventory.forget(handler.player.getUUID()); Totem.forget(handler.player.getUUID()); Glide.forget(handler.player.getUUID()); Ticks.forget(handler.player.getUUID()); Chatter.forget(handler.player.getUUID()); Fish.forget(handler.player.getUUID()); });
 		CombatLog.init();

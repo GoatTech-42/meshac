@@ -105,7 +105,7 @@ there's an optional discord webhook for holds and removals.
 | `appeal`, `serverName`, `accent`, `warn` | the text and colours players see |
 | `fixPistonWater` | patches MC-130183, the sticky piston flood machine bug. off by default |
 | `veilXray`, `veilEsp` | anti-xray and anti-esp. off until proven on a real client |
-| `clientFingerprintEnabled` | optional client brand hints. off by default, and it never punishes anyone on its own |
+| `clientFingerprintEnabled` | OFF by default. Opt-in exact client-brand/channel matches can kick on the first match and permanently ban on a matching rejoin. Generic vanilla/fabric/forge/neoforge hints are ignored. Client hints can be spoofed and are not cheating proof; leave this OFF for normal play. |
 
 how removal actually works, and why a legit player can't reach it, is in [docs/PUNISHMENT-DESIGN.md](docs/PUNISHMENT-DESIGN.md).
 

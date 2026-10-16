@@ -28,7 +28,7 @@ Rung r = floor(n) + 1:
 - r = 1: kick (the screen names the check; case id logged).
 - r = 2..: tempban D_r = D_1 * m^(r-2), default D_1 = 10 min, m = 6 -> 10 min, 1 h, 6 h, 36 h, capped at D_max = 7 days.
 - Permanent only when permanentBan is on AND the removal was tier A confirmed (>= 2 tier A flags) AND r >= 4. Default permanentBan = false.
-- Escalation shortcut: a removal driven by tier A evidence skips one rung (fly/noclip/killaura are rarely accidental, but false flags have happened, so this is a tuning choice and not a promise); tier C-only removals never skip.
+- Escalation shortcut: a removal driven by tier A evidence skips one rung (this is a tuning choice; false flags have happened); tier C-only removals never skip.
 - Pardon of a case removes it from n; unban keeps it.
 
 ## 5. Config (all in meshac.json, with presets lenient / default / strict)

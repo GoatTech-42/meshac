@@ -29,7 +29,7 @@ I built it because most anticheats either miss things or ban honest players for 
 - Inventory and mining: fast break, nuker, impossible inventory actions
 
 **How it punishes**
-It does not react to one weird packet. Every flag adds heat to a player, and heat cools off on its own. Several independent things have to go wrong before anyone is removed, which is meant to keep a lag spike or a laggy tunnel from adding up to a removal. Lag has still caused false flags in testing, and the fixes are written up in the repo. Two strong flags in a row, like real flight, remove a player fast.
+Removal normally needs repeated evidence. Every flag adds heat to a player, and heat cools off on its own. Several independent things have to go wrong before anyone is removed, which is meant to keep a lag spike or a laggy tunnel from adding up to a removal. Lag has still caused false flags in testing, and the fixes are written up in the repo. Two strong flags in a row, like real flight, remove a player fast.
 
 Removal is a ladder: kick first, then a tempban that grows each time (10 minutes, 1 hour, 6 hours, 36 hours, up to 7 days). Old offences fade over time. Permanent bans are off by default.
 

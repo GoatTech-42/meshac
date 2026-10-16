@@ -31,6 +31,17 @@ public class VeilSelfTest {
 		check(EspCore.segmentHitsBox(0, 0, 0, 10, 0, 0, 4, -1, -1, 5, 1, 1), "segment through box");
 		check(!EspCore.segmentHitsBox(0, 0, 0, 3, 0, 0, 4, -1, -1, 5, 1, 1), "segment short of box");
 		check(EspCore.samplePoints(0, 0, 0, 1, 2, 1).length == 13 * 3, "13 sample points");
+		// fence regression: a 2-thick fence line along X (rails 6/16..10/16 thick, collision 1.5 tall) at z=10..12, target behind it at z=30
+		boolean hit = false; double ex = 0.5, ey = 1.6, tz = 30;
+		for (double z0 : new double[] { 10.0 + 6 / 16.0, 11.0 + 6 / 16.0 }) hit |= EspCore.segmentHitsBox(ex, ey - 1.0, 0, ex, 0.9, tz, 0, 0, z0, 3, 1.5, z0 + 4 / 16.0);
+		check(hit, "geometry: collision box of a fence rail intercepts the ray (root cause of 0/40)");
+		check(!RayBlocking.blocks(false, true, false, true, false, hit), "fence/gate/wall never blocks");
+		check(!RayBlocking.blocks(false, false, false, false, false, true), "canOcclude false (glass, pane, bars, door, trapdoor, scaffolding, cobweb) never blocks");
+		check(!RayBlocking.blocks(false, true, true, false, false, true), "leaves never block");
+		check(!RayBlocking.blocks(true, true, false, false, false, true), "air never blocks");
+		check(!RayBlocking.blocks(false, true, false, false, true, true), "empty shape never blocks");
+		check(RayBlocking.blocks(false, true, false, false, false, true), "stone/slab/stair block when the ray crosses the shape");
+		check(!RayBlocking.blocks(false, true, false, false, false, false), "ray that misses a slab/stair shape passes");
 		System.out.println(fails == 0 ? "ALL OK" : fails + " FAILURES");
 		System.exit(fails == 0 ? 0 : 1);
 	}

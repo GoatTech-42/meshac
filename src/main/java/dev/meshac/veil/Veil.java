@@ -210,17 +210,20 @@ public final class Veil {
 	/**
 	 * Foliage-aware ray. Vanilla ClipContext.Block.VISUAL stops on leaves (their visual shape is a full cube), so a player standing behind a bush was culled although a real client sees
 	 * him through the gaps and the sprite cut-outs. This walks the voxels itself and only an OCCLUDING block with a visual shape the ray really crosses blocks it. Leaves, glass, ice,
-	 * slime, vines, fences, doors, scaffolding and cobwebs (anything where canOcclude() is false) let the ray through. The cost is that a tree line no longer hides players from a wallhack;
+	 * slime, vines, doors, scaffolding and cobwebs (anything where canOcclude() is false) and fences, gates and walls (tag-excluded: canOcclude() is true for them) let the ray through. The cost is that a tree line no longer hides players from a wallhack;
 	 * that is the point: a missed cull is invisible, a wrong cull is a vanished player. Walls, stone, dirt, wood and the like still block as before.
 	 * UNCOMPILED. VERIFY: BlockGetter.traverseBlocks(Vec3, Vec3, T, BiFunction, Function) and VoxelShape.clip(Vec3, Vec3, BlockPos) exist under those names in 26.x.
 	 */
 	private static boolean rayClear(ServerLevel l, Vec3 from, Vec3 to) {
 		Boolean blocked = net.minecraft.world.level.BlockGetter.traverseBlocks(from, to, l, (lv, pos) -> {
 			BlockState st = lv.getBlockState(pos);
-			if (st.isAir() || !st.canOcclude() || st.is(net.minecraft.tags.BlockTags.LEAVES)) return null;
+			// fences, gates, walls: canOcclude() is true and the visual shape is the 1.5-tall collision box, but the model has gaps (see RayBlocking).
+			boolean gappy = st.is(net.minecraft.tags.BlockTags.FENCES) || st.is(net.minecraft.tags.BlockTags.FENCE_GATES) || st.is(net.minecraft.tags.BlockTags.WALLS);
+			boolean foliage = st.is(net.minecraft.tags.BlockTags.LEAVES);
+			if (st.isAir() || !st.canOcclude() || foliage || gappy) return null; // cheap exit before the shape lookup
 			var shape = st.getVisualShape(lv, pos, net.minecraft.world.phys.shapes.CollisionContext.empty()); // VERIFY signature
-			if (shape.isEmpty()) return null;
-			return shape.clip(from, to, pos) != null ? Boolean.TRUE : null;
+			boolean crosses = !shape.isEmpty() && shape.clip(from, to, pos) != null;
+			return RayBlocking.blocks(false, true, foliage, gappy, shape.isEmpty(), crosses) ? Boolean.TRUE : null;
 		}, lv -> Boolean.FALSE);
 		return !Boolean.TRUE.equals(blocked);
 	}

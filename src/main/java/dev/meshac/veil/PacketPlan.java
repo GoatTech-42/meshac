@@ -15,7 +15,7 @@ public final class PacketPlan<S> {
 	/** Size pass for section i. veil returns the replacement or null for "use live". Exceptions in veil mean live (fail open). */
 	public int size(int i, S live, UnaryOperator<S> veil, ToIntFunction<S> sizer) {
 		S v = null;
-		if (i >= 0 && i < veiled.length) {
+		if (i >= 0 && i < chosen.length) {
 			try { v = veil.apply(live); } catch (RuntimeException e) { v = null; }
 		}
 		S sel = v != null ? v : live;

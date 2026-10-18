@@ -4,11 +4,70 @@ import java.nio.file.Path;
 public final class GroundReplayTest {
 	static String k4last = "";
 	static int k4Run(String javaBin, String cp, String log) throws Exception {
+		final int CAP = 65536; // 64 KiB RETAINED-MEMORY bound, not a total-work bound: the drain keeps reading
+		                       // (and discarding) past the cap so the child never blocks; overflow is an explicit failure
 		Path f = Files.createTempFile("k4nc", ".log");
-		Files.writeString(f, log);
-		Process pr = new ProcessBuilder(javaBin, "-cp", cp, "GroundReplay", f.toString()).redirectErrorStream(true).start();
-		k4last = new String(pr.getInputStream().readAllBytes());
-		return pr.waitFor();
+		Process pr = null;
+		java.util.concurrent.ExecutorService ex = null;
+		try {
+			Files.writeString(f, log);
+			pr = new ProcessBuilder(javaBin, "-cp", cp, "GroundReplay", f.toString()).redirectErrorStream(true).start();
+			final Process child = pr;
+			ex = java.util.concurrent.Executors.newSingleThreadExecutor(r -> { Thread th = new Thread(r); th.setDaemon(true); return th; });
+			// Future gives safe publication of result AND error; nothing is swallowed.
+			java.util.concurrent.Future<byte[]> drain = ex.submit(() -> {
+				try (java.io.InputStream in = child.getInputStream()) {
+					java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+					byte[] chunk = new byte[8192];
+					int n;
+					boolean overflow = false;
+					while ((n = in.read(chunk)) != -1) {
+						int room = CAP - buf.size();
+						if (n > room) { overflow = true; if (room > 0) buf.write(chunk, 0, room); } // byte 65537 is rejected
+						else buf.write(chunk, 0, n);
+					}
+					if (overflow) throw new java.io.IOException("child output exceeded the " + CAP + "-byte retained-memory bound");
+					return buf.toByteArray();
+				}
+			});
+			if (!pr.waitFor(60, java.util.concurrent.TimeUnit.SECONDS)) {
+				pr.destroyForcibly();
+				if (!pr.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) {
+					k4last = "TIMEOUT (60s); child pid " + pr.pid() + " did not exit within 5s of destroyForcibly - UNREAPED, identity reported";
+					return -1;
+				}
+				k4last = "TIMEOUT (60s, child pid " + pr.pid() + " destroyed)";
+				return -1;
+			}
+			final byte[] out;
+			try {
+				out = drain.get(5, java.util.concurrent.TimeUnit.SECONDS); // reader termination REQUIRED: fail closed on timeout or error
+			} catch (java.util.concurrent.TimeoutException te) {
+				k4last = "drain did not terminate within 5s of child exit - explicit failure";
+				return -1;
+			} catch (java.util.concurrent.ExecutionException ee) {
+				k4last = "drain error: " + ee.getCause() + " - explicit failure";
+				return -1;
+			}
+			k4last = new String(out);
+			return pr.exitValue();
+		} finally {
+			// child cleanup FIRST (nested), then the temp file
+			if (pr != null) {
+				try { pr.getOutputStream().close(); } catch (java.io.IOException ignored) {}
+				try { pr.getInputStream().close(); } catch (java.io.IOException ignored) {}
+				try { pr.getErrorStream().close(); } catch (java.io.IOException ignored) {}
+				if (pr.isAlive()) {
+					pr.destroyForcibly();
+					boolean reaped = false;
+					try { reaped = pr.waitFor(5, java.util.concurrent.TimeUnit.SECONDS); }
+					catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+					if (!reaped) { k4last = "child pid " + pr.pid() + " UNREAPED in finally after destroyForcibly + 5s - identity reported"; System.out.println("  K4: " + k4last); }
+				}
+			}
+			if (ex != null) ex.shutdownNow();
+			Files.deleteIfExists(f);
+		}
 	}
 
 	static int fails;
@@ -131,6 +190,8 @@ public final class GroundReplayTest {
 		check(k4last.contains("K4 FAILS CLOSED: jar-vs-harness state disagreement"), "K4 mismatch prints the disagreement line");
 		check(k4Run(javaBin, cp, "[trace] gndclaim Bot air=true count=1\n[trace] gndclaim Bot air=true\n") == 1, "K4 negative control: a mixed counted/uncounted capture exits 1");
 		check(k4last.contains("K4 FAILS CLOSED: counted and uncounted capture lines BOTH present"), "K4 mixed capture prints the fail-closed line (0029 both-order wording)");
+		check(k4Run(javaBin, cp, "[trace] gndclaim Bot air=true\n[trace] gndclaim Bot air=true count=2\n") == 1, "K4 negative control: a mixed uncounted-then-counted capture (reverse order) exits 1");
+		check(k4last.contains("K4 FAILS CLOSED: counted and uncounted capture lines BOTH present"), "K4 reverse-order mixed capture prints the fail-closed line");
 		check(k4Run(javaBin, cp, "[trace] gndclaim Bot air=true\n") == 0, "receiptless capture exits 0 (diagnostic only, never a pass)");
 		check(k4last.contains("K4 NOT RUN"), "receiptless capture is labeled K4 NOT RUN");
 		check(k4Run(javaBin, cp, "[trace] gndclaim Bot air=true count=1\n[trace] gndclaim Bot air=true count=2\n") == 0, "positive control: consistent jar counts exit 0");

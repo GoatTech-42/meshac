@@ -6,9 +6,12 @@
 > (63 patch files spanning 0001-0066, tar sha256
 > 3f0dea27f1e67380114c893716886d9ec2a017dc2704cf54f1d69b6e24aa9602) with its own
 > MANIFEST.txt / PATCHES-SHA256.txt; BOX-REPORTED 10-17 11:36pm: clean apply onto c4b3fe8,
-> javac harness GREEN (85 test mains, exit 0), full compile x4 GREEN. Follow the DELIVERED-bundle
-> manifest for the current apply order; the table below is HISTORICAL. The build/run STEPS below
-> remain the intended shape.
+> javac harness GREEN (85 test mains, exit 0), full compile x4 GREEN. The DELIVERED-bundle manifest and the
+> 11:36pm Box report are HISTORICAL: they cover the series through 0066. With 0067-0068 the tip
+> has moved past them; the apply order they prove no longer covers the series. At run review,
+> require the CURRENT full apply manifest - a fresh apply + harness receipt at the tip under
+> review - not this banner. The table below is HISTORICAL. The build/run STEPS below remain
+> the intended shape.
 
 ## 0. Inputs
 - Base: meshac main line c4b3fe8 (bundle base commit 9353fbd).

@@ -13,8 +13,8 @@ GS-D/GS-E in REDTEAM-GROUNDSPOOF-PLAN are BY-DESIGN misses because of it).
 
 ## Candidate (patch 6, unreviewed, no production caller)
 
-GroundEvidence.decay(): a clear forgives only the OLDEST unsupported claim. D-row fixtures
-(patch 0020) pin the semantics: D1 shows the live-vs-decay divergence on a grace-farm stream,
+GroundEvidence.decay(): a clear forgives only the OLDEST unsupported claim. Hand-built
+synthetic unit fixtures D1-D4 (patch 0020) pin the semantics - they are not battery evidence: D1 shows the live-vs-decay divergence on a grace-farm stream,
 D2/D3 show legit streams stay sub-flag, D4 pins one-claim forgiveness per boundary.
 
 ## Stage 1 (this patch): shadow dual-window - log-only, default off
@@ -32,7 +32,7 @@ mirroring the O3 shadow pattern (patch 3, reviewed shape). Every shadow statemen
 TRACE (the MESHAC_TRACE env switch, unset by default): the shadow is OFF BY DEFAULT and
 collects nothing when the env is unset.
 
-Witness pins: GroundEvidenceTest decay pins (exist), D-row fixtures (exist, 0020),
+Witness pins: GroundEvidenceTest decay pins (exist), synthetic D1-D4 unit fixtures (exist, 0020),
 sim/DecayShadowWitnessTest (new, this patch): asserts the shadow is declared with the live
 config, adds claims at exactly the live window's single claim site, decays at exactly one site
 (the exempt/grace reset), is cleared at every full-reset site, is TRACE-gated, and that NO shadow

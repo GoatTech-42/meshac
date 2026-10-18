@@ -322,7 +322,7 @@ public final class Movement {
 			if (!claimTol) { // a tolerated claim is a landing on a partial shape: it neither enters nor evicts the evidence window
 				s.gndEv.add(claimAir);
 				if (TRACE) { s.gndEvDecay.add(claimAir); // grace-boundary persistence DRAFT, log-only shadow: identical claim set/order/threshold as the live window; decays (not clears) at the exempt/grace reset below; default off (TRACE is the MESHAC_TRACE env switch, unset by default)
-					if (s.gndEvDecay.flagged() && !s.gndEv.flagged() && nowMs - s.decayLogAt > 1000) { s.decayLogAt = nowMs; Meshac.LOG.info("[trace] nofall decay-shadow {} count={} (grace-boundary persistence draft, log-only)", pl.getGameProfile().name(), s.gndEvDecay.unsupported()); } }
+					if (s.gndEvDecay.flagged() && nowMs - s.decayLogAt > 1000) { s.decayLogAt = nowMs; Meshac.LOG.info("[trace] nofall decay-shadow {} count={} liveCount={} liveFlagged={} (grace-boundary persistence draft, log-only)", pl.getGameProfile().name(), s.gndEvDecay.unsupported(), s.gndEv.unsupported(), s.gndEv.flagged()); } }
 				s.bufGround = s.gndEv.unsupported();
 				if (GROUND_TOL_COMPARE && claimAir) groundTolCompare(pl, s, pl.getBoundingBox().move(dx, dy, dz));
 				if (TRACE && (claimAir || s.bufGround > 0)) groundCtx(pl, s, s.gndEv.flagged() && hit == null, claimAir, ground, dy, s.prevDtS, exempt);
@@ -335,7 +335,7 @@ public final class Movement {
 				s.gndShadow.add(claimAir);
 				if (TRACE && s.gndShadow.flagged() && nowMs - s.softLogAt > 1000) { s.softLogAt = nowMs; Meshac.LOG.info("[trace] nofall shadow-evidence {} count={} (damage grace, log-only)", pl.getGameProfile().name(), s.gndShadow.unsupported()); }
 			}
-		} else if (ground) { if (TRACE && s.bufGround > 0) Meshac.LOG.info("[trace] gndclear {}", pl.getGameProfile().name()); s.gndEv.clear(); if (TRACE) s.gndEvDecay.decay(); s.bufGround = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } // exempt/grace ground claim: fresh start, as before; air packets leave the window alone
+		} else if (ground) { if (TRACE && (s.bufGround > 0 || s.gndEvDecay.unsupported() > 0)) Meshac.LOG.info("[trace] gndclear {} decayCount={}", pl.getGameProfile().name(), s.gndEvDecay.unsupported()); s.gndEv.clear(); if (TRACE) s.gndEvDecay.decay(); s.bufGround = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } // exempt/grace ground claim: fresh start, as before; air packets leave the window alone
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
 			if (ch[0].equals("speed") || ch[0].equals("fly") || ch[0].equals("air") || ch[0].equals("high") || ch[0].equals("microhop")) ctxLog(pl, s, dx, dy, dz); // log only: what the player was doing when the speed check fired

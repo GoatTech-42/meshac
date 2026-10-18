@@ -24,19 +24,27 @@ Alongside the live gndEv, a shadow gndEvDecay replays the SAME claim set, orderi
 claim the live window clear()s (unchanged) and the shadow decay()s. The shadow NEVER flags a
 verdict, never calls Verdict/MonitorGate, never damages. At every full-reset site (own-teleport,
 soft-mode return, post-flag reset) the shadow is cleared alongside the live window. When the
-shadow is flagged while the live window is not, one rate-limited log-only line:
+shadow is flagged, one rate-limited log-only line carries BOTH windows' state, so a simultaneous
+live+shadow flag is never invisible:
 
-    [trace] nofall decay-shadow <name> count=N (grace-boundary persistence draft, log-only)
+    [trace] nofall decay-shadow <name> count=N liveCount=M liveFlagged=<bool> (grace-boundary persistence draft, log-only)
+
+The gndclear capture line fires at every exempt/grace boundary that holds state in EITHER window
+(not only when the live window is non-empty) and carries the shadow's count: the replay harness
+sees every decay boundary, so replay-vs-jar flag agreement is assertable.
 
 mirroring the O3 shadow pattern (patch 3, reviewed shape). Every shadow statement sits behind
 TRACE (the MESHAC_TRACE env switch, unset by default): the shadow is OFF BY DEFAULT and
 collects nothing when the env is unset.
 
 Witness pins: GroundEvidenceTest decay pins (exist), synthetic D1-D4 unit fixtures (exist, 0020),
-sim/DecayShadowWitnessTest (new, this patch): asserts the shadow is declared with the live
-config, adds claims at exactly the live window's single claim site, decays at exactly one site
-(the exempt/grace reset), is cleared at every full-reset site, is TRACE-gated, and that NO shadow
-line touches a Verdict/MonitorGate/causeFallDamage/hit-assignment/armNoFall/setback-return path.
+sim/DecayShadowWitnessTest (new, this patch): per-site coverage, not aggregate counts - every
+live-window reset site must handle the shadow on the same line (decay at the exempt/grace
+boundary, clear at full resets); asserts the live-config declaration, the single claim site, the
+single decay site inside the gndclear branch, the TRACE gate (MESHAC_TRACE env, unset by
+default), the both-windows telemetry format, the every-boundary gndclear capture, and that NO
+non-clear shadow line touches a Verdict/MonitorGate/causeFallDamage/hit-assignment/armNoFall/
+setback-return path.
 
 ## Stage 2 (separate, later, reviewer-gated): live swap - exactly what it can and cannot do
 

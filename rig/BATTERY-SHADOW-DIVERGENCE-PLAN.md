@@ -14,13 +14,18 @@ session log.
 
 ## Rows
 
-1. **GS-D - NoFall human=0 + self-damage grace-farming.** Meadow 1.21.1 (config receipt:
-   `nofall mode=human:0`, arrow self-damage loop, flat area). Walk/idle while spamming.
-   EXPECT: repeated `[trace] nofall decay-shadow <bot> count=N` lines; the live window stays silent
-   (that silence is the hole this proposal closes). GroundReplay on the same log: decay table flags,
-   clear table does not (or flags strictly later).
-2. **GS-E - NoFall human=0 + water dip.** Same config; bot walks through a water pool, dip <= 4 air
-   claims. EXPECT: decay-shadow lines persist through the dip; an honest landing still ends them.
+1. **GS-D - NoFall human=0 + self-damage grace-farming.** Attack-effect proof FIRST, or the row
+   is INCONCLUSIVE: (a) bot falls >= 8 blocks with NoFall OFF - observe the health drop (baseline);
+   (b) the same fall with NoFall human=0 ON - damage avoided (the spoof is live and bound);
+   (c) only then the grace-farming phase: arrow self-damage loop, walk/idle, flat area, config
+   receipt `nofall mode=human:0`. MESHAC_TRACE=1 must be set BEFORE the session so the claim
+   stream exists; capture gndclaim, gndclear (with decayCount=) and decay-shadow lines.
+   EXPECT: repeated `[trace] nofall decay-shadow <bot> count=N liveCount=M liveFlagged=false`
+   lines; the live window stays silent (that silence is the hole this proposal closes).
+   GroundReplay on the same log: decay table flags, clear table does not (or flags strictly later).
+2. **GS-E - NoFall human=0 + water dip.** Same effect preamble (a/b), then bot walks through a
+   water pool, dip <= 4 air claims. EXPECT: decay-shadow lines persist through the dip; an honest
+   landing still ends them.
 3. **Legit medium dip.** Human walks through the same pool, no cheat. EXPECT: ZERO decay-shadow
    lines. Any line here is a kill criterion.
 4. **Legit knockback landing.** Zombie pen hit or RCON knockback onto ground. EXPECT: ZERO
@@ -30,10 +35,12 @@ session log.
 
 ## Cross-check (offline, Box)
 
-Run GroundReplay (clear vs decay tables) over every row's log. The harness and the in-jar shadow
-should agree on flag/no-flag per row; the harness's documented conservatism (uncaptured clears keep
-the harness shadow counting where the jar shadow has already cleared at a teleport/setback) explains
-any leftover-count mismatch - flag agreement is the requirement, count equality is not.
+Run GroundReplay (clear vs decay tables) over every row's log. Every boundary that holds state in
+EITHER window now emits a gndclear line (with the shadow's decayCount), so the replay sees every
+decay boundary the jar saw - flag/no-flag agreement per row is assertable, and we assert it. The
+remaining documented gap: uncaptured clears (teleport/setback/post-flag) keep the harness shadow
+counting where the jar shadow has already cleared - that can move COUNTS, not flag presence, on
+rows without teleports it does not apply at all. Count equality is not required; flag agreement is.
 
 ## Stage-2 gate (unchanged from GRACE-DECAY-PROMOTION-DRAFT.md section 6)
 

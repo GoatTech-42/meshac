@@ -1,4 +1,4 @@
-# Box run specs v2 (10-18) - reviewer v1 items folded. Supersedes rig/BOX-RUN-SPECS-20261018.md.
+# Box run specs v2 (10-18) - SUPERSEDED by rig/BOX-RUN-SPECS-v3-20261018.md (reviewer v2 round: tree-hash + applied-bytes verification instead of HEAD equality; bound timeout/systemd-run cgroup caps; pidfd + process-group owned-tree supervision; network namespace confinement for runtime phases; spec S enforcement-ON reclassified as a policy change needing Luke's authorization with a default no-policy-change route; roles not assumed account names). Kept for history; do not run from this file.
 
 NEVER ilhsmc, NEVER the live server, no live deploy. No run starts without the reviewer's GO
 on this spec. "Frozen series" below is exact: no floating tip, no either/or commands.

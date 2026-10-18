@@ -1,10 +1,9 @@
 # DECIDED: combat re-arm for 0.1.0 (was: ship-vs-fix decision doc) - 10-17
 
 DECISION (Instinct, under Luke's fully-autonomous standing, relayed by parent 10-17 10:01pm):
-OPTION C - 0.1.0 BLOCKS on the combat re-arm, with the d124 reach/LOS ruling 10a binding the
-reach/LOS rules. NOTE: the exact 10a wording is not in my recovered context; it has been
-requested from the parent. Until it lands, all reach/LOS rules stay at the d124 source values
-(3.2 line, reach>0.5 LOS rule) and the re-arm draft does NOT re-rule thresholds.
+OPTION C - 0.1.0 BLOCKS on the combat re-arm. The reach/LOS rules are bound by the binding
+rule in W2 (decided by Instinct 10:04pm, NOT a quoted Luke ruling: the earlier "ruling 10a"
+reference could not be recovered by either side, so this rule replaces it).
 
 ## The gap, grounded in source (cited against the tree at this commit; evidence archive sent with it)
 
@@ -31,8 +30,11 @@ W1. Attack hook + emit wiring (0044 draft, scratch-only): inject handleInteract,
     Combat.check on attack actions; hit strings emit through Verdict ONLY in monitor mode
     (log-only, step ignored - never cancel, never punish); the :29 contract comment rewritten
     in the same patch. Compile gate: Box (no javac in the sandbox).
-W2. Reach/LOS ruling 10a: bind the exact ruling text into the reach/LOS rules + controls
-    (BLOCKED on the ruling wording from parent).
+W2. Reach/LOS binding rule (DECIDED by Instinct 10-17 10:04pm, not a quoted Luke ruling):
+    keep the d124 source thresholds UNCHANGED (the 3.2 reach line, the reach>0.5 LOS rule);
+    every combat signal is monitor-only/log-only - no heat, no cancel, no punish,
+    punishEligible=false; any threshold change requires rig FP replay at 100/300 ms ping plus a
+    reviewer GO. 0044 already embodies this (monitor-gated emit, thresholds untouched).
 W3. FP-hardening promotion: FP-SPECS-COMBAT-HARDENING tunings (same-target consecutive-miss,
     per-tick dedup) and COMBAT-LAG-AUDIT fix1 are SOURCE-ONLY; each needs battery rows with
     100 ms and 300 ms ping passes (veil-checklist pattern) before any threshold ships.

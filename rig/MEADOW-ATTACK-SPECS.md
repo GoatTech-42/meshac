@@ -36,11 +36,13 @@ Observable contract:
 - New NoFall setting (e.g. interleave = k): during a fall past the distance threshold, send a fake
   StatusOnly(onGround=true) every k-th airborne packet, honest air packets between.
 - Pre-registered outcome (REDTEAM-GROUNDSPOOF-PLAN GS-C): CAUGHT for every k - the fake claims all
-  enter the window and 3-of-5 accumulates regardless of the air between them. If a run shows
-  silence with attack-effect proof, that is a MEADOW-EVADE finding against the window.
+  enter the window and 3-of-5 accumulates regardless of the air between them (air never dilutes).
+  If a run shows silence with attack-effect proof, that is a MEADOW-EVADE finding against the window.
 - The follow-on evasion that WOULD stress the window is touch-and-go micro-landings (brief REAL
-  supported contact draining evidence mid-fall) - out of scope for NoFall alone (needs a fly/glide
-  assist to survive the touchdown); noted so nobody confuses air-interleave with landing-interleave.
+  supported contact draining evidence mid-fall) - preregistered as GS-C2 (2-of-5 density,
+  BY-DESIGN below-threshold). It needs a landing-survival assist (the MicroHop spec in this file);
+  out of scope for NoFall alone. Never confuse air-interleave (GS-C, caught) with
+  landing-interleave (GS-C2, hole).
 
 ## Fixture status (GS-C replay assets)
 

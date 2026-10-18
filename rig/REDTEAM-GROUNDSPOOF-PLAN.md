@@ -27,18 +27,23 @@ get credit for catching a crippled attack, and meadow does not get an EVADE for 
 |---|---|---|---|---|
 | GS-A | NoFall, human=0, distance=2 | spoofs a +gnd status packet on EVERY fall >= 2 blocks; long falls send consecutive unsupported claims | CAUGHT: consecutive spoof trips the window (3-of-5) trivially; "nofall ground spoof" SIGNAL | MEADOW-EVADE (finding) |
 | GS-B | NoFall, human=1, distance=2 | ONE spoof on the final approach, then a ground=false packet (tuned against the old 3-consecutive trigger) | BY-DESIGN below-threshold: a single unsupported claim is count 1 of 3; no flag. The cheat may still avoid the damage | BY-DESIGN (not a verdict; pre-registered hole the P3-strong arm at count>=2 is meant to price) |
-| GS-C | interleaved spoof (2-of-5 honest air between fake claims) | the round-2 evasion that beat the old buffer | CAUGHT by the window (3-of-5 catches interleave) | MEADOW-EVADE (finding). NOTE: meadow NoFall has no interleave mode - this row needs the recorded GS01 fixture client or a packet tool; if neither is available the row is SKIP, and meshac's nofall score rides on A/B/D only |
+| GS-C | interleaved spoof: a fake +gnd claim every k-th airborne packet, honest AIR packets between (k=2 or 3) | the round-2 evasion that beat the old buffer | CAUGHT: only GROUND CLAIMS enter the window (Movement.java:320-336) - honest air packets neither add nor evict, so the window fills with fake claims and 3-of-5 accumulates for every k. The stream truly contains 3-of-5 INSIDE the window; the air dilution beats consecutive-count triggers only | MEADOW-EVADE (finding). NOTE: meadow NoFall has no interleave mode - this row needs the recorded GS01 fixture client or a packet tool; if neither is available the row is an explicit SKIP (incomplete coverage, named in the tally) |
+| GS-C2 | diluted spoof: fake claims broken by REAL supported ground contact (touch-and-go micro-landing), density 2-of-5 inside the window | the follow-on evasion the window genuinely prices | BY-DESIGN below-threshold: supported claims dilute to 2-of-5, under flagAt=3. Pre-registered hole - a promotion that moves flagAt must re-price this row | BY-DESIGN (not a verdict). Driver needs a landing-survival assist (meadow MicroHop, patch 0017 spec); likely SKIP until that lands |
 | GS-D | GS-A + grace-farming (self-damage / small falls to keep grace warm) | exempt/grace ground claims CLEAR the window (Movement.java:336) | BY-DESIGN below-threshold (known grace-farming hole, rebind delta 2; patch 6's decay table measures the fix) | BY-DESIGN (not a verdict; feeds the decay policy decision) |
 | GS-E | GS-A with water/medium dips mid-fall | exempt states reset the evidence | BY-DESIGN below-threshold (same hole family as GS-D) | BY-DESIGN |
 | GS-F | spoof adjacent to placed powder | only live if the POWDER-EXEMPT-DRAFT patch ever lands | BLOCKED until GC05 decides | n/a |
 
 ## Run order and scoring
 
-1. Ladder order A, B, D, E (C when a driver exists). F stays blocked.
+1. Ladder order A, B, D, E - all four are runnable (A/B/D/E need only meadow NoFall + flat/water terrain) and EVERY runnable preregistered row is required. C runs only when a driver exists (else explicit SKIP, incomplete coverage); C2 likely SKIP until MicroHop lands; F stays blocked. A C SKIP never drops or substitutes a runnable row - E in particular always runs.
 2. Per row: config receipt -> liveness -> fall >= 8 blocks -> grade the bound string (checks=('nofall',))
    -> attack-effect proof (damage avoided? handback?) -> verdict per the table.
-3. Scoreboard mapping: any MEADOW-EVADE finding = MEADOW (EVADE) on the nofall check. All CAUGHT
-   rows caught + BY-DESIGN rows behaving as pre-registered + zero legit-row flags (GC01/GC02/GC05)
-   = MESHAC on nofall. Any legit flag = MEADOW (FP), capped at SPLIT if the cheat rows were caught.
+3. Scoreboard mapping: any MEADOW-EVADE finding = MEADOW (EVADE) on the nofall check. MESHAC on
+   nofall = the preregistered CAUGHT subset actually run (GS-A, plus GS-C when its driver exists)
+   caught + every BY-DESIGN row behaving as pre-registered (GS-B, GS-D, GS-E, GS-C2 when run) +
+   zero legit-row flags (GC01/GC02/GC05). The scoreboard entry must NAME the caught subset and
+   show each BY-DESIGN hole - a blanket 'MESHAC wins nofall' without the holes shown is a scoring
+   error. Any legit flag = MEADOW (FP), capped at SPLIT if the cheat rows were caught. A SKIPPED
+   row is incomplete coverage, stated in the tally, never silently dropped.
 4. The BY-DESIGN rows are the honest core of the page: they are listed with their pre-registered
    outcomes so nobody can later rebrand a known hole as a surprise or a surprise as a known hole.

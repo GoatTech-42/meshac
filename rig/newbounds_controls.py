@@ -18,6 +18,8 @@ G = {
  'autostep_lane': '260.5 70 100.5', # 20-block alternating slab/stair lane toward +x
  'boat_lake': '280.5 69 140.5',    # 10x10 water pool, surface y 69 (Box places the boat)
  'boat_pad': '280.5 70 180.5',     # flat stone pad, no water/bubble column anywhere near (Box places the boat)
+ 'snow_ramp': '300.5 70 300.5',    # 12-long ascending snow-layer ramp (1..8 layers) toward +x with a 2-block ceiling over the top half - Box builds it (microhop r01 geometry)
+ 'kb_pen': '158.5 70 160',         # AT the penned zombie (the combat pen doubles as the hitter pen - the zombie is the second actor)
 }
 
 S = {
@@ -143,6 +145,22 @@ S = {
    'legs': [('module', None), ('wait', 10), ('module', None)],
    'row': 'POSITIVE CONTROL: AutoTotem with totems in inventory, Box RCON /damage to pop: the offhand refill must SIGNAL inventory ("off hand filled <n> ms after a totem popped...")',
    'falsifies': 'the totem-refill timer vs an inventory-touching totem module'},
+ # microhop (matrix r01): FP-side row only - meadow has NO microhop module (Speed has no hop modes),
+   # and scripted driver hops are vanilla jumps, NOT a packet-level microhop. The cheat row waits on a
+   # real attack (new meadow module or a packet tool); tracked in COVERAGE-RECHECK + the scoreboard.
+ 'nb-microhop-legit': {'tp': G['snow_ramp'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
+   'legs': [('hold2', 'w', 'space', 6), ('wait', 1), ('hold2', 'w', 'space', 6)],
+   'row': 'sprint-jump up the snow ramp UNDER the 2-block ceiling: zero microhop SIGNAL (the lowCeiling + powder guards at Movement.java:300-305 exist for exactly this FP - Luke sprint-jump-under-2-block, 2026-10-11)',
+   'falsifies': 'ceiling-clipped jumps and snow-layer steps must not count as microhop'},
+ # antiknockback: the zombie is the second actor (hitter); Box keeps the bot alive via RCON (armor + Resistance II)
+ 'nb-kb-legit': {'tp': G['kb_pen'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
+   'legs': [('wait', 12)],
+   'row': 'stand at the zombie pen taking ~3 melee hits (Box: iron armor + Resistance II via RCON; hits land ~1/s): vanilla knockback moves the bot ~0.5/hit - zero antiknockback SIGNAL',
+   'falsifies': 'normal knockback must clear the movement eval within 450 ms of each hit'},
+ 'nb-kb-cheat': {'tp': G['kb_pen'], 'needs': 'cheat', 'expect': 'signal', 'module': 'Velocity (horizontal 0.0)', 'checks': ('antiknockback',), 'yaw': -90, 'expectMove': False,
+   'legs': [('module', None), ('wait', 12), ('module', None)],
+   'row': 'POSITIVE CONTROL: Velocity horizontal=0.0 taking ~3 zombie melee hits (same armor/resistance setup, open space behind the bot): "no push after three hits" must SIGNAL antiknockback',
+   'falsifies': 'the three-strike no-push counter vs a zero-knockback module'},
 }
 
 LEG_VERBS = {'wait': 2, 'hold': 3, 'hold2': 4, 'tap': 2, 'module': 2, 'click': 3, 'holdmouse': 3}

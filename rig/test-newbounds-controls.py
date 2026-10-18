@@ -29,10 +29,17 @@ for k, chk, twin in (('nb-nuker-cheat', ('mining',), 'nb-mine-legit'), ('nb-ghos
     check(S[k]['expect'] == 'signal' and S[k]['checks'] == chk and 'module' in S[k], k + ' is a bound cheat row')
     check(twin in S and S[twin]['expect'] == 'zero', k + ' names an existing legit twin ' + twin)
     check(twin in S[k]['row'], k + ' row text names its twin')
+# microhop: legit row only - the attack side is honestly blocked (no meadow microhop module)
+mh = [k for k in S if k.startswith('nb-microhop-')]
+check(mh == ['nb-microhop-legit'] and S['nb-microhop-legit']['expect'] == 'zero', 'microhop: legit row only until a real attack exists')
+check('ceiling' in S['nb-microhop-legit']['row'] and 'lowCeiling' in S['nb-microhop-legit']['row'], 'microhop legit row exercises the lowCeiling guard')
+# kb cheat row must NOT require self-movement (the point of the attack is standing still)
+check(S['nb-kb-cheat']['expectMove'] is False, 'kb cheat row is stationary by design')
 # one vanilla + one cheat row per newly-bound check family
 for fam, cheat in (('fly', 'fly'), ('speed', 'speed'), ('combat', 'combat'), ('mine', 'mining'),
                    ('interact', 'interact'), ('inv', 'inventory'), ('boatfly', 'boatfly'),
-                   ('high', 'high'), ('timer', 'timer'), ('glide', 'glide'), ('totem', 'inventory')):
+                   ('high', 'high'), ('timer', 'timer'), ('glide', 'glide'), ('totem', 'inventory'),
+                   ('kb', 'antiknockback')):
     rows = [k for k in S if k.startswith('nb-' + fam + '-')]
     check(len(rows) == 2, fam + ' has a legit and a cheat row')
     z = [k for k in rows if S[k]['expect'] == 'zero']; p = [k for k in rows if S[k]['expect'] == 'signal']

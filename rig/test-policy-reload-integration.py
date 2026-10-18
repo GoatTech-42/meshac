@@ -96,7 +96,10 @@ public final class ReloadHarness {
  static void removeDirect(ServerPlayer p, String why) throws Exception {
   Method m = Verdict.class.getDeclaredMethod("remove", ServerPlayer.class, String.class, List.class, Config.class); m.setAccessible(true);
   synchronized (Config.POLICY_LOCK) { m.invoke(null, p, why, List.of("harness"), Config.get()); } } // production calls remove() only under the lock; mirror that contract
- static boolean rise5(ServerPlayer p) { boolean refused = false; for (int i = 0; i < 5; i++) { ServerPlayer.Server.tick++; refused = Vehicle.check(p, new ServerboundMoveVehiclePacket()); } return refused; } // RISE_AT = 5
+ static boolean[] rise5(ServerPlayer p) { boolean[] r = new boolean[5]; for (int i = 0; i < 5; i++) { ServerPlayer.Server.tick++; r[i] = Vehicle.check(p, new ServerboundMoveVehiclePacket()); } return r; } // Vehicle RISE_AT = 5: a refusal can only land on the 5th rise of a run
+ static void expectRefusal(String phase, boolean[] r, boolean fifth) { // calls 1-4 must NEVER refuse (rise budget not matured); call 5 carries the verdict
+  for (int i = 0; i < 4; i++) ck(!r[i], phase + ": call " + (i+1) + " refused before the rise budget matured");
+  ck(r[4] == fifth, phase + ": call 5 refusal = " + r[4] + ", expected " + fifth); }
 
  public static void main(String[] a) throws Exception {
   // S1: first action after an invalid reload
@@ -130,19 +133,19 @@ public final class ReloadHarness {
   // S2: the REAL MC direct-cancel caller: Vehicle.check -> Verdict.signal -> ActionEvidence.cancel
   writeCfg(VALID_LOW); Config.load();
   ServerPlayer r = new ServerPlayer();
-  ck(rise5(r), "S2 enforcing policy: boatfly rise must be REFUSED by the real caller");
+  expectRefusal("S2 enforcing", rise5(r), true); // boatfly rise must be REFUSED by the real caller
   int m3 = Meshac.LOG.all.size();
   synchronized (Config.POLICY_LOCK) { Config.get().monitorOnly = true; Movement.clearPendingActions(); Verdict.clearPendingActions(); } // the exact /mesh monitor-on commit shape
-  ck(!rise5(r), "S2 monitor-on: the real caller must NOT refuse");
+  expectRefusal("S2 monitor-on", rise5(r), false); // the real caller must NOT refuse
   ck(Meshac.LOG.containsSince("SIGNAL", m3) && Meshac.LOG.containsSince("log", m3), "S2 monitor signals must still be logged");
   synchronized (Config.POLICY_LOCK) { Config.get().monitorOnly = false; }
   ck(Config.get().enforce("boatfly"), "S2 monitor-off must REOPEN the gate");
-  ck(rise5(r), "S2 monitor-off: refusal restored through the real caller");
+  expectRefusal("S2 monitor-off", rise5(r), true); // refusal restored through the real caller
   int clears = Movement.clears; int m4 = Meshac.LOG.all.size();
   writeCfg("{\\"halfLifeSeconds\\":-1}"); Config.load();
   ck(Movement.clears > clears, "S2 reload did not invoke the Movement pending-clear hook"); // invocation only: clearing semantics are pinned by MonitorSourceWitnessTest
   ck(!Config.get().enforce("boatfly"), "S2 invalid policy must close the direct gate");
-  ck(!rise5(r), "S2 invalid policy: the real caller signals but must NOT refuse");
+  expectRefusal("S2 invalid-policy", rise5(r), false); // the real caller signals but must NOT refuse
   ck(Meshac.LOG.containsSince("boatfly", m4), "S2 invalid-policy signals must still be logged");
 
   // S3: remove with an invalid offence half-life
@@ -171,8 +174,10 @@ class PolicyReloadIntegration(unittest.TestCase):
         self.assertTrue(shutil.which('javac'), 'HARD prereq missing: javac not on PATH - this test must RUN, not skip (Box provides the JDK)')
         self.assertIsNotNone(gj, 'HARD prereq missing: no Gson jar (set GSON_JAR or use the gradle cache) - this test must RUN, not skip')
         self.assertTrue(Path(gj).name.startswith('gson-'), f'gson jar sanity: {gj}')
-        jv = subprocess.run(['javac','-version'], capture_output=True, text=True, timeout=30)
-        print('TOOLCHAIN javac:', (jv.stderr or jv.stdout).strip())
+        jv = subprocess.run(['javac','-version'], capture_output=True, text=True, timeout=30, check=True)
+        vv = subprocess.run(['java','-version'], capture_output=True, text=True, timeout=30, check=True)
+        print('TOOLCHAIN javac:', shutil.which('javac'), (jv.stderr or jv.stdout).strip())
+        print('TOOLCHAIN java:', shutil.which('java'), (vv.stderr or vv.stdout).strip().splitlines()[0])
         print('TOOLCHAIN gson jar:', gj, 'sha256', sha(Path(gj).read_bytes()))
         with tempfile.TemporaryDirectory(prefix='reload-it-') as d:
             root = Path(d); cfgdir = root/'config'; cfgdir.mkdir()
@@ -184,29 +189,45 @@ class PolicyReloadIntegration(unittest.TestCase):
                 text = (S/f'{n}.java').read_text()
                 if n == 'Verdict':
                     n_clock = text.count(CLOCK_NEEDLE)
+                    self.assertEqual(n_clock, 5, 'expected exactly 5 clock sites in production Verdict (update the pin on a real change; 0 would mean the rebinding silently no-ops)')
                     text = text.replace(CLOCK_NEEDLE, 'dev.meshac.TestClock.ms')
                     self.assertEqual(text.count(CLOCK_NEEDLE), 0, 'clock rebinding incomplete')
                     self.assertEqual(text.count('dev.meshac.TestClock.ms'), n_clock, 'clock rebinding count drifted')
                     self.assertEqual(text.replace('dev.meshac.TestClock.ms', CLOCK_NEEDLE), (S/f'{n}.java').read_text(), 'Verdict fixture copy differs from production beyond the clock rebinding')
                     print(f'SOURCE Verdict.java: clock rebound at {n_clock} sites, reversal-identical')
                 f = root/'prod'/f'dev/meshac/{n}.java'; f.parent.mkdir(parents=True, exist_ok=True); f.write_text(text); sources.append(str(f))
-                manifest.append(f'prod/dev/meshac/{n}.java:{sha(text.encode())}')
-                print(f'SOURCE {n}.java sha256 {sha((S/f"{n}.java").read_bytes())}' + ('' if n == 'Verdict' else ' (byte-identical)'))
+                src_b, fix_b = (S/f'{n}.java').read_bytes(), f.read_bytes()
+                manifest.append(f'prod/dev/meshac/{n}.java:source={sha(src_b)}:fixture={sha(fix_b)}')
+                if n == 'Verdict':
+                    print(f'SOURCE Verdict.java source sha256 {sha(src_b)} fixture sha256 {sha(fix_b)} (differs ONLY by the clock rebinding; reversal + count asserted)')
+                else:
+                    self.assertEqual(src_b, fix_b, f'{n}.java fixture bytes differ from production bytes')
+                    print(f'SOURCE {n}.java sha256 {sha(src_b)} (byte-identical, fixture bytes re-hashed from disk)')
             h = root/'dev/meshac/ReloadHarness.java'; h.write_text(HARNESS); sources.append(str(h))
             manifest.append(f'dev/meshac/ReloadHarness.java:{sha(HARNESS.encode())}')
             mhash = hashlib.sha256('\n'.join(manifest).encode()).hexdigest()
             print('FIXTURE-MANIFEST sha256', mhash)
+            for row in manifest: print('MANIFEST-ROW', row)
             out = root/'out'
-            try:
-                subprocess.run(['javac','-J-Xmx256m','-cp',gj,'-d',str(out)]+sources, check=True, timeout=300, capture_output=True, text=True)
-            except subprocess.CalledProcessError as e:
-                self.fail('javac failed:\n' + (e.stderr or '')[-4000:])
-            try:
-                r = subprocess.run(['java','-Xmx256m',f'-Dmeshac.test.configdir={cfgdir}','-cp',f'{out}:{gj}','dev.meshac.ReloadHarness'], capture_output=True, text=True, timeout=180)
-            except subprocess.TimeoutExpired:
-                self.fail('harness exceeded the 180 s bound')
-            self.assertEqual(r.returncode, 0, (r.stdout + r.stderr)[-4000:])
-            self.assertIn('ReloadHarness PASS', r.stdout)
-            print(r.stdout.strip())
+            # an output cap that actually caps: subprocess output goes to FILES (memory stays flat), only bounded tails are read back; sizes reported
+            jlog, hlog = root/'javac.log', root/'harness.log'
+            with open(jlog,'w') as lf:
+                try:
+                    subprocess.run(['javac','-J-Xmx256m','-cp',gj,'-d',str(out)]+sources, check=True, timeout=300, stdout=lf, stderr=subprocess.STDOUT)
+                except subprocess.TimeoutExpired:
+                    self.fail('javac exceeded the 300 s bound')
+                except subprocess.CalledProcessError as e:
+                    self.fail(f'javac rc={e.returncode}, log {jlog.stat().st_size} bytes, tail:\n' + jlog.read_bytes()[-4000:].decode(errors='replace'))
+            print(f'javac log {jlog.stat().st_size} bytes at {jlog}')
+            with open(hlog,'w') as lf:
+                try:
+                    r = subprocess.run(['java','-Xmx256m',f'-Dmeshac.test.configdir={cfgdir}','-cp',f'{out}:{gj}','dev.meshac.ReloadHarness'], stdout=lf, stderr=subprocess.STDOUT, timeout=180)
+                except subprocess.TimeoutExpired:
+                    self.fail('harness exceeded the 180 s bound')
+            htail = hlog.read_bytes()[-4000:].decode(errors='replace')
+            self.assertEqual(r.returncode, 0, f'harness rc={r.returncode}, log {hlog.stat().st_size} bytes, tail:\n' + htail)
+            self.assertIn('ReloadHarness PASS', htail)
+            print(f'harness log {hlog.stat().st_size} bytes at {hlog}')
+            print(htail.strip())
 
 if __name__ == '__main__': unittest.main()

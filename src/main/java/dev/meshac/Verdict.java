@@ -41,9 +41,9 @@ public final class Verdict {
 			if (h.lh.now(ms, cfg.ladderParams()) < 0.25) { h.weight.clear(); h.detail.clear(); } // cooled off: the case must name the check of THIS build-up, not one from an hour ago
 			Ladder.Step ls = h.lh.add(check, weight, ms, Config.get().ladderParams());
 			h.heat = (int) Math.round(h.lh.heat); h.at = ms; heatNow = h.heat;
-			h.weight.merge(check, weight, Integer::sum); h.detail.put(check, detail);
-			step = ls == Ladder.Step.REMOVE ? Step.REMOVE : ls == Ladder.Step.HOLD ? Step.HOLD : Step.SETBACK;
-			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + h.heat);
+			if (ls != Ladder.Step.LOG) { h.weight.merge(check, weight, Integer::sum); h.detail.put(check, detail); } // an invalid-policy flag leaves NO enforcement evidence (weight/detail feed the case build-up)
+			step = ls == Ladder.Step.REMOVE ? Step.REMOVE : ls == Ladder.Step.HOLD ? Step.HOLD : ls == Ladder.Step.LOG ? Step.LOG : Step.SETBACK;
+			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + h.heat + (ls == Ladder.Step.LOG ? " (invalid policy: logged, no action)" : ""));
 			ev = new ArrayList<>(h.trace);
 			// The case names the check that carried most of the heat, not whichever one happened to land last: a held player hovering after a no-fall flag is a no-fall case.
 			String top = check; int best = -1;

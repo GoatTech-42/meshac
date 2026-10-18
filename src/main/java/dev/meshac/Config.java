@@ -85,14 +85,19 @@ public final class Config {
 	/** Eager policy validation. Runs in load() after deserialization and BEFORE the instance is published as Config.get(),
 	 *  and once for the first-boot instance. Diagnostics are logged here (bounded by operator reloads), not per signal. */
 	void validatePolicy() {
-		Ladder.Params raw = new Ladder.Params(halfLifeSeconds != null ? halfLifeSeconds : 8, holdAtD(), removeAtD(), requireClusters != null ? requireClusters : 3, requireClustersTierA != null ? requireClustersTierA : 2, 3, 150);
-		double rawHl = offenceHalfLifeDays != null ? offenceHalfLifeDays : memoryDays();
-		policy = Ladder.PolicyDecision.of(raw, rawHl, lastValidLadder, 14);
-		if (policy.invalid()) {
-			String probs = Ladder.Params.problems(raw);
-			if (!probs.isEmpty()) Meshac.LOG.warn("[meshac] invalid ladder config ({}): keeping the last valid values and pausing enforcement (log-only) until a valid reload", probs);
-			if (policy.offenceHalfLifeDays() != rawHl) Meshac.LOG.warn("[meshac] invalid offenceHalfLifeDays ({}): keeping 14 d and pausing enforcement (log-only) until a valid reload", rawHl);
-		} else lastValidLadder = raw;
+		try {
+			Ladder.Params raw = new Ladder.Params(halfLifeSeconds != null ? halfLifeSeconds : 8, holdAtD(), removeAtD(), requireClusters != null ? requireClusters : 3, requireClustersTierA != null ? requireClustersTierA : 2, 3, 150);
+			double rawHl = offenceHalfLifeDays != null ? offenceHalfLifeDays : memoryDays();
+			policy = Ladder.PolicyDecision.of(raw, rawHl, lastValidLadder, 14);
+			if (policy.invalid()) {
+				String probs = Ladder.Params.problems(raw);
+				if (!probs.isEmpty()) Meshac.LOG.warn("[meshac] invalid ladder config ({}): keeping the last valid values and pausing enforcement (log-only) until a valid reload", probs);
+				if (policy.offenceHalfLifeDays() != rawHl) Meshac.LOG.warn("[meshac] invalid offenceHalfLifeDays ({}): keeping 14 d and pausing enforcement (log-only) until a valid reload", rawHl);
+			} else lastValidLadder = raw;
+		} catch (RuntimeException e) { // a null preset or any broken getter must never escape into load(): publish an invalid decision (log-only) on the reviewed defaults
+			Meshac.LOG.warn("[meshac] policy validation failed ({}): reviewed defaults published, enforcement paused (log-only) until a valid reload", e.toString());
+			policy = new Ladder.PolicyDecision(Ladder.Params.defaults(), 14, true);
+		}
 	}
 	private boolean policyInvalid() { return policy == null || policy.invalid(); } // policy==null only before the first validatePolicy(); fail to log-only, never to enforcement
 	public Ladder.Params ladderParams() { return policy != null ? policy.params() : Ladder.Params.defaults(); }
@@ -122,7 +127,7 @@ public final class Config {
 		help.addProperty("appearance", "accent and warn are #RRGGBB colors. serverName and appeal appear on removal screens.");
 		root.add("_help", help); return g.toJson(root) + "\n";
 	}
-	private static Config cur = new Config();
+	private static volatile Config cur = new Config(); // volatile publication; the only writer is the reload path (brigadier runs /mesh reload on the server thread), readers are the server and network threads
 	static { cur.validatePolicy(); } // first-boot instance is validated before any enforce() call can read it
 	public static Config get() { return cur; }
 
@@ -145,7 +150,8 @@ public final class Config {
     output = g.toJson(root) + "\n";
    } else output = documented(g, cur);
   } catch (Exception e) { Meshac.LOG.warn("[meshac] config read/parse failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
-  next.validatePolicy(); Movement.clearPendingActions(); Verdict.clearPendingActions(); cur = next; // validated BEFORE publishing: no enforce() call can run ahead of discovery; no old hold or NoFall debt survives
+  try { next.validatePolicy(); } catch (RuntimeException e) { Meshac.LOG.warn("[meshac] config validation failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
+  Movement.clearPendingActions(); Verdict.clearPendingActions(); cur = next; // validated BEFORE publishing: no enforce() call can run ahead of discovery; reload wipes ALL ladder evidence (Verdict.clearPendingActions clears HEAT): invalid-period evidence never survives into a valid policy
   try { Files.writeString(p, output); }
   catch (Exception e) { Meshac.LOG.warn("[meshac] config settings applied but file could not be saved: {}", e.toString()); return AdminLog.ReloadResult.APPLIED_NOT_SAVED; }
   return existed ? AdminLog.ReloadResult.APPLIED : AdminLog.ReloadResult.DEFAULTS_CREATED;

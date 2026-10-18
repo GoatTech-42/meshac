@@ -2,7 +2,7 @@ package dev.meshac;
 
 /** The punishment maths, with no game code in it so it can be replayed and tested offline. See docs/PUNISHMENT-DESIGN.md. */
 public final class Ladder {
-	public enum Step { SETBACK, HOLD, REMOVE }
+	public enum Step { SETBACK, HOLD, REMOVE, LOG } // LOG: evidence recorded, no action - the invalid-policy result (mirrors Verdict.Step.LOG)
 
 	/** Tunable numbers. All come from config. clusterMs: flags closer together than this are one cause (a lag stall hits many checks in one burst). */
 	public record Params(double halfLifeSec, double holdAt, double removeAt, int minClusters, int minClustersTierA, int tierAWeight, long clusterMs) {
@@ -39,18 +39,18 @@ public final class Ladder {
 		public double heat; long at; long clusterAt; double clusterMax; int clusters, tierAClusters;
 		// Policy epoch: the params this evidence was collected under. A config change (e.g. /mesh reload) must never
 		// RECLASSIFY existing clusters under a new threshold, so a params mismatch wipes the evidence (fail closed) instead.
-		private double pHalf, pHold, pRem; private int pMinc, pMinta, pTaw; private long pCms; private boolean bound;
-		private boolean epochStale(Params p) {
-			return bound && (pHalf != p.halfLifeSec() || pHold != p.holdAt() || pRem != p.removeAt() || pMinc != p.minClusters() || pMinta != p.minClustersTierA() || pTaw != p.tierAWeight() || pCms != p.clusterMs());
+		private double pHalf, pHold, pRem; private int pMinc, pMinta, pTaw; private long pCms; private boolean pInvalid; private boolean bound;
+		private boolean epochStale(Params p, boolean invalid) {
+			return bound && (pInvalid != invalid || pHalf != p.halfLifeSec() || pHold != p.holdAt() || pRem != p.removeAt() || pMinc != p.minClusters() || pMinta != p.minClustersTierA() || pTaw != p.tierAWeight() || pCms != p.clusterMs());
 		}
-		private void bind(Params p) { pHalf = p.halfLifeSec(); pHold = p.holdAt(); pRem = p.removeAt(); pMinc = p.minClusters(); pMinta = p.minClustersTierA(); pTaw = p.tierAWeight(); pCms = p.clusterMs(); bound = true; }
+		private void bind(Params p, boolean invalid) { pHalf = p.halfLifeSec(); pHold = p.holdAt(); pRem = p.removeAt(); pMinc = p.minClusters(); pMinta = p.minClustersTierA(); pTaw = p.tierAWeight(); pCms = p.clusterMs(); pInvalid = invalid; bound = true; }
 		/** Unbound (never fed), stale-epoch, or invalid-params evidence reads as ZERO: old heat is never interpreted under a new decay curve, and corrupt params read as nothing. */
-		public double now(long t, Params p) { if (!bound || !p.valid() || epochStale(p)) return 0; return heat * Math.pow(0.5, Math.max(0, t - at) / 1000.0 / p.halfLifeSec()); }
+		public double now(long t, Params p) { if (!bound || !p.valid() || epochStale(p, false)) return 0; return heat * Math.pow(0.5, Math.max(0, t - at) / 1000.0 / p.halfLifeSec()); }
 		public Step add(String check, int weight, long t, Params p) {
-			boolean invalid = !p.valid(); // explicit invalid-policy contract: evidence is recorded under sanitized values, but the step is capped at SETBACK - raw invalid params can never remove anyone, even for a caller that skips Config
+			boolean invalid = !p.valid(); // explicit invalid-policy contract: evidence is recorded under sanitized values, but the step is LOG (no action) - raw invalid params can never cause an effect, even for a caller that skips Config. The epoch binds the invalidity, so invalid-period evidence is never reclassified under a later valid policy.
 			if (invalid) p = p.sanitized();
-			if (epochStale(p)) reset(); // policy changed: old evidence is never reclassified under the new thresholds
-			bind(p);
+			if (epochStale(p, invalid)) reset(); // policy changed: old evidence is never reclassified under the new thresholds
+			bind(p, invalid);
 			double h = now(t, p);
 			// Intentional (decision relayed via parent 10-18, option a of the lane-A design question): tier-A evidence decays WITH the heat.
 			// Below the 0.25 floor the next flag wipes tierAClusters too, so 'tier A confirmed' only survives inside one active build-up. The
@@ -67,13 +67,14 @@ public final class Ladder {
 			// with those bursts the branch is live on default (6 <= 7) and strict (5 <= 7) and subsumed on the shipped lenient preset (removeAt 8 > 7:
 			// two weight-3 bursts cap at 5.95 < 7 and the third burst trips the generic gate in the same add() call). A future weight-4+ tier-A
 			// signal would clear the lenient floor and make the branch live there too. Documented behavior, unchanged (Box lane A, 10-18).
-			if (tierAClusters >= p.minClustersTierA() && h >= p.removeAt() - 1) return invalid ? Step.SETBACK : Step.REMOVE; // two separate tier A bursts: no need to wait for full heat
-			if (h >= p.removeAt() && clusters >= p.minClusters()) return invalid ? Step.SETBACK : Step.REMOVE;
-			if (h >= p.holdAt()) return invalid ? Step.SETBACK : Step.HOLD;
+			if (invalid) return Step.LOG; // invalid policy: evidence recorded above, no action of any kind
+			if (tierAClusters >= p.minClustersTierA() && h >= p.removeAt() - 1) return Step.REMOVE; // two separate tier A bursts: no need to wait for full heat
+			if (h >= p.removeAt() && clusters >= p.minClusters()) return Step.REMOVE;
+			if (h >= p.holdAt()) return Step.HOLD;
 			return Step.SETBACK;
 		}
 		public void reset() { heat = 0; clusters = 0; tierAClusters = 0; clusterMax = 0; clusterAt = 0; bound = false; }
-		public boolean confirmedTierA(Params p) { return bound && p.valid() && !epochStale(p) && tierAClusters >= p.minClustersTierA(); } // honors the configured bar (requireClustersTierA); a never-fed heat, invalid params, or evidence from before a config change never confirms
+		public boolean confirmedTierA(Params p) { return bound && p.valid() && !epochStale(p, false) && tierAClusters >= p.minClustersTierA(); } // honors the configured bar (requireClustersTierA); a never-fed heat, invalid params, invalid-policy-period evidence, or evidence from before a config change never confirms
 	}
 
 	/** The load-time policy decision, pure for the harness: given the raw config values, decide what gets PUBLISHED.
@@ -81,6 +82,8 @@ public final class Ladder {
 	 *  caller pauses enforcement (log-only) rather than trusting substituted thresholds. */
 	public record PolicyDecision(Params params, double offenceHalfLifeDays, boolean invalid) {
 		public static PolicyDecision of(Params raw, double rawHalfLifeDays, Params lastValid, double defaultHalfLifeDays) {
+			if (lastValid != null && !lastValid.valid()) lastValid = null; // a corrupt last-valid is no fallback
+			if (!(defaultHalfLifeDays > 0) || !Double.isFinite(defaultHalfLifeDays)) defaultHalfLifeDays = 14;
 			boolean badP = !raw.valid();
 			boolean badHl = !(rawHalfLifeDays > 0) || !Double.isFinite(rawHalfLifeDays);
 			return new PolicyDecision(badP ? (lastValid != null ? lastValid : Params.defaults()) : raw, badHl ? defaultHalfLifeDays : rawHalfLifeDays, badP || badHl);

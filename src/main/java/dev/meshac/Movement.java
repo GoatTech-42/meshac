@@ -15,11 +15,13 @@ public final class Movement {
 	private static final Map<UUID, S> STATE = new ConcurrentHashMap<>();
 	private static final int SIGNAL_AT = 10;      // buffered violations before a setback
 	private static final int SKIP_TICKS = 20;  // grace after teleport, damage, effects
+	private static final int GROUND_WINDOW = 5;    // PROPOSAL: sliding window over the last ground claims (legit battery gates)
+	private static final int GROUND_FLAG_AT = 3;   // PROPOSAL: unsupported claims inside the window that fire nofall
 
 	private static final class S { final ContextLogBudget.Caller ctxBudget = new ContextLogBudget.Caller(); int ownerEntity; Object ownerDimension; volatile boolean blinkHit; volatile long burstMark; final BlinkOrigin bo = new BlinkOrigin(); long iceAt; double prevDtS; long flyMedAt, gtLogAt; final CompareLogBudget.Caller spShadowLog = new CompareLogBudget.Caller(); double spShadow; boolean wasExempt; long lastPosAt, burstStart; int burstN; double burstGap; boolean lastMoving; double ax = Double.NaN, az; long tickEnds, teAtLastPos;  final BlinkClock clock = new BlinkClock(); final BounceTracker bounce = new BounceTracker(); final MediumExit exit = new MediumExit(); final StepAccumulator stepAcc = new StepAccumulator(); double lastH, lastFallH; int slipN;
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
 		boolean ground, cground, init, ownTp;
-		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks;
+		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks; final GroundEvidence gndEv = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT);
 	}
 
  private static S state(ServerPlayer pl) {
@@ -77,7 +79,7 @@ public final class Movement {
 				if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly) {
 					Verdict.Step bst = Verdict.signal(pl, "blink", "held its movement packets back and released them in one burst", 1);
 					if (bst != Verdict.Step.LOG && acts("blink") && act == BlinkOrigin.Act.ORIGIN && p.hasPosition()) { // the flushed packets already moved the player: put them back where the burst began (soft mode never gets here)
-						s.ownTp = true; s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
+						s.ownTp = true; s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 						s.goodX = s.bo.x; s.goodY = s.bo.y; s.goodZ = s.bo.z;
 						s.px = s.cx = s.bo.x; s.py = s.cy = s.bo.y; s.pz = s.cz = s.bo.z;
 						if (bst == Verdict.Step.HOLD) { s.freezeUntil = System.currentTimeMillis() + 1500; s.freezeCheck = "blink"; }
@@ -180,6 +182,13 @@ public final class Movement {
 			s.bufClimb = dy > 0.21 ? s.bufClimb + 2 : Math.max(0, s.bufClimb - 1);
 			if (s.bufClimb >= 4) hit = String.format("ladder dy %.3f", dy);
 		} else s.bufClimb = 0;
+		// Ground-claim probe, shared by the air-chain reset gate and the nofall check: a ground claim
+		// with only air 0.1 below the moved box is unsupported (spoof evidence, not a landing).
+		boolean claimAir = false;
+		if (ground && !exempt && s.grace <= 0) {
+			AABB gb = pl.getBoundingBox().move(dx, dy, dz);
+			claimAir = pl.level().noCollision(pl, new AABB(gb.minX, gb.minY - 0.1, gb.minZ, gb.maxX, gb.minY, gb.maxZ));
+		}
 		if (s.grace > 0 || exempt) {
 			if (s.grace > 0) s.grace--;
 			s.airY0 = y; s.sinceJump = 99; s.exemptAt = System.currentTimeMillis();
@@ -253,7 +262,7 @@ public final class Movement {
 				double room = 1.45 + (jb == null ? 0 : (jb.getAmplifier() + 1) * 0.6);
 				if (s.airY0 == 0) s.airY0 = y; // a fresh state has no takeoff height yet
 				if (dy > 0.05 && y - s.airY0 > room && s.grace == 0 && hit == null && System.currentTimeMillis() - s.exemptAt > 4000 && !s.bounce.bouncing(y, nowMs)) hit = String.format("high jump rose %.2f", y - s.airY0);
-			} else { if (!stuckNow) s.bufFly = 0; s.sinceJump = 99; s.airY0 = s.ground ? sy : y; } // a stuck or sliding packet skips the checks for itself only and neither clears nor adds to the fly buffer
+			} else if (!claimAir) { if (!stuckNow) s.bufFly = 0; s.sinceJump = 99; s.airY0 = s.ground ? sy : y; } // a stuck or sliding packet skips the checks for itself only; an unsupported ground claim is not a landing: it must not reset the air chains (rig round-2 human high jump)
 			boolean bouncePad = pl.level().getBlockState(pl.blockPosition().below()).is(net.minecraft.world.level.block.Blocks.SLIME_BLOCK)
 				|| pl.level().getBlockState(pl.blockPosition().below()).is(net.minecraft.tags.BlockTags.BEDS)
 				|| pl.level().getBlockState(pl.blockPosition().below(2)).is(net.minecraft.world.level.block.Blocks.SLIME_BLOCK)
@@ -267,7 +276,7 @@ public final class Movement {
 			// Step: claiming ground while rising more than a half block. Vanilla only auto-steps 0.6.
 			if (StepEvidence.excessive(ground, dy, pl.hasEffect(MobEffects.JUMP_BOOST)) && hit == null) hit = String.format("step dy %.3f onGround", dy);
 			// High jump / step: leaving the ground higher than a jump (0.42 + jump boost) or a step (0.6).
-			if (!StepEvidence.autoStep(ground, dy, pl.hasEffect(MobEffects.JUMP_BOOST)) && s.ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && GlideWindow.jumpCheckLive(nowMs, s.glideAt) && !powderNear && !s.bounce.bouncing(y, nowMs)) { // not just after an elytra landing (rocket/glide momentum carries into the first hop) and not during a real slime/bed bounce (launches the same way)
+			if (!StepEvidence.autoStep(ground, dy, pl.hasEffect(MobEffects.JUMP_BOOST)) && s.ground && dy > 0.62 + 0.1 * (pl.hasEffect(MobEffects.JUMP_BOOST) ? 3 : 0) && GlideWindow.jumpCheckLive(nowMs, s.glideAt) && !FpGuards.powderJumpBand(dy, powderNear) && !s.bounce.bouncing(y, nowMs)) { // powder exempts only the ~0.63 struggle band, not any big dy (rig round-2 powder-snow jump) // not just after an elytra landing (rocket/glide momentum carries into the first hop) and not during a real slime/bed bounce (launches the same way)
 				s.bufJump += 2;
 				if (s.bufJump >= 2 && hit == null) hit = String.format("jump dy %.3f", dy);
 			} else s.bufJump = Math.max(0, s.bufJump - 1);
@@ -292,23 +301,24 @@ public final class Movement {
 			if (s.balMs > 1300 && hit == null) hit = String.format("timer ahead %.0f ms", s.balMs);
 		}
 		s.lastNs = now;
-		// NoFall / ground spoof: claims to stand on something with only air below.
+		// NoFall / ground spoof: claims to stand on something with only air below. Windowed evidence
+		// (rig round 2: an interleaved spoof slipped the old 3-consecutive buffer; honest air packets
+		// between spoofed claims no longer erase the evidence).
 		if (ground && !exempt && s.grace <= 0) {
-			AABB b = pl.getBoundingBox().move(dx, dy, dz);
-			boolean air = pl.level().noCollision(pl, new AABB(b.minX, b.minY - 0.1, b.minZ, b.maxX, b.minY, b.maxZ));
-			s.bufGround = air ? s.bufGround + 1 : 0;
-			if (GROUND_TOL_COMPARE && air) groundTolCompare(pl, s, b);
-			if (TRACE && (air || s.bufGround > 0)) groundCtx(pl, s, s.bufGround >= 3 && hit == null, air, ground, dy, s.prevDtS, exempt);
-			if (s.bufGround >= 3 && hit == null) hit = "nofall ground spoof";
-		} else s.bufGround = 0;
+			s.gndEv.add(claimAir);
+			s.bufGround = s.gndEv.unsupported();
+			if (GROUND_TOL_COMPARE && claimAir) groundTolCompare(pl, s, pl.getBoundingBox().move(dx, dy, dz));
+			if (TRACE && (claimAir || s.bufGround > 0)) groundCtx(pl, s, s.gndEv.flagged() && hit == null, claimAir, ground, dy, s.prevDtS, exempt);
+			if (s.gndEv.flagged() && hit == null) hit = "nofall ground spoof";
+		} else if (ground) { s.gndEv.clear(); s.bufGround = 0; } // exempt/grace ground claim: fresh start, as before; air packets leave the window alone
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
 			if (ch[0].equals("speed") || ch[0].equals("fly") || ch[0].equals("air") || ch[0].equals("high") || ch[0].equals("microhop")) ctxLog(pl, s, dx, dy, dz); // log only: what the player was doing when the speed check fired
 			if (ch[0].equals("nofall")) { if (MonitorGate.armNoFall(acts("nofall"))) s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("fly") ? 3 : ch[0].equals("microhop") ? 2 : 1); // a block climbed in a few ticks is never an accident
-			if (step == Verdict.Step.LOG || !acts(ch[0])) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.spBal = 0; s.spShadow = 0; return null; } // soft mode: record, never correct
+			if (step == Verdict.Step.LOG || !acts(ch[0])) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.balMs = 0; s.spBal = 0; s.spShadow = 0; return null; } // soft mode: record, never correct
 			s.ownTp = true;
-			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			if (step == Verdict.Step.HOLD) { s.freezeUntil = System.currentTimeMillis() + 1500; s.freezeCheck = ch[0]; }
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};

@@ -14,6 +14,11 @@ public final class FpGuards {
 	/** The powder climb, strictly: the body must overlap powder snow (the feet cell or the cell above) - vanilla only climbs while inside it (LivingEntity travel treats powder as climbable). "Near" is not enough: a hack next to a powder column must not inherit the band. */
 	public static boolean powderClimb(double dy, boolean bodyInPowder) { return bodyInPowder && dy > 0 && dy <= POWDER_CLIMB_DY; }
 
+	/** Struggle-climbing out of powder snow kicks dy ~0.63 (mutant319 FP MA-65NE 2026-10-11). The jump check exempts this BAND only, not any big dy near powder - rig round 2: a hack big-jumped beside powder under the blanket exemption. PROPOSAL band; the zero-FP legit battery gates it. */
+	public static final double POWDER_JUMP_LO = 0.60, POWDER_JUMP_HI = 0.70;
+	/** True when a ground-leaving dy near powder is the vanilla struggle-climb kick, not a boosted jump. */
+	public static boolean powderJumpBand(double dy, boolean powderNear) { return powderNear && dy >= POWDER_JUMP_LO && dy <= POWDER_JUMP_HI; }
+
 	/** Falling, and the previous packet spanned several ticks: its dy is a multi-tick drop, so the expected next dy built from it is too low and a normal one-tick drop looks like hovering. */
 	public static boolean staleFall(double dy, double prevDtS) { return dy < 0 && prevDtS > STALE_DT; }
 

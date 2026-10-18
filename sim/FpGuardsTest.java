@@ -69,6 +69,13 @@ public final class FpGuardsTest {
 		check(fb2 >= 10, "hover at dy 0 in powder with no support still flags: " + fb2);
 		int gb = 0; for (int i = 0; i < 40; i++) gb = FpGuards.flyBuf(gb, 0.0, FpGuards.stuckExpect(-0.078, true), false, FpGuards.restingInPowder(true, true, 0.0));
 		check(gb == 0, "standing on the pit floor in snow built buffer " + gb);
+				// powderJumpBand: only the ~0.63 struggle band near powder is exempt
+		check(FpGuards.powderJumpBand(0.63, true), "0.63 near powder not in band");
+		check(FpGuards.powderJumpBand(0.60, true) && FpGuards.powderJumpBand(0.70, true), "band edges excluded");
+		check(!FpGuards.powderJumpBand(0.59, true), "0.59 near powder in band");
+		check(!FpGuards.powderJumpBand(0.71, true), "0.71 near powder in band");
+		check(!FpGuards.powderJumpBand(1.10, true), "big jump near powder in band");
+		check(!FpGuards.powderJumpBand(0.63, false), "0.63 without powder in band");
 		System.out.println(fails == 0 ? "FpGuardsTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

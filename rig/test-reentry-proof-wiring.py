@@ -71,7 +71,7 @@ class ReentryPins(unittest.TestCase):
     def test_lock_coverage_boundaries(self):
         v = stripped(Path('src/main/java/dev/meshac/Verdict.java'))
         slo = body(v, 'public static Step signalLogOnly(')
-        self.assertLess(slo.index('h.name = pl.getGameProfile().name();'), slo.index('synchronized (h)'))  # name write OUTSIDE the lock (documented benign-by-immutability)
+        self.assertLess(slo.index('h.name = pl.getGameProfile().name();'), slo.index('synchronized (h)'))  # name write OUTSIDE the lock (visibility via monitor-edge happens-before)
         self.assertEqual(slo.count('h.name = '), 1)
         fgt = body(v, 'public static void forget(')
         self.assertLess(fgt.index('HEAT.remove(id)'), fgt.index('flushSuppressed(id, h, "disconnect flush")'))  # remove-then-flush, documented
@@ -80,9 +80,10 @@ class ReentryPins(unittest.TestCase):
         self.assertIn('synchronized (h)', fs)
     def test_paper_states_the_boundaries(self):
         p = (ROOT/'rig/SERVER-THREAD-REENTRY-PROOF.md').read_text()
-        for frag in ['destroyBlock', 'benign-by-immutability', 'ConcurrentHashMap',
-                     'flush loop over HEAT.entrySet()', 'Ladder.Heat.now does not mutate',
-                     'thread-assertion', 'fail-safe direction', 'server.execute', 'detection LOSS']:
+        for frag in ['destroyBlock', 'monitor-edge happens-before', 'ConcurrentHashMap',
+                     'flush loop over HEAT.entrySet()', 'Heat.now returns the decayed value',
+                     'thread-assertion', 'fail-safe direction', 'server.execute', 'detection LOSS',
+                     'in-flight-reference', 'DETACHED', 'NOT an']:
             self.assertIn(frag, p)
 if __name__ == '__main__':
     unittest.main()

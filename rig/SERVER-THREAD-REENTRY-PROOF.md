@@ -1,11 +1,15 @@
-# Pre-GO 2: server-thread / reentry proof for the combat log-only path (0064 rev)
+# Pre-GO 2: server-thread / reentry proof for the combat log-only path (0065 rev)
 
-Status: PAPER for review, over the 0063 atomic-drain rework. 0063 reviewer verdict:
-scoped SOURCE GO; paper GO only as a conditional thread-assumption inventory. This
-revision replaces the generic "vanilla schedules handlers" claim with per-injection-point
-scheduling evidence (item 1), and replaces the "every mutation holds the lock" claim with
-an explicit enumeration of what is and is not lock-covered (item 3). Reviewer correction
-folded in: Ladder.Heat.now does not mutate, so status() read-only stands (item 2 dropped).
+Status: PAPER for review, over the 0063 atomic-drain rework and the 0065a destroyBlock
+guard. Reviewer verdicts so far: 0063 scoped SOURCE GO; 0064 scoped conditional PAPER GO
+(per-injection guard inventory accepted as better than blanket vanilla scheduling - NOT an
+all-version thread proof: the 6 static string pins assert the cited line-level facts only
+and prove nothing about the indirect call graph or vanilla/Fabric API contracts). This
+revision: (a) destroyBlock moves from ASSUMPTION to CODE-GUARDED via the 0065a early
+isSameThread guard (detection-loss caveat, no server.execute - reviewer item 4); (b) the
+forget() lifecycle argument is corrected - the in-flight-reference race is a documented
+residual, not "durable either way" (reviewer item 1); (c) the h.name visibility argument
+is restated precisely - monitor-edge happens-before, not immutability (reviewer item 2).
 Empirical closure (thread-assertion rig run) is proposed, not done. Box compile x4 and the
 FP 100/300 ms replay remain Box's gates.
 
@@ -61,16 +65,15 @@ guarded branch would simply never run for it - checks for that packet would sile
 fire (a detection LOSS, not a concurrency hazard). The T1 concurrency claim does not
 depend on the re-queue behavior; only detection liveness does.
 
-### B. Vanilla call-chain ASSUMPTION routes (NOT code-guarded; named explicitly)
+### B. Vanilla/Fabric call-chain ASSUMPTION routes (NOT code-guarded; named explicitly)
 
-- ServerPlayerGameModeMixin.destroyBlock HEAD (:17-19) -> Mining.refuse -> Verdict.signal:
-  no isSameThread guard. Assumption: vanilla invokes ServerPlayerGameMode methods only
-  from the server thread (packet path after its own ensureRunningOnSameThread re-queue,
-  plus game logic); no netty-thread caller of destroyBlock exists in vanilla. This is the
-  SAME class of assumption d124's existing unguarded per-player state (plain HashMaps in
-  Movement etc.) already relies on; 0063/0064 stacks nothing new on it. If the reviewer
-  wants this route code-guarded too, it is a two-line change (isSameThread check +
-  server.execute else-branch) - say the word.
+- ServerPlayerGameModeMixin.destroyBlock: CODE-GUARDED since 0065a - an early
+  isSameThread return runs BEFORE Meshac.skip / Mining.refuse / any world read. An
+  off-thread invocation now loses detection (fail-safe direction) instead of reaching
+  Verdict. Deliberately NO server.execute: a delayed refusal would change the synchronous
+  return/cancel semantics of destroyBlock and could act after the block is mined
+  (reviewer 11:03pm item 4). Guarding narrows the assumption; it does not replace the
+  all-4-version build/runtime proof.
 - Fabric event contracts: END_SERVER_TICK (Meshac.java:38, Verdict.tickFlush) and
   ServerPlayConnectionEvents.DISCONNECT (Meshac.java:42, Verdict.forget) fire on the
   server thread per the Fabric API contract; the same tick handler already mutates
@@ -87,7 +90,9 @@ depend on the re-queue behavior; only detection liveness does.
 
 Movement.arrive (:35), Inventory.arrive (:136), Movement.tickEnd (:111), Interact.signGap
 + Packets.lines + Trace.t in the sign hook (:78-81), Trace.t/ack lines in guarded hooks'
-netty passes. None touches Verdict HEAT/H state (static pin in the wiring suite).
+netty passes. None touches Verdict HEAT/H state (static pins in
+rig/test-reentry-proof-wiring.py; the pins assert exactly these line-level facts and
+nothing more).
 
 ## T2 (defense in depth): what the per-player lock does and does NOT cover
 
@@ -100,20 +105,29 @@ inside synchronized(h) is safe - Java monitors are reentrant).
 Deliberately OUTSIDE the lock, enumerated (0064, replaces the blanket T2 claim):
 
 1. `h.name = pl.getGameProfile().name()` in signalLogOnly is assigned BEFORE the
-   synchronized(h) block. Safety argument (benign-by-immutability, not lock protection):
-   the H instance is per-UUID; for a given UUID the written value is the same on every
-   write (a player's name cannot change while connected; disconnect removes the H, so a
-   rejoin gets a fresh H); a String reference write is atomic; and every READ of h.name
-   (flushSuppressed, tickFlush) happens inside synchronized(h), which the same thread
-   passed through before any receipt can reference the name. Invariant: sigLog buckets are
-   created only in signalLogOnly AFTER the name assignment, so a receipt never prints a
-   null name.
+   synchronized(h) block. Visibility argument (0065, precise - immutability alone is NOT
+   the proof): the assigning thread performs, in program order, name write -> monitor
+   enter -> bucket create -> monitor exit. Every reader of h.name (flushSuppressed,
+   tickFlush) reads it while holding the same monitor. A monitor exit happens-before every
+   subsequent enter of that monitor, and program order carries the pre-lock name write
+   into the writer's pre-exit set - so the name write happens-before any locked read that
+   can observe a bucket. Invariant: sigLog buckets are created only in signalLogOnly
+   inside the lock, after the name assignment in the same call, so a receipt can never
+   observe a bucket whose name write is not already visible; the value written is also the
+   same for a given UUID (names cannot change while connected; disconnect removes the H),
+   which covers concurrent writers but is secondary to the monitor-edge argument.
 2. HEAT map lifecycle: computeIfAbsent (note/signal/signalLogOnly) relies on
    ConcurrentHashMap's thread-safe publication of H; no per-player lock is (or needs to
-   be) held. forget() does HEAT.remove(id) THEN flushSuppressed on the removed instance:
-   a signal racing the remove would computeIfAbsent a FRESH H and start a clean bucket,
-   while the removed instance's pending counts are still flushed - the receipt is durable
-   either way; the two instances never share state.
+   be) held. forget() does HEAT.remove(id) THEN flushSuppressed on the removed instance.
+   RESIDUAL (0065, reviewer item 1 - the 0064 "durable either way" claim was WRONG): a
+   thread that captured the H reference BEFORE the remove (computeIfAbsent or tickFlush's
+   HEAT.get) can be paused, let forget() remove + flush, then resume and increment the
+   DETACHED instance's suppressed count after the flush - that count is orphaned: the
+   instance is unreachable from HEAT and never flushed again. Post-remove computeIfAbsent
+   creating a fresh H does not help; same-instance in-flight references are the hazard.
+   Unreachable when T1 holds (all four routes serialized on the server thread); NOT
+   reworked - a tombstone-flag rework is the known fix if T1 is ever abandoned. Classified
+   alongside the clearPendingActions residual below.
 3. clearPendingActions(): the flush loop over HEAT.entrySet() and HEAT.clear() are not
    atomic; a concurrent computeIfAbsent between them could drop one pending count.
    Unreachable when callers are serialized (T1); no global lock added, it would be a no-op
@@ -124,7 +138,9 @@ counts within the window and never reopens the budget.
 
 ## What this does NOT prove (empirical closure, proposed)
 
-- The bucket-B assumptions (game-mode dispatch thread, Fabric event threads, brigadier
-  dispatch thread) on all four target versions: propose a one-off thread-assertion run on
-  the rig (log Thread.currentThread() at each route, one pass per version build).
+- The remaining bucket-B assumptions (Fabric event threads, brigadier dispatch thread)
+  on all four target versions, and the guarded routes' behavior on real builds: propose a
+  one-off thread-assertion run on the rig (log Thread.currentThread() at each route, one
+  pass per version build). The static pins are line-level assertions only - they do not
+  prove the indirect call graph or any vanilla/Fabric API contract (reviewer 0064 note).
 - Box compile x4 + FP 100/300 remain Box's gates.

@@ -34,7 +34,7 @@ Packet-level bots on the same rig, before the real client was set up.
 
 ## Not covered yet
 
-- Combat (reach, aura, criticals), building (scaffold, fast place), inventory, exploits, bots and join floods.
+- Combat (reach, aura, criticals), inventory, exploits, bots and join floods. Building is partly covered (second pass below): the loud scaffold, fast place and auto-build patterns are caught, but a builder that turns its view before placing, keeps a block in hand and stays under about 4 blocks a second is a predicted miss from source reading, not rig-verified.
 - Blocks and items that change movement: ice, slime, honey, bubble columns, wind charges, elytra, riptide. These can cause false signals until tested.
 - Meteor, other clients, Via-translated clients, lag spikes, other Minecraft versions.
 - Phase, Jesus, Spider, Step, NoFall with a real client.
@@ -58,6 +58,8 @@ Same rig and same reading of the columns as above. Every hack here was also run 
 | TreeBot | Kicked | Block break rate |
 | FastBreak | No speedup got through (4 blocks in 10 s with or without it) | Vanilla needs 70 percent break progress, and the 8 a second cap sits on top |
 | ItemGenerator, TrollPotion, KillPotion | 0 items gained in survival | The server refuses creative inventory packets from survival players. Not traced at packet level |
+
+Note on the building rows (AutoBuild, InstaBuild, ScaffoldWalk, FastPlace above): these are the loud versions. A builder that turns its view before placing, keeps a block in hand (no slot swaps) and stays under about 4 blocks a second is a predicted miss from source reading, not rig-verified. A proposal explores this gap; nothing is shipped.
 
 ### Partly caught
 

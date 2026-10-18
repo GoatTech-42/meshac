@@ -2,7 +2,7 @@
 
 **Name:** meshac
 **Slug:** meshac
-**Summary (under 256 chars):** A native Fabric anticheat. Runs on the server, players install nothing. Watches movement, combat, building, inventory and mining, and removes real cheaters without flagging legit play.
+**Summary (under 256 chars):** A native Fabric anticheat. Runs on the server, players install nothing. Watches movement, combat, building, inventory and mining. Built to limit false flags on normal play, with a log-only monitor mode so you can check it on your server first.
 
 **Project type:** Mod
 **Loader:** Fabric
@@ -20,12 +20,12 @@
 
 meshac is an anticheat that lives inside your Fabric server. Nobody has to install anything on their end.
 
-I built it because most anticheats either miss things or ban honest players for lagging. The bar for meshac is simple: if a hack can be seen from the server, catch it and stop it, and never touch someone who is just playing.
+The bar for meshac is simple: if a hack can be seen from the server, catch it and stop it, and stay quiet on someone who is just playing. That bar is a goal, not a promise: false flags remain. Current limits include Bedrock and linked accounts, and ordinary movement and interaction cases still under review. Flags are reviewable in game, and monitor mode lets you watch before it ever kicks.
 
 **What it watches**
 - Movement: flight, speed, high jump, step, glide, timer, no-fall, no-clip, boat fly, anti-knockback
 - Combat: kill aura, reach, criticals, attack rate, attribute swapping
-- Building and interaction: scaffold, fast place, auto build, clicks that are not in your line of sight
+- Building and interaction: fast place, clicks that are not in your line of sight, and loud scaffold and auto-build patterns (what gets through is listed under honest limits)
 - Inventory and mining: fast break, nuker, impossible inventory actions
 
 **How it punishes**
@@ -43,7 +43,7 @@ Removal is a ladder: kick first, then a tempban that grows each time (10 minutes
 There are three presets (lenient, default, strict) and every number can be overridden in the config. There is an optional Discord webhook for holds and removals.
 
 **Honest limits**
-Some hacks look exactly like legit play from the server side (a client that only sprints at normal speed, for example). meshac does not pretend to catch those. Test results, misses included, are in docs/coverage.md in the repo.
+Some hacks look exactly like legit play from the server side (a client that only sprints at normal speed, for example). meshac does not pretend to catch those. A scaffold or auto-builder that turns its view before placing, keeps a block in hand and stays under about 4 blocks a second is a predicted miss based on source reading, not rig-verified. A proposal explores this gap; nothing is shipped for it. Test results, misses included, are in docs/coverage.md in the repo.
 
 Built and tested against real hacked clients (Wurst and Meteor) on an isolated test rig, plus a legit-play suite that has to stay at zero flags.
 

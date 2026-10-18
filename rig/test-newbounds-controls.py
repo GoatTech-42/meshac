@@ -2,7 +2,7 @@
 """Machine-checks the NEWBOUNDS capture-row spec (rig/newbounds_controls.py). No rig, no server.
 SOURCE-SHAPE CHECKS ONLY: these pins verify the spec's structure (fields, commands, DRAFT labels,
 pre-committed bounds) - they do NOT prove any runner executes the setup or validates receipts."""
-import pathlib, sys
+import os, pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import newbounds_controls
 
@@ -21,7 +21,8 @@ for k in gc:
     check(S[k]['expect'] == 'zero' and S[k]['needs'] == 'vanilla', k + ' is a vanilla zero row')
 r1 = S['nb-gc01-sneakedge']['row']
 check('ZERO nofall SIGNAL' in r1 and '300s' in r1 and '150 cycles' in r1, 'GC01 pre-commits the 5-minute (300s) zero-flag jitter bound, bound IN the legs')
-check(sum(l[3] for l in S['nb-gc01-sneakedge']['legs']) == 300, 'GC01 legs total 300s (the pre-committed bound, not 16s)')
+_GC01_TOTAL = 301 if os.environ.get('MESHAC_TEST_MUTATE') == 'gc01' else 300  # mutation hook (0039)
+check(sum(l[3] for l in S['nb-gc01-sneakedge']['legs']) == _GC01_TOTAL, 'GC01 legs total 300s (the pre-committed bound, not 16s)')
 check('DRAFT until' in r1, 'GC01 stays a DRAFT until the driver receipt proves duration')
 check('no silent widening' in r1, 'GC01 forbids silent widening')
 r5 = S['nb-gc05-jb-powder']['row']
@@ -108,9 +109,15 @@ def finish():
     if failed: raise SystemExit('%d failures' % failed)
     print('test-newbounds_controls ok')
 
-# negative control: an isolated, deliberately broken fixture suite MUST exit rc1 (reviewer 10-17, 0036)
-import subprocess
-_fx = pathlib.Path(__file__).parent / 'test-newbounds-negative-fixture.py'
-_rc = subprocess.run([sys.executable, str(_fx)], capture_output=True).returncode
-check(_rc == 1, 'broken fixture suite must exit rc1 (got %s)' % _rc)
+# negative controls (skipped inside a mutated run - no recursion)
+if not os.environ.get('MESHAC_TEST_MUTATE'):
+    import subprocess
+    # (a) isolated broken fixture harness MUST exit rc1 (0036)
+    _fx = pathlib.Path(__file__).parent / 'test-newbounds-negative-fixture.py'
+    _rc = subprocess.run([sys.executable, str(_fx)], capture_output=True).returncode
+    check(_rc == 1, 'broken fixture suite must exit rc1 (got %s)' % _rc)
+    # (b) mutation of a REAL production pin (GC01 total -> 301) MUST exit rc1 (0039)
+    _env = dict(os.environ); _env['MESHAC_TEST_MUTATE'] = 'gc01'
+    _rc2 = subprocess.run([sys.executable, str(pathlib.Path(__file__))], capture_output=True, env=_env).returncode
+    check(_rc2 == 1, 'mutated production pin (GC01 total) must exit rc1 (got %s)' % _rc2)
 finish()

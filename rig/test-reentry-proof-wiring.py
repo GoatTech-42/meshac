@@ -50,10 +50,13 @@ class ReentryPins(unittest.TestCase):
             self.assertIn(frag, m)
         for meth in ['meshac$place', 'meshac$use']:  # useItemOn / useItem: work only inside the isSameThread branch
             self.assertIn('if (player.level().getServer().isSameThread()) {', body(m, f'private void {meth}('))
-    def test_bucket_b_assumption_routes_pinned_as_unguarded(self):
+    def test_destroyblock_guarded_since_0065(self):
         g = stripped(Path('src/main/java/dev/meshac/mixin/ServerPlayerGameModeMixin.java'))
         self.assertIn('Mining.refuse(player, pos)', g)
-        self.assertNotIn('isSameThread', g)  # DOCUMENTED vanilla-dispatch assumption; adding a guard must fail this pin + update the paper
+        b = g.split('private void meshac$break', 1)[1]
+        self.assertIn('if (!player.level().getServer().isSameThread()) return;', b)
+        self.assertLess(b.index('isSameThread()) return;'), b.index('Mining.refuse('))  # 0065: guard BEFORE world reads / Verdict reach
+        self.assertNotIn('.execute(', b)  # 0064 reviewer: NO server.execute - a delayed refusal would change synchronous cancel semantics
         mg = stripped(Path('src/main/java/dev/meshac/Meshac.java'))
         tick = mg.split('END_SERVER_TICK.register', 1)[1].split('ServerPlayConnectionEvents', 1)[0]
         self.assertIn('Verdict.tickFlush(pl);', tick)

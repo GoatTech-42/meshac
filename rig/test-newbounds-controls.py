@@ -24,9 +24,15 @@ r5 = S['nb-gc05-jb-powder']['row']
 check('Jump Boost' in r5 and '0 nofall flags' in r5, 'GC05 binds Jump Boost + the 0-flag acceptance')
 check('dy' in r5 and 'never widen' in r5, 'GC05 pre-commits dy reporting over silent band widening')
 check('POWDER-EXEMPT-DRAFT' in r5, 'GC05 names the flag-route doc')
+# single-row positive controls whose legit twins already exist in other families
+for k, chk, twin in (('nb-nuker-cheat', ('mining',), 'nb-mine-legit'), ('nb-ghosthand-cheat', ('interact',), 'nb-interact-legit')):
+    check(S[k]['expect'] == 'signal' and S[k]['checks'] == chk and 'module' in S[k], k + ' is a bound cheat row')
+    check(twin in S and S[twin]['expect'] == 'zero', k + ' names an existing legit twin ' + twin)
+    check(twin in S[k]['row'], k + ' row text names its twin')
 # one vanilla + one cheat row per newly-bound check family
 for fam, cheat in (('fly', 'fly'), ('speed', 'speed'), ('combat', 'combat'), ('mine', 'mining'),
-                   ('interact', 'interact'), ('inv', 'inventory'), ('boatfly', 'boatfly')):
+                   ('interact', 'interact'), ('inv', 'inventory'), ('boatfly', 'boatfly'),
+                   ('high', 'high'), ('timer', 'timer'), ('glide', 'glide'), ('totem', 'inventory')):
     rows = [k for k in S if k.startswith('nb-' + fam + '-')]
     check(len(rows) == 2, fam + ' has a legit and a cheat row')
     z = [k for k in rows if S[k]['expect'] == 'zero']; p = [k for k in rows if S[k]['expect'] == 'signal']

@@ -97,6 +97,52 @@ S = {
    'legs': [('module', None), ('hold', 'space', 6), ('module', None)],
    'row': 'POSITIVE CONTROL: rig BoatFly climbing in open air must SIGNAL boatfly ("boat climbing in open air") after 5 consecutive rising vehicle packets with no lift (Vehicle.java: RISE_AT=5)',
    'falsifies': 'the vehicle rise counter: silence here means open-air boat climbing is unseen'},
+ # nuker (matrix r04): same mining check as nb-mine, different detail strings
+ 'nb-nuker-cheat': {'tp': G['mine_wall'], 'needs': 'cheat', 'expect': 'signal', 'module': 'Nuker', 'checks': ('mining',), 'yaw': -90,
+   'legs': [('module', None), ('wait', 8), ('module', None)],
+   'row': 'POSITIVE CONTROL: Nuker on the wall must SIGNAL mining with a nuker string ("breaks blocks in every direction" / "block broken through another block" / "broke a block it is not looking at"); legit twin = nb-mine-legit',
+   'falsifies': 'the direction/look-ray mining checks vs an omnidirectional nuker'},
+ # GhostHand (matrix r03): wrong-face/behind placement
+ 'nb-ghosthand-cheat': {'tp': G['place_floor'], 'needs': 'cheat', 'expect': 'signal', 'module': 'GhostHand', 'checks': ('interact',), 'yaw': 90,
+   'legs': [('module', None), ('click', '3', 10), ('module', None)],
+   'row': 'POSITIVE CONTROL: GhostHand placing while facing AWAY (yaw 90, back to the floor) must SIGNAL interact ("clicked a block it is not looking at" / "clicked a block through another block"); legit twin = nb-interact-legit',
+   'falsifies': 'the look-ray interact checks vs behind-the-back placement'},
+ # high jump (matrix r02 control)
+ 'nb-high-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
+   'legs': [('tap', 'space'), ('wait', 1), ('tap', 'space'), ('wait', 1), ('tap', 'space')],
+   'row': 'plain jumps on the flat lane: zero high SIGNAL (room is 1.45 + 0.6 per JB level, Movement.java:274-278)',
+   'falsifies': 'a vanilla jump apex (~1.25) must stay under the high-jump room'},
+ 'nb-high-cheat': {'tp': G['lane_start'], 'needs': 'cheat', 'expect': 'signal', 'module': 'HighJump (+1.0)', 'checks': ('high',), 'yaw': -90,
+   'legs': [('module', None), ('tap', 'space'), ('wait', 3), ('module', None)],
+   'row': 'POSITIVE CONTROL: HighJump must SIGNAL high ("high jump rose %.2f") once y - airY0 > 1.45 with dy > 0.05, no exempt event within 4 s, not bouncing',
+   'falsifies': 'the high-jump rise accumulator vs a boosted jump'},
+ # timer (matrix r07)
+ 'nb-timer-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
+   'legs': [('hold', 'w', 15)],
+   'row': 'plain sprint 15 s: zero timer SIGNAL (balMs must stay under 1300; the stalled-connection bank allows 1.6 s of catch-up)',
+   'falsifies': 'vanilla 20 pps pacing must not bank 1.3 s'},
+ 'nb-timer-cheat': {'tp': G['lane_start'], 'needs': 'cheat', 'expect': 'signal', 'module': 'Timer (x1.2)', 'checks': ('timer',), 'yaw': -90,
+   'legs': [('module', None), ('hold', 'w', 15), ('module', None)],
+   'row': 'POSITIVE CONTROL: Timer x1.2 must SIGNAL timer ("timer ahead %.0f ms") - at 1.2x the balance banks ~200 ms/s, crossing 1300 in ~7 s (matrix r07: run under latency)',
+   'falsifies': 'the packet-balance clock vs a 20% game-speed hack'},
+ # glide (matrix BF13): elytra equipped by Box via RCON before both rows
+ 'nb-glide-legit': {'tp': G['sneak_edge'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': 0,
+   'legs': [('hold', 'w', 1), ('tap', 'space'), ('wait', 1), ('tap', 'space'), ('hold', 'w', 3)],
+   'row': 'legit elytra hop-glide off the edge (Box: /item replace entity @p armor.chest with elytra; if the hop is too shallow to deploy, Box substitutes a 3-block pillar at these coords): zero glide SIGNAL',
+   'falsifies': 'a real fall-start glide must not read as restarted gliding'},
+ 'nb-glide-cheat': {'tp': G['lane_start'], 'needs': 'cheat', 'expect': 'signal', 'module': 'ElytraFly', 'checks': ('glide',), 'yaw': -90,
+   'legs': [('module', None), ('tap', 'space'), ('hold', 'w', 8), ('module', None)],
+   'row': 'POSITIVE CONTROL: ElytraFly (elytra equipped via RCON) must SIGNAL glide ("restarted gliding..." / "flying at ...")',
+   'falsifies': 'the glide re-arm and no-air-drag checks vs a firework-free flat-glide module'},
+ # auto-totem (matrix totem rows): Box pops the totem via RCON /damage mid-row
+ 'nb-totem-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90, 'expectMove': False,
+   'legs': [('wait', 10)],
+   'row': 'one totem in the offhand, Box RCON /damage to pop it, NO refill: zero inventory SIGNAL (Totem.java:39 fires on the fast refill, not the pop)',
+   'falsifies': 'a vanilla pop leaving the offhand empty must not read as auto-totem'},
+ 'nb-totem-cheat': {'tp': G['lane_start'], 'needs': 'cheat', 'expect': 'signal', 'module': 'AutoTotem (totems in hotbar)', 'checks': ('inventory',), 'yaw': -90, 'expectMove': False,
+   'legs': [('module', None), ('wait', 10), ('module', None)],
+   'row': 'POSITIVE CONTROL: AutoTotem with totems in inventory, Box RCON /damage to pop: the offhand refill must SIGNAL inventory ("off hand filled <n> ms after a totem popped...")',
+   'falsifies': 'the totem-refill timer vs an inventory-touching totem module'},
 }
 
 LEG_VERBS = {'wait': 2, 'hold': 3, 'hold2': 4, 'tap': 2, 'module': 2, 'click': 3, 'holdmouse': 3}

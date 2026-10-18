@@ -1,7 +1,8 @@
-# DRAFT patch proposal: grace-decay promotion (shadow first, log-only throughout)
+# DRAFT patch proposal: grace-decay promotion (Stage 1 shadow: log-only, default off)
 
-Status: DRAFT for reviewer, 10-17. Ordered by the boss queue after patch 0020. Gated on battery
-D-row evidence (P3-FOLLOWUPS). Nothing here changes a verdict today.
+Status: DRAFT for reviewer, 10-17 (wording pass 2, per reviewer notes on 0021). Ordered by the
+boss queue after patch 0020. Gated on battery D-row evidence (P3-FOLLOWUPS). Stage 1 changes no
+verdict and is off by default; Stage 2 is NOT log-only and is scoped explicitly below.
 
 ## Problem
 
@@ -16,25 +17,42 @@ GroundEvidence.decay(): a clear forgives only the OLDEST unsupported claim. D-ro
 (patch 0020) pin the semantics: D1 shows the live-vs-decay divergence on a grace-farm stream,
 D2/D3 show legit streams stay sub-flag, D4 pins one-claim forgiveness per boundary.
 
-## Proposal: two stages, both log-only
+## Stage 1 (this patch): shadow dual-window - log-only, default off
 
-STAGE 1 (this patch): shadow dual-window. Alongside the live gndEv, run gndEvDecay through the
-same claims; at every exempt/grace ground claim the live window clear()s (unchanged) and the
-shadow decay()s. The shadow NEVER flags, never touches MonitorGate, never damages. When the
-shadow is flagged while the live window is not, emit a rate-limited trace line:
+Alongside the live gndEv, a shadow gndEvDecay replays the SAME claim set, ordering and threshold
+(same single claim site, same GROUND_WINDOW/GROUND_FLAG_AT config). At every exempt/grace ground
+claim the live window clear()s (unchanged) and the shadow decay()s. The shadow NEVER flags a
+verdict, never calls Verdict/MonitorGate, never damages. At every full-reset site (own-teleport,
+soft-mode return, post-flag reset) the shadow is cleared alongside the live window. When the
+shadow is flagged while the live window is not, one rate-limited log-only line:
 
     [trace] nofall decay-shadow <name> count=N (grace-boundary persistence draft, log-only)
 
-mirroring the O3 shadow pattern (patch 3, reviewed shape). Witness pins: GroundEvidenceTest decay
-pins (exist), D-row fixtures (exist, 0020), a MonitorSourceWitnessTest-style source pin asserting
-the shadow wiring never calls Verdict/MonitorGate, and a clearPendingActions-style reset pin
-(shadow cleared at every full-reset site, patch-5 FIX-1 pattern).
+mirroring the O3 shadow pattern (patch 3, reviewed shape). Every shadow statement sits behind
+TRACE (the MESHAC_TRACE env switch, unset by default): the shadow is OFF BY DEFAULT and
+collects nothing when the env is unset.
 
-STAGE 2 (separate, later, reviewer-gated): env-gated live swap (MESHAC_GROUND_DECAY=1, default
-off, classify-mode precedent): the exempt/grace reset calls decay() instead of clear() on the
-LIVE window. Only after Stage-1 battery data shows (a) decay-shadow divergence on the cheat
-D-rows (GS-D/GS-E) and (b) ZERO decay-shadow flags on every legit row. Then the same battery
-reruns on the swapped jar before any default-on talk.
+Witness pins: GroundEvidenceTest decay pins (exist), D-row fixtures (exist, 0020),
+sim/DecayShadowWitnessTest (new, this patch): asserts the shadow is declared with the live
+config, adds claims at exactly the live window's single claim site, decays at exactly one site
+(the exempt/grace reset), is cleared at every full-reset site, is TRACE-gated, and that NO shadow
+line touches a Verdict/MonitorGate/causeFallDamage/hit-assignment/armNoFall/setback-return path.
+
+## Stage 2 (separate, later, reviewer-gated): live swap - exactly what it can and cannot do
+
+Stage 2 is a live behavior change, explicitly NOT log-only. It may do exactly ONE thing: behind
+MESHAC_GROUND_DECAY=1 (unset by default; classify-mode env precedent, patch 0018), the
+exempt/grace reset calls decay() instead of clear() on the live window. With the env unset, live
+behavior is byte-identical to today.
+
+Stage 2 may NOT: add, move or remove any Verdict/MonitorGate/causeFallDamage call; change any
+threshold (GROUND_WINDOW, GROUND_FLAG_AT, STRONG_ARM_AT) or tolerance; change claim ordering or
+soft-grace handling; arm, enable or alter any action. Every setback, NoFall arming and damage
+call stays on its current acts()/MonitorGate path, exactly as configured.
+
+Gate (unchanged): Stage-1 battery shows (a) decay-shadow divergence on the cheat rows
+(GS-D/GS-E) and (b) ZERO decay-shadow flags on every legit row; then the same battery reruns on
+the swapped jar before any default-on talk.
 
 ## Pre-committed kill criteria
 
@@ -44,8 +62,8 @@ reruns on the swapped jar before any default-on talk.
 - Uncaptured-clear conservatism (teleport/setback/post-flag) is re-stated in the battery report;
   a Stage-1 divergence explainable ONLY by an uncaptured clear is not evidence for Stage 2.
 
-## What Box runs for Stage 1 evidence
+## Stage-1 evidence plan
 
-The D-row battery rows (GS-D grace-farm, GS-E medium dips + the legit D-family) with TRACE on;
-GroundReplay over gndclaim/gndclear scores both policies offline as today, and the shadow trace
-line is the in-jar cross-check of the same divergence (K4 presence semantics).
+rig/BATTERY-SHADOW-DIVERGENCE-PLAN.md (this patch): the rows (GS-D, GS-E + legit dip/knockback/
+medium-exit rows), the expected shadow behavior per row, the GroundReplay cross-check, and the
+light-job/ilhsmc-priority constraints. Box compiles the jar; the rig runs the rows.

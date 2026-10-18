@@ -1,8 +1,8 @@
-# Box: one-pass build + battery run plan (bundle HEAD = patch 0019)
+# Box: one-pass build + battery run plan (bundle HEAD = patch 0022)
 
 ## 0. Inputs
 - Base: meshac main line c4b3fe8 (bundle base commit 9353fbd).
-- Series: meshac-series-0001-0019.tar.gz = 18 format-patch files, git-numbered 0001-0018 in APPLY
+- Series: meshac-series-0001-0022.tar.gz = 21 format-patch files, git-numbered 0001-0021 in APPLY
   ORDER. Mapping to the delivered numbering (reviewer verdicts cite the DELIVERED numbers):
 
   | series file | delivered patch | content |
@@ -25,6 +25,9 @@
   | 0016 | 0017 | meadow attack specs (MicroHop, NoFall interleave) (NOT reviewed) |
   | 0017 | 0018 | this plan + readiness update (static GO 8:20pm) |
   | 0018 | 0019 | citation correction + rig-only jar label |
+  | 0019 | 0020 | grace-boundary D-row grader fixtures (hand-built synthetic unit fixtures; scoped GO) |
+  | 0020 | 0021 | grace-decay promotion draft (doc-only) |
+  | 0021 | 0022 | grace-decay Stage-1 shadow (log-only, TRACE-gated) + witness + battery plan |
 
   CITATION GUARD: the "8:17pm 0011-0013 GO" relay named MONITOR-SERIES items, a different
   numbering - the GroundReplay-lineage GO is 0011-0016 + 0018, relayed 8:20pm. The battery jar
@@ -35,7 +38,7 @@
 
 ## 1. Apply + tree check
   git clone <c4b3fe8 base> meshac-build && cd meshac-build
-  git am series/*.patch        # 18 patches; 17-patch predecessor verified clean 10-17 on a fresh worktree
+  git am series/*.patch        # 21 patches; 17-patch predecessor verified clean 10-17 on a fresh worktree
   git log --oneline | head -18 # subjects must match the table above; git am rewrites committer
                                # ids, so compare TREES/subjects, not commit hashes
 

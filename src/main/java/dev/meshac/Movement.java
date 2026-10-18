@@ -22,7 +22,7 @@ public final class Movement {
 	private static final class S { final ContextLogBudget.Caller ctxBudget = new ContextLogBudget.Caller(); int ownerEntity; Object ownerDimension; volatile boolean blinkHit; volatile long burstMark; final BlinkOrigin bo = new BlinkOrigin(); long iceAt; double prevDtS; long flyMedAt, gtLogAt; final CompareLogBudget.Caller spShadowLog = new CompareLogBudget.Caller(); double spShadow; boolean wasExempt; long lastPosAt, burstStart; int burstN; double burstGap; boolean lastMoving; double ax = Double.NaN, az; long tickEnds, teAtLastPos;  final BlinkClock clock = new BlinkClock(); final BounceTracker bounce = new BounceTracker(); final MediumExit exit = new MediumExit(); final StepAccumulator stepAcc = new StepAccumulator(); double lastH, lastFallH; int slipN;
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
 		boolean ground, cground, init, ownTp;
-		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks; final GroundEvidence gndEv = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); boolean graceSoft; final GroundEvidence gndShadow = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); long softLogAt; long nfStrongAt; double fdStrongMax;
+		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks; final GroundEvidence gndEv = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); boolean graceSoft; final GroundEvidence gndShadow = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); long softLogAt; final GroundEvidence gndEvDecay = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); long decayLogAt; long nfStrongAt; double fdStrongMax;
 	}
 
  private static S state(ServerPlayer pl) {
@@ -80,7 +80,7 @@ public final class Movement {
 				if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly) {
 					Verdict.Step bst = Verdict.signal(pl, "blink", "held its movement packets back and released them in one burst", 1);
 					if (bst != Verdict.Step.LOG && acts("blink") && act == BlinkOrigin.Act.ORIGIN && p.hasPosition()) { // the flushed packets already moved the player: put them back where the burst began (soft mode never gets here)
-						s.ownTp = true; s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
+						s.ownTp = true; s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.gndEvDecay.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 						s.goodX = s.bo.x; s.goodY = s.bo.y; s.goodZ = s.bo.z;
 						s.px = s.cx = s.bo.x; s.py = s.cy = s.bo.y; s.pz = s.cz = s.bo.z;
 						if (bst == Verdict.Step.HOLD) { s.freezeUntil = System.currentTimeMillis() + 1500; s.freezeCheck = "blink"; }
@@ -321,6 +321,8 @@ public final class Movement {
 		if (ground && !exempt && s.grace <= 0) {
 			if (!claimTol) { // a tolerated claim is a landing on a partial shape: it neither enters nor evicts the evidence window
 				s.gndEv.add(claimAir);
+				if (TRACE) { s.gndEvDecay.add(claimAir); // grace-boundary persistence DRAFT, log-only shadow: identical claim set/order/threshold as the live window; decays (not clears) at the exempt/grace reset below; default off (TRACE is the MESHAC_TRACE env switch, unset by default)
+					if (s.gndEvDecay.flagged() && !s.gndEv.flagged() && nowMs - s.decayLogAt > 1000) { s.decayLogAt = nowMs; Meshac.LOG.info("[trace] nofall decay-shadow {} count={} (grace-boundary persistence draft, log-only)", pl.getGameProfile().name(), s.gndEvDecay.unsupported()); } }
 				s.bufGround = s.gndEv.unsupported();
 				if (GROUND_TOL_COMPARE && claimAir) groundTolCompare(pl, s, pl.getBoundingBox().move(dx, dy, dz));
 				if (TRACE && (claimAir || s.bufGround > 0)) groundCtx(pl, s, s.gndEv.flagged() && hit == null, claimAir, ground, dy, s.prevDtS, exempt);
@@ -333,15 +335,15 @@ public final class Movement {
 				s.gndShadow.add(claimAir);
 				if (TRACE && s.gndShadow.flagged() && nowMs - s.softLogAt > 1000) { s.softLogAt = nowMs; Meshac.LOG.info("[trace] nofall shadow-evidence {} count={} (damage grace, log-only)", pl.getGameProfile().name(), s.gndShadow.unsupported()); }
 			}
-		} else if (ground) { if (TRACE && s.bufGround > 0) Meshac.LOG.info("[trace] gndclear {}", pl.getGameProfile().name()); s.gndEv.clear(); s.bufGround = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } // exempt/grace ground claim: fresh start, as before; air packets leave the window alone
+		} else if (ground) { if (TRACE && s.bufGround > 0) Meshac.LOG.info("[trace] gndclear {}", pl.getGameProfile().name()); s.gndEv.clear(); if (TRACE) s.gndEvDecay.decay(); s.bufGround = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } // exempt/grace ground claim: fresh start, as before; air packets leave the window alone
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
 			if (ch[0].equals("speed") || ch[0].equals("fly") || ch[0].equals("air") || ch[0].equals("high") || ch[0].equals("microhop")) ctxLog(pl, s, dx, dy, dz); // log only: what the player was doing when the speed check fired
 			if (ch[0].equals("nofall")) { if (MonitorGate.armNoFall(acts("nofall"))) s.nfAt = System.currentTimeMillis(); s.nfStrongAt = 0; s.fdStrongMax = 0; if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("fly") ? 3 : ch[0].equals("microhop") ? 2 : 1); // a block climbed in a few ticks is never an accident
-			if (step == Verdict.Step.LOG || !acts(ch[0])) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; return null; } // soft mode: record, never correct
+			if (step == Verdict.Step.LOG || !acts(ch[0])) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.gndEvDecay.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; return null; } // soft mode: record, never correct
 			s.ownTp = true;
-			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.gndEvDecay.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			if (step == Verdict.Step.HOLD) { s.freezeUntil = System.currentTimeMillis() + 1500; s.freezeCheck = ch[0]; }
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};

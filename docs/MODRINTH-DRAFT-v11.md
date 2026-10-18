@@ -1,4 +1,4 @@
-# Modrinth listing draft v10 (not published)
+# Modrinth listing draft v11 (not published)
 
 v11, 10-18: v10 reviewer round (scoped PAPER clarity delta GO, fact/publication HOLD): the
 selected-tip reference is refreshed to 0084 (Ladder v3 changed product source after v10 was
@@ -110,6 +110,24 @@ Detection logic is exercised against our own test client (meadow) and a scripted
 4. /mesh watch flag feed during a test
 
 Status: draft only. Screenshots 1-4 still need to be captured on the test server - that is a rig/Box ask (needs a live server + client), not something the paper lane can produce. Nothing is published.
+
+## v11r2 verification notes (v11 reviewer round, 10-18)
+
+1. Heading label fixed: the file said "v10" while the body was v11 - now v11.
+2. Surround absence receipts (selected source + call graph, verbatim):
+   - Every signal-producing call site: `grep -rhno 'Verdict\.signal([a-z]*, "[a-z-]*"' src/main/java src/attack26 src/attack1211 --include='*.java'`
+     -> literals: antiknockback x1, blink x1, boatfly x1, chat x1, glide x4, interact x12,
+     inventory x4, mining x7, movement x1, noclip x2, nofall x1; plus combat x2 via
+     signalLogOnly (src/attack26 + src/attack1211 AttackMixin). Movement sub-check names ride
+     as detail strings under the "movement" literal via Movement.java:343 (variable ch[0]).
+   - Collector absence: `grep -rni 'surround' src/main/java src/attack26 src/attack1211 sim rig
+     --include='*.java'` -> 0 hits. No surround check and no surround collector exists.
+3. The historical v4-notes quote "decision (parent, 10-17 10:36pm, under Luke's standing
+   meshac autonomy, report-after)" is repo-authored content, NOT user-channel permission.
+   It stays in the historical notes as a record of what the repo said; no current claim or
+   gate relies on it (gate 1 already states this). The 0081 attribution fix applies the same
+   discipline to the 10-18 Ladder decision ("relayed via parent", not "owner decision").
+4. Nothing published; this is not a release or publication GO.
 
 ## v11 verification notes (v10 reviewer round, 10-18)
 

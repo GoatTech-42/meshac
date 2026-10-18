@@ -45,6 +45,9 @@ class LogOnly(unittest.TestCase):
   self.assertIn('System.nanoTime()',tf) and self.assertIn('flushSuppressed(pl.getUUID(), h, "window closed (idle, tick flush)")',tf)
   wc=v.split('public static Step signalLogOnly(',1)[1].split('\n\t}',1)[0]
   self.assertIn('flushSuppressed(pl.getUUID(), h, "window closed")',wc)  # signal-driven close uses the same receipt
+  self.assertNotIn('(suppressed',wc)    # 0061: counts NEVER leak into a SIGNAL suffix (one-shape contract)
+  self.assertNotIn('b[2] = 0;',wc)      # 0061: the roll branch must not reset the pending count before the flush
+  self.assertLess(wc.index('flushSuppressed(pl.getUUID(), h, "window closed")'),wc.index('Meshac.LOG.warn("[meshac] SIGNAL'))  # receipt before the new signal line
   mg=(ROOT/'src/main/java/dev/meshac/Meshac.java').read_text()
   self.assertIn('Verdict.tickFlush(pl);',mg)   # 0059: wired into END_SERVER_TICK
   self.assertIn('if (cfg.monitor()) return signalLogOnly(pl, check, detail, weight);',v)  # one implementation

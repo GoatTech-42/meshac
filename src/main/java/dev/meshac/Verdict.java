@@ -83,7 +83,7 @@ public final class Verdict {
 		H h = HEAT.computeIfAbsent(pl.getUUID(), k -> new H());
 		h.name = pl.getGameProfile().name(); // 0059: stable identity for suppression receipts
 		long ms = System.currentTimeMillis();
-		int mh; long sup = 0; boolean winClose = false; boolean emit = true;
+		int mh; boolean winClose = false; boolean emit = true;
 		synchronized (h) {
 			h.mon.add(check, weight, ms, cfg.ladderParams()); mh = (int) Math.round(h.mon.heat);
 			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + mh + " (log-only)"); if (h.trace.size() > 40) h.trace.poll();
@@ -94,16 +94,16 @@ public final class Verdict {
 				long now = System.nanoTime(); // monotonic: a wall-clock rollback must never reopen the budget
 				long[] b = h.sigLog.computeIfAbsent(check, k -> new long[3]);
 				if (b[0] == 0 || now - b[0] >= 60_000_000_000L) { // forward roll only: now < b[0] counts within the window, never reopens
-					winClose = b[2] > 0; // durable window-close summary via flushSuppressed below: suppressed positives always reach the log
+					winClose = b[2] > 0; // 0061: b[2] is left INTACT here - the shared flush below emits the one-shape receipt and clears it; it must never leak into a SIGNAL suffix
 					b[0] = now; b[1] = 0;
 				}
-				if (b[1] >= 30) { b[2]++; emit = false; }
-				else { b[1]++; sup = b[2]; b[2] = 0; }
+				if (b[1] >= 30) { b[2]++; emit = false; } // a post-roll window is at used=0, so a rolled signal always emits
+				else { b[1]++; }
 			}
 		}
-		if (winClose) flushSuppressed(pl.getUUID(), h, "window closed");
+		if (winClose) flushSuppressed(pl.getUUID(), h, "window closed"); // emits + clears the pending count BEFORE the new signal line
 		if (!emit) return Step.LOG;
-		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> log{}", pl.getGameProfile().name(), check, detail, mh, sup > 0 ? " (suppressed " + sup + ")" : "");
+		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> log", pl.getGameProfile().name(), check, detail, mh);
 		alert(pl, check + " " + detail + " heat " + mh + " log");
 		return Step.LOG;
 	}

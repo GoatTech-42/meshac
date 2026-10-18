@@ -1,0 +1,29 @@
+# Chunk border leaks: design
+
+Both leaks fail open (an ore stays visible or stays hidden wrongly at a chunk edge). Neither is a false positive against a player. Pure parts and tests are in place (`sim/VeilBorderTest.java`). Leaks 1 and 2 are wired on branch `veil-border-wiring-20261016` (uncompiled, names marked VERIFY): the cache now holds a `Plan` (mods, neighbour mask, border blocks and their outward bits) and `Veil.mods` runs `PlanGuard.check`. `PlanLifecycleTest` runs a two-chunk toy world through the same pure pieces. The retroactive resend is still design only.
+
+## Leak 1: a no-update change next to a border
+A planned block on the border (x or z at 0 or 15) depends on one block in the chunk next door. If that block changes without a setBlock update (WorldEdit, no-update flags), the cached plan of this chunk does not hear about it, and the freshness check only compares this chunk's own blocks.
+
+Design (`BorderGuard`):
+- Each planned block on the border stores 4 bits: which outward neighbours were see-through at plan time. Interior blocks store nothing.
+- On a send, for planned border blocks only, re-read the outward neighbours (a getBlockState each, at most 2 for a corner) and compare. Any difference makes the section replan, the same path as a stale rebuild.
+- Cost: one lookup per planned border block per send. Plans hold a few dozen blocks per section, border blocks are a fraction of that. No events, no timers.
+- Covered: a hidden ore whose neighbour became air. Not covered: an ore that should now be hidden because the neighbour became solid (it has no plan entry). That one stays visible, which is the safe direction.
+- Wiring sketch: add `byte border` to `Veil.Mod`, fill it in `modsCached` through `View.at()` for idx with `BorderGuard.isBorder`, and compare it inside `fresh()`.
+
+## Leak 2: a chunk planned before its neighbour was loaded
+An unloaded neighbour counts as see-through, so a border ore is shown. Nothing replans the chunk when the neighbour loads.
+
+Design (`NeighbourMask`):
+- Store a 4-bit mask of which side neighbours were loaded when the plan was made.
+- On a send, recompute the mask (4 chunk-map lookups). Replan only if a neighbour that was missing is loaded now. An unload never replans.
+- Bound: stored is overwritten at each replan, so a rebuild needs a neighbour that was missing at that time. A flapping neighbour cannot cause a rebuild storm (tested).
+- No Fabric chunk event is used. Their `ServerChunkEvents.Load` takes 2 arguments in 1.21.11 and 3 in 26.x (checked in the cached jars).
+
+Retroactive part (`BorderDiff`, design only): the replan above only helps later sends. A client that already holds the chunk keeps the visible border ore. After a replan, `BorderDiff.diff(oldPlan, newPlan, cap)` lists the border positions that changed. Sending those few as block updates (fake for the newly hidden, real for the newly shown) would fix chunks players already have. It needs a veiled block-update path, which does not exist in this branch (block updates go out real). Past the cap (suggested 256 positions) nothing is sent and the old behaviour stays. Not worth building unless a Bedrock or Java test shows the visible border ore matters in practice.
+
+## Order of work if it is wanted
+1. Leak 2 first (smaller: one int next to the plan).
+2. Leak 1 (changes `Mod`).
+3. Retroactive resend last, and only after a rig test shows it is needed.

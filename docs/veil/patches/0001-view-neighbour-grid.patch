@@ -1,0 +1,41 @@
+diff --git a/src/main/java/dev/meshac/veil/Veil.java b/src/main/java/dev/meshac/veil/Veil.java
+index 87c30fa..ab26978 100644
+--- a/src/main/java/dev/meshac/veil/Veil.java
++++ b/src/main/java/dev/meshac/veil/Veil.java
+@@ -57,6 +57,8 @@ public final class Veil {
+ 			return t.getBlockState(mp.set(x, y, z));
+ 		}
+ 		public boolean hidden(int x, int y, int z) { BlockState s = at(x, y, z); return s != null && Veil.hidden(s); }
++		/** Same answers as hidden() and transparent(), as bits for NeighbourGrid. */
++		public int classify(int x, int y, int z) { return (hidden(x, y, z) ? NeighbourGrid.HIDDEN : 0) | (transparent(x, y, z) ? NeighbourGrid.TRANSPARENT : 0); }
+ 		public boolean transparent(int x, int y, int z) {
+ 			if (y < c.getMinY() || y >= c.getMaxY()) return false; // world top/bottom: nothing to see through
+ 			BlockState s = at(x, y, z); return s == null || Veil.transparent(s);
+@@ -67,6 +69,8 @@ public final class Veil {
+ 	public record Mod(int idx, BlockState fake, BlockState real) {}
+ 	/** Cache key includes the level: the old key was (chunk x, z, section) only, so the overworld and the nether shared entries and a swap list computed for one dimension was applied to another (wrong "real" state restored into live terrain). */
+ 	private record Key(ServerLevel level, int cx, int cz, int sec) {}
++	/** mods() only runs on the server thread (checked above), so one instance is enough. */
++	private static final NeighbourGrid NG = new NeighbourGrid();
+ 	private static final Map<Key, Mod[]> CACHE = new ConcurrentHashMap<>();
+ 	private static final Mod[] NONE = new Mod[0];
+ 	private static final int CACHE_MAX = 20000;
+@@ -121,6 +125,7 @@ public final class Veil {
+ 		if (CACHE.size() > CACHE_MAX) CACHE.clear();
+ 		return CACHE.computeIfAbsent(new Key(lvl, c.getPos().getMinBlockX() >> 4, c.getPos().getMinBlockZ() >> 4, secIdx), k -> {
+ 			View v = new View(c);
++			NeighbourGrid ng = NG.reset(c.getPos().getMinBlockX(), (c.getMinSectionY() + secIdx) << 4, c.getPos().getMinBlockZ(), v::classify);
+ 			int baseY = (c.getMinSectionY() + secIdx) << 4, bx = c.getPos().getMinBlockX(), bz = c.getPos().getMinBlockZ(); // VERIFY getMinSectionY
+ 			long salt = salt(lvl);
+ 			List<Mod> out = new ArrayList<>();
+@@ -128,8 +133,8 @@ public final class Veil {
+ 				BlockState s = sec.getBlockState(lx, ly, lz);
+ 				int x = bx + lx, y = baseY + ly, z = bz + lz, idx = lx | ly << 4 | lz << 8;
+ 				if (Veil.hidden(s)) {
+-					if (XrayCore.shouldHide(v, x, y, z)) out.add(new Mod(idx, stoneFor(lvl, y), s));
+-				} else if (fakeRatio > 0 && isStone(s) && XrayCore.fakeOreAt(salt, x, y, z, fakeRatio) && !XrayCore.exposed(v, x, y, z)) {
++					if (XrayCore.shouldHide(ng, x, y, z)) out.add(new Mod(idx, stoneFor(lvl, y), s));
++				} else if (fakeRatio > 0 && isStone(s) && XrayCore.fakeOreAt(salt, x, y, z, fakeRatio) && !XrayCore.exposed(ng, x, y, z)) {
+ 					BlockState f = fakeOre(lvl, y, salt, x, z);
+ 					if (f != null) out.add(new Mod(idx, f, s));
+ 				}

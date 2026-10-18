@@ -1,0 +1,194 @@
+<p align="center">
+  <img src="assets/banner.png" alt="meshac: a native fabric anticheat" width="720">
+</p>
+
+# meshac
+
+a native anticheat for fabric servers.
+
+it catches only what a server can see.
+
+> **first beta (0.1.0).** everything here is what's been tested so far, misses included.
+
+## why this exists
+
+the anticheats i tried either missed hacks or banned honest players for having bad wifi. the second one's worse. a missed hack lets a hacker free, but a false ban costs you a player.
+
+so the quality standard for meshac is simple. if a cheat leaves a trace the server can see, catch it. if it's a real player lagging, don't touch them. zero false flags is the goal, and every check has to prove it against a clean control before it ships.
+
+## what it does
+
+meshac watches movement, combat, building, mining, interaction and elytra flight. it works out what vanilla physics would allow and steps in when the two don't match.
+
+it doesn't punish one packet. every flag adds heat to a player and the heat cools off on its own. a lag spike, or a laggy tunnel bunching packets up, doesn't add up to a removal. real cheating does, fast.
+
+1. the player gets put back
+2. then held for a moment
+3. then kicked, and repeat offenders get tempbans that grow each time (10 minutes, 1 hour, 6 hours, 36 hours, up to 7 days)
+
+permanent bans are off unless you turn them on.
+
+## what it's caught so far
+
+tested against real hacked clients (wurst on 26.3 and 26.1.2, meteor on 26.2) on a throwaway server, with a clean hack-off run next to every one.
+
+flight, speed above sprint-jump pace, step, spider, jesus, fast climb, no slow, timer, blink (0.75 s and up), slippy, air jump, high jump, elytra fly and boost, reach, kill aura, criticals, crystal aura, anchor aura, auto totem, nuker, packet mine, ghost hand, auto clicker.
+
+we aim for no false flags on normal play. the control runs so far (sprint-jumping, wind charges, tnt and crystal knockback, elytra, hand mining through tunnels, lag spikes and a laggy proxy) came up clean, but they were run on an earlier build. powder snow, slow falling, honey, bubble columns and bedrock players are handled in code and not control-tested yet. run `/mesh monitor on` first if you want to see what it would flag on your server before it removes anyone.
+
+## what it doesn't catch
+
+- speed at or below sprint-jump pace. it looks exactly like a fast legit player, so meshac doesn't pretend. sustained speed above about 7.4 blocks per second does flag, on a budget that forgives short bursts
+- bedrock players (through geyser) get looser speed limits, so a steady cheat around 8 blocks per second can pass there, and combat, interaction, inventory and mining aren't checked for them at all
+- short blink (about 0.4 s)
+- surround
+- bow aimbot
+- boosts above 45 blocks per second
+- explosion knockback is exempt on purpose, because legit players get launched by explosions all day
+
+some modules just haven't been run yet. that list lives in [docs/coverage.md](docs/coverage.md).
+
+i also found checks of my own that never fired. the sign text rule and the chat command rule were hooked on the wrong thread, so they sat there doing nothing. both are fixed now and tested with scripted bots. that's written up in the false-positives doc because it's the exact kind of thing that makes a clean test run meaningless.
+
+## install
+
+1. get a jar for your minecraft version (see below)
+2. drop it in your server's `mods` folder next to [fabric api](https://modrinth.com/mod/fabric-api)
+3. start the server. `config/meshac.json` gets written with every default so you can see each knob
+
+players install nothing.
+
+**start in monitor mode.** set `monitorOnly` to `true`. it logs and alerts but never kicks or bans. watch what it flags on your own server for a bit, then turn punishment on.
+
+| minecraft | jar | java |
+| --- | --- | --- |
+| 1.21.11 | `meshac-1.21.11.jar` | 21 |
+| 26.1.2 | `meshac-26.1.jar` | 25 |
+| 26.2 | `meshac-26.2.jar` | 25 |
+| 26.3 | `meshac-26.3.jar` | 25 |
+
+fabric api is required on all of them. no releases are published yet. to build one yourself, see [building](#building).
+
+## for admins
+
+all `/mesh` commands are op only.
+
+| command | what it does |
+| --- | --- |
+| `/mesh cases` | recent cases |
+| `/mesh case <id>` | what happened and why |
+| `/mesh status <player>` | a player's heat, offences and what happens next |
+| `/mesh watch` | flags in chat as they happen |
+| `/mesh monitor` | shows whether monitor mode is on |
+| `/mesh kick`, `/mesh ban` | manual removal |
+| `/mesh pardon <case id>`, `/mesh unban <player>` | lift a case or a ban |
+| `/mesh reload` | reload the config |
+
+there's an optional discord webhook for holds and removals.
+
+<details>
+<summary>config reference</summary>
+
+`config/meshac.json`, written with defaults on first start. three presets, `lenient`, `default` and `strict`. any knob left null follows the preset, set one to override just that knob.
+
+| key | what it does |
+| --- | --- |
+| `preset` | `lenient`, `default` or `strict` |
+| `monitorOnly` | log and alert, never kick or ban |
+| `permanentBan` | false caps the ladder at the longest tempban |
+| `holdAt`, `removeAt` | heat at which a player is held, and removed |
+| `halfLifeSeconds` | how fast heat cools (heat halves every this many seconds, default 8). `heatCoolSeconds` was removed, it never did anything |
+| `kicksBeforeTempban` | kicks before the first tempban |
+| `tempbanBaseMinutes`, `tempbanGrowth`, `tempbanMaxMinutes` | the tempban ladder |
+| `offenceHalfLifeDays`, `offenceMemoryDays` | how long old offences count |
+| `requireClusters`, `requireClustersTierA` | independent causes needed before removal |
+| `discordWebhook`, `discordOnHold` | webhook url (empty is off) and whether holds post too |
+| `appeal`, `serverName`, `accent`, `warn` | the text and colours players see |
+| `fixPistonWater` | patches MC-130183, the sticky piston flood machine bug. off by default |
+| `veilXray`, `veilEsp` | anti-xray and anti-esp. off until proven on a real client |
+| `veilEnabled` | master switch for anti-xray and anti-esp. on unless you set it to false. it does not turn them on, `veilXray` and `veilEsp` still do that. false switches both off at the next `/mesh reload` |
+| `veilBedrock` | off by default. bedrock players joining through geyser always see every player, anti-esp never hides anyone from them. anti-xray applies to them either way, the chunks are shared. set it to true to let anti-esp hide players from them too, only after a bedrock player has tested it |
+| `enderchestEggRule` | on unless you set it to false. the dragon egg can't go into an ender chest, and neither can a shulker box or bundle with an egg inside |
+| `clientFingerprintEnabled` | optional client brand/channel hints. off by default. when enabled with matching configured hints, enforcement mode can kick or ban; monitor mode only logs |
+
+**the veil and the egg rule don't care about monitor mode.** `monitorOnly` stops automatic anti-cheat punishment. Explicit staff kick and ban commands remain active. it does not turn the veil or the ender chest egg rule off. if you want either one off, set `veilEnabled` or `enderchestEggRule` to false in `config/meshac.json` and run `/mesh reload`. turning the veil off does not change chunks a player already has: the hidden ore and chests stay hidden for them until they leave and come back, so ask people to relog. the egg rule only stops new placements. an egg already in an ender chest stays there and can be taken out.
+
+how removal works, and the safeguards intended to reduce punishment of legitimate play, are in [docs/PUNISHMENT-DESIGN.md](docs/PUNISHMENT-DESIGN.md).
+
+</details>
+
+<details>
+<summary>coverage by hack</summary>
+
+the full per-module tables, with times, holds and kicks:
+
+- [docs/coverage.md](docs/coverage.md) for wurst
+- [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) for meteor
+
+`0 signals` only counts as a miss when the hack visibly acted. if it didn't, the row says unproven, not passed.
+
+the last full sweep ran 138 cases with 57 legit controls on the final jar. no legit control was flagged. kill-aura is only caught on some runs, so treat it as partial. details are in [docs/FINAL-SWEEP.md](docs/FINAL-SWEEP.md).
+
+</details>
+
+<details>
+<summary>how it's tested</summary>
+
+`rig/` is a throwaway server and real clients on a docker network with no internet. it runs real wurst and meteor clients, scripted bots for packet-level tests, and a lag proxy that stalls and bunches packets so laggy connections get tested on purpose.
+
+the rules for any new check:
+
+- it ships with a test that shows it catching the hack
+- and a test that shows it leaving legit play alone
+- measure first, never tune blind
+
+see [rig/README.md](rig/README.md). the false positives we found and fixed, with the numbers, are in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
+
+</details>
+
+<details>
+<summary>false positives we've hit</summary>
+
+every one gets written up: what flagged, why, and what the fix does. the short list so far is tunnel mining that looked like a nuker, a block broken "through" another when the hand just grazed a wall edge, and mining checks that tripped under lag. the long version is in [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md).
+
+</details>
+
+<details>
+<summary>per-version notes</summary>
+
+one source tree builds for 1.21.11, 26.1.2, 26.2 and 26.3. the 1.21.11 jar uses the older obfuscated toolchain and runs on java 21, the rest need java 25. `rig/smoke.sh` boots each jar on a real server of its version.
+
+most of the real-client testing is on 26.3 and 26.1.2. the other versions build and boot with meshac loaded, and the 1.21.11 and 26.3 jars have had no full client run yet.
+
+</details>
+
+## building
+
+you need java 25.
+
+    ./gradlew build
+
+the jar ends up in `build/libs/`. `build-all.sh` builds every version into `dist/`. to build for one version, pass `-Pminecraft_version=... -Pfabric_api_version=...` (see `gradle.properties` and `versions/`).
+
+## the words
+
+- a **signal** is one check catching something
+- **heat** is a player's recent signals, and it cools off
+- a **trace** is the evidence behind a signal
+- a **ward** is an exemption
+
+## docs
+
+- [docs/PRINCIPLES.md](docs/PRINCIPLES.md) how code gets written here
+- [docs/PUNISHMENT-DESIGN.md](docs/PUNISHMENT-DESIGN.md) the heat and ladder math
+- [docs/IDENTITY.md](docs/IDENTITY.md) how it should feel
+- [docs/coverage.md](docs/coverage.md) and [docs/COVERAGE-METEOR.md](docs/COVERAGE-METEOR.md) what's caught
+- [docs/FALSE-POSITIVES.md](docs/FALSE-POSITIVES.md) what went wrong and how it got fixed
+
+## license
+
+gnu affero general public license v3.0 only, see [LICENSE](LICENSE). use it, change it, share it. if you distribute it or run a modified copy for others over a network, share your changes under the same license and keep the copyright notices.
+
+Combat-log protection obeys `monitorOnly`: a tagged disconnect in monitor mode logs that it would have killed the player, with no kill, case or death broadcast. Enforcement mode keeps the existing kill/case behavior. Staff kick/ban commands are independent of monitor mode.
+
+Reload results distinguish read/parse failure (previous settings kept) from file-save failure (new settings stay active but are not saved). A successful config selection, including a missing-file defaults load, clears old movement hold/NoFall debt and verdict heat before use. Audit and command feedback report persistence failure explicitly.

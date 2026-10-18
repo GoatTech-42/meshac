@@ -1,0 +1,53 @@
+* b4a231f rig: harness v11.1 (nonce status and 12-hex check before any op key, prefix-hash wording, key_settled live-read note)
+* fd3a42e rig: harness v11 (no pipelines in ledger check, snapshot count and hash, key_settled needs valid check, handoff removed, scope claims narrowed)
+* 9651f67 rig: harness v10 (parser status never reads as clean, single-snapshot ledger check, checked digests, owner-held in-flight marker with owner-issued op keys, literal run id, ENOENT-only vanish, lock handoff protocol, 19 drills plus handoff drill)
+* a6aab64 rig: harness v9 (owner-held ledger anchor, run-bound header and full-state validation before every create, per-op nonce keys, cannot-tell for unreadable members, barriers before down and network removal, 18 fake-docker drills)
+* 235fc76 rig: harness v8 (validated ledger, no manual settle, fail-closed group and session state, watcher flag checked before destructive steps, image ids in run commands, exact absent results, tracked-only botrig, 16 fake-docker drills)
+* d639572 rig: harness v7 (pending-intent file with settle-on-positive-outcome, unsettled blocks profile and network deletion, fail-closed group state from launch pid and birth, bounded reap, port binding inspect, all digests checked, continuous abort relist, 14 fake-docker drills)
+* 843d742 rig: harness v6 (raw-log version parse pinned to 26.1, pkill/pgrep group control, labelled network with intent and unknown-outcome ownership, journal failure stops creation, status-checked manifest, lock released last, fake-docker drills)
+* 9e8b46c rig: harness v5 (intent journal, label reconcile with status-checked lists, process-group watcher kept through teardown, logs saved before removal, anchored version, manifest fails on empty, bounded docker everywhere)
+* 49d174c rig: harness v4 (abort gate before every creation, labelled helpers, bounded docker, label-checked teardown order, real failure patterns, kept logs, actual manifest)
+* a08f2bf rig: harness v3 (watcher before first resource, bounded docker calls, owner labels, caps, verified teardown, exit codes kept, manifest)
+* 8befb7c veil: spec v2 (public base 6376ae5 findings, semantic merge caveats, lock model) and harness RAM watcher
+* f7b75cb veil: merge order review and Gate 2 harness spec, doc only
+* 5182d39 veil: Gate 2 supervised first-run checklist and TNT fixture adjustment path, doc only
+* a12287f rig: botrig per-id flock around up and down
+* 43549ea rig: botrig lock uses ln -sT and checks the owner after acquiring, teardown needs a definite no-such-container answer
+* 0d68889 rig: botrig symlink lock, verified teardown before release, observed readiness
+* 3c689d0 rig: botrig token-owned locks need the token for down, harness teardown token-checked at cleanup time, rcon secret read before any change
+* 1eb779b rig: botrig per-id ownership lock and create-only mode, harness cleanup only after owning
+* 1e98f95 rig: reveal-gate harness v3 (fill limit, own dir and network, rcon packet types, tnt cover, honest dig claims)
+* f9105f4 rig: reveal-gate harness v2 (seed before join, private rcon secret, RAM caps, full inventory) and Gate 5 design fixes
+* 0ccb0d0 veil: Gate 5 Bedrock (Geyser) check design, doc only
+* 67c06cd rig: reveal-gate harness (border, TNT, piston, bot dig) for veil Gate 2, source only
+* a152c6c veil: native gate step list with expected observations, per version compile checklist for Veil.java
+* 9f58d8c veil: FakeKnobs normalises negative zero, doc nits (hidden blocks, setFake startup only)
+* d20c99f veil: fake ore settings as one snapshot (FakeKnobs), Veil.setFake clears cached plans on change, tests, docs
+* 9b15ffb veil: reveal resend cost sim for the fake ore modes, numbers in FAKE-ORE.md
+* 5827f1d veil: optional real density mode for fake ore (OreTable.density, Veil.fakeRealDensity off by default), tests, docs
+* 645d913 veil: scale the fake ratio per layer with OreTable.shape (XrayCore.fakeOreAt and resendOnReveal overloads, wired in Veil), tests, docs
+* cd906be veil: fake ores follow vanilla ore heights and the real base block; deepslate band instead of a flat cut at y 0 (OreTable, DeepslateBand, tests, rig ore scan)
+| * 9262f1e monitor path: bound Movement-side arrival stamps, drain on early return, sweep orphaned per-player state
+| | * c4b3fe8 powder merge v3: helper cross-product test mirrors powderNear vs body booleans, renamed, scope stated
+| | * 4ab1958 powder merge review fixes: real pose-box powder overlap, firstExit waiver gates fly emission, cross-product replay test, comment + run-tests dedupe
+| | *   cfe9afa merge powder-interaction b44e000: semantic port onto bounce+interactions (StepAccumulator=powder, BounceTracker=bounce, Movement/FpGuards hand-resolved)
+| | |\  
+| | | * b44e000 rig: grader + synthetic lesson-set tests, GS/SE/BL rows, provenance/witness/disarm in the PB driver
+| | | * 4dd2a5e rig: grade 3fffe5a against the raw bounce-7e reps (envelopes, honey end-y, control anomalies)
+| | | * 293a98f rig: PB-m..q rows (rim, slime edge, bed-on-slime, taint negatives), falsification per row, 3fffe5a grading vs bounce-7e
+| | | * 1f5106e rig: pb-controls dry-run driver for the powder/bounce capture cells (PB-a..e, PB-l)
+| | | * 3fffe5a sim endpoint ordering (bouncing at packet y, as Movement) + rig capture request for the powder/bounce jar round
+| | | * 9974eba air jump x sneak/slime/honey/bed interactions: sim matrix through the guarded call path
+| | | * dc110ad powder test nit: drive post-flag trajectory through real FpGuards.powderClimb
+c4b3fe8 powder merge v3: helper cross-product test mirrors powderNear vs body booleans, renamed, scope stated
+4ab1958 powder merge review fixes: real pose-box powder overlap, firstExit waiver gates fly emission, cross-product replay test, comment + run-tests dedupe
+cfe9afa merge powder-interaction b44e000: semantic port onto bounce+interactions (StepAccumulator=powder, BounceTracker=bounce, Movement/FpGuards hand-resolved)
+ed78d77 Merge interactions 1901eed into bounce 7e838e1 (run-tests.sh union)
+b44e000 rig: grader + synthetic lesson-set tests, GS/SE/BL rows, provenance/witness/disarm in the PB driver
+4dd2a5e rig: grade 3fffe5a against the raw bounce-7e reps (envelopes, honey end-y, control anomalies)
+293a98f rig: PB-m..q rows (rim, slime edge, bed-on-slime, taint negatives), falsification per row, 3fffe5a grading vs bounce-7e
+1f5106e rig: pb-controls dry-run driver for the powder/bounce capture cells (PB-a..e, PB-l)
+1901eed movement: legacy cobweb/honey bypass ORs removed; stuck/slide exempt one packet only via dy-gated body box at server and endpoint positions; web speed cap keeps entry momentum separate; exact-predicate tests
+e318d70 movement: first-packet-only water/ladder exit waiver (MediumExit), cobweb and honey from the real body box with the honey slide predicate and dy gates, validated web cap; fixes the commented-out budget reset; replay tests
+3fffe5a sim endpoint ordering (bouncing at packet y, as Movement) + rig capture request for the powder/bounce jar round
+efc08d4 movement: fly grace after water/ladder/levitation exits actually starts; cobweb and honey found anywhere in the body footprint; web cap scales with speed; interaction audit sims

@@ -1,0 +1,35 @@
+# Candidate9l flight patch integration
+
+Base6aa7456(candidate9k), source08a0fb0withctxbudget/latestFloodgate/powdersnow.
+Applied supplied format-patches e0494e1,303c430,b0f7883 in that order. Worker
+sandbox commits weren't in sharedobjectDB;gitam3wayusedembeddedbasetrees.
+Movement.S conflicts resolved additivefields(ctxBudget+BlinkClock+BounceTracker+
+StepAccumulator+lastFallH). Runnercompile/testunion retained. NoFpGuardsconflict;
+powderstuckExpectandpreviousstepdirectbandcoherence retained.
+
+BlinkClock extracts existing arrival math, no newtrustedclickclock. BounceTracker
+bounds rise bypreviousfallheight+1and10scap; notblanketbed/slime exemption.
+StepAccumulatorusesnonrenewing4packetwindow, fixingcontinualsmallriseaccumulation.
+PathCollisionandSneakEdgearepuretestgeometry,notnewliveadapters. MovePathlive
+axisroutefrom9i retained. No researchtimingwiring/promotedhitboxassumptions.
+
+Requested awaiting-confirmguard now BEFORErotationhistory/Blink/fallPeak/status
+checks. Positiononlyconsumesonearrivalstamp and updatesclockbaseline;rotationonly
+consumesnone. Clearslatchedblinkhit/mark,setsminimum2grace,returnswithoutheat.
+Nettyarrivaldetectorstillseespacketsandmayholdcandidateclockstate;thischange
+isn'taclaimofallcross-threadhistorybeingreset. Nativeconfirmation-order/burst
+lifecycleprobe still needed. No per-checkthreshold expansion.
+
+Newnoclipfrom/to/blockdiagnosticusesexistingshared20/smonotonicglobalbudgetand
+own5scallerbudgeton top ofworker1swallgate,so notunbounded. Generalctxandnoclip
+have separatecallerbudget:up to2lines/player/5scombined,global20/stotal. Dropped
+countersnextallowedline,notguaranteedfinalsummary. Formattingafterbudgetgrant.
+Wallgateonnewnocliplinecoulddelaydiagnosticsafterclockreversal,nogameplayeffect.
+
+69registeredJavapureclassesPASS,18rig/test*.pyentrypointsPASS. Newwiringtestpins
+guardbeforeallcheckpaths,onepositionstamp/noVerdict,unionfeatures+bothctxbudgets.
+Updatedoldaccumulatorwiringassertiontochecknewhelpercaller+unchanged.65limit.
+Noheavycompile/native/rig/deploy/configmutation. Nativebouncephysics,bed/slime,
+ceiling,stair/partial-top,awaitingconfirm+positivecontrols andversion/APIbuild
+remainBox/riggates. Bouncearmingcurrentlyfollowsfirsthighjumproomcalculation;
+largefirstlaunchpacketcanstillneednative/sourcefollow-up,notclaimedclean.

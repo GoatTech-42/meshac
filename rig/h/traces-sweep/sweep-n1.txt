@@ -1,0 +1,32 @@
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-58, z=639} turn=29.6 gapMs=640 gapTicks=12 sweep=0
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=99, y=-58, z=640} turn=40.9 gapMs=500 gapTicks=12 sweep=0
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=101, y=-58, z=640} turn=59.2 gapMs=600 gapTicks=12 sweep=1
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-58, z=641} turn=40.9 gapMs=600 gapTicks=12 sweep=0
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-57, z=640} turn=29.6 gapMs=551 gapTicks=12 sweep=0
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=99, y=-58, z=639} turn=51.8 gapMs=649 gapTicks=12 sweep=1
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=101, y=-58, z=639} turn=89.3 gapMs=550 gapTicks=12 sweep=2
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=99, y=-58, z=641} turn=103.6 gapMs=600 gapTicks=12 sweep=3
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=101, y=-58, z=641} turn=89.3 gapMs=650 gapTicks=12 sweep=4
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-59, z=638} turn=113.6 gapMs=600 gapTicks=12 sweep=5
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=98, y=-59, z=640} turn=89.6 gapMs=550 gapTicks=12 sweep=6
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=102, y=-59, z=640} turn=170.9 gapMs=600 gapTicks=12 sweep=7
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-59, z=642} turn=89.6 gapMs=600 gapTicks=12 sweep=8
+[Server thread/WARN]: [meshac] SIGNAL mcWl06 mining breaks blocks one after another with a 50+ degree view turn each time heat=1 -> setback
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-59, z=642} turn=89.6 gapMs=1150 gapTicks=23 sweep=7
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-61, z=640} turn=85.4 gapMs=600 gapTicks=12 sweep=8
+[Server thread/WARN]: [meshac] SIGNAL mcWl06 mining breaks blocks one after another with a 50+ degree view turn each time heat=2 -> setback
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-61, z=640} turn=85.4 gapMs=1150 gapTicks=23 sweep=7
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-61, z=639} turn=58.2 gapMs=650 gapTicks=12 sweep=8
+[Server thread/WARN]: [meshac] SIGNAL mcWl06 mining breaks blocks one after another with a 50+ degree view turn each time heat=3 -> setback
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-61, z=639} turn=58.2 gapMs=1200 gapTicks=23 sweep=7
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=99, y=-61, z=640} turn=73.9 gapMs=554 gapTicks=12 sweep=8
+[Server thread/WARN]: [meshac] SIGNAL mcWl06 mining breaks blocks one after another with a 50+ degree view turn each time heat=3 -> hold
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=99, y=-61, z=640} turn=73.9 gapMs=1100 gapTicks=23 sweep=7
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=101, y=-61, z=640} turn=116.4 gapMs=600 gapTicks=12 sweep=8
+[Server thread/WARN]: [meshac] SIGNAL mcWl06 mining breaks blocks one after another with a 50+ degree view turn each time heat=4 -> hold
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=101, y=-61, z=640} turn=116.4 gapMs=1150 gapTicks=23 sweep=7
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-61, z=641} turn=73.9 gapMs=601 gapTicks=12 sweep=8
+[Server thread/WARN]: [meshac] SIGNAL mcWl06 mining breaks blocks one after another with a 50+ degree view turn each time heat=5 -> hold
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-61, z=641} turn=73.9 gapMs=1200 gapTicks=23 sweep=7
+[Server thread/INFO]: [trace] sweep mcWl06 BlockPos{x=100, y=-60, z=638} turn=143.6 gapMs=550 gapTicks=12 sweep=8
+[Server thread/WARN]: [meshac] SIGNAL mcWl06 mining breaks blocks one after another with a 50+ degree view turn each time heat=5 -> hold

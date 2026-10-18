@@ -1,0 +1,4 @@
+meshac main line bundle - 2026-10-17
+HEAD: c4b3fe8 (powder merge v3) - full source via git archive of zen-work/meshac
+Lineage: ROUND2-LINEAGE.txt (graph + last 12)
+d124 candidate jar: NOT ON BOX - /home/luke/build-scratch/2026-10-17/row3-delta/candidate-jars-d124-20261017/ does not exist (staged deploy script references it, expected sha e623a86d...). Live server runs meshac-0.1.0-fabric-263.jar (sha 5bd5914d..., d123 line). Build d124 from this source: JAVA_HOME=/home/luke/meshac-work/jdks/jdk-25.0.4.1+1 ./gradlew build (baseline has 12 pre-existing packets_a compile errors in the WIP tree only; main line builds clean).

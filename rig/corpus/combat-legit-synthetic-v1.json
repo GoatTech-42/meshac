@@ -1,0 +1,578 @@
+{
+  "schema": "meshac.combat-replay.v1",
+  "provenance": "synthetic",
+  "description": "Inspired by recorded control families, NOT real 2026-10-11 player recordings. Geometry oracle only.",
+  "cases": [
+    {
+      "id": "corner-strafe-old-visible-new-blocked",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 1,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "blocked"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "door-closes-after-legal-observation",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 1,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "blocked"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "bad-ping-held-2400ms",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 1,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 3400
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "bounce-descends-repeat-phase",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 1,
+          "eye": [
+            0,
+            2.42,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 2,
+          "eye": [
+            0,
+            2.72,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 3,
+          "eye": [
+            0,
+            2.42,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 4,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "moving-target-vertical-history",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 1,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            3,
+            2.5,
+            0.3,
+            4.8,
+            3.1
+          ],
+          "visibility": "visible"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "attacker-moves-after-aim",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 1,
+          "eye": [
+            2,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "current-reach-enters-since-history",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            3.5,
+            0.3,
+            1.8,
+            4.1
+          ],
+          "visibility": "visible"
+        },
+        {
+          "tick": 1,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "visible"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "large-entity-edge-aim",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.2,
+            0,
+            2.5,
+            3.8,
+            4,
+            3.1
+          ],
+          "visibility": "visible"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "unknown-los-not-blocked-proof",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "unknown"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "allow_geometry"
+    },
+    {
+      "id": "positive-all-out-of-reach",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            4.5,
+            0.3,
+            1.8,
+            5.1
+          ],
+          "visibility": "visible"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "deny_reach"
+    },
+    {
+      "id": "positive-all-observed-blocked",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "blocked"
+        },
+        {
+          "tick": 1,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            -0.3,
+            0,
+            2.5,
+            0.3,
+            1.8,
+            3.1
+          ],
+          "visibility": "blocked"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "deny_los"
+    },
+    {
+      "id": "positive-true-ray-miss",
+      "samples": [
+        {
+          "tick": 0,
+          "eye": [
+            0,
+            1.62,
+            0
+          ],
+          "box": [
+            2,
+            0,
+            1,
+            2.6,
+            1.8,
+            1.6
+          ],
+          "visibility": "visible"
+        }
+      ],
+      "attack": {
+        "look": [
+          0,
+          0,
+          1
+        ],
+        "sentMs": 1000,
+        "handledMs": 1000
+      },
+      "expected": "deny_aim"
+    }
+  ]
+}

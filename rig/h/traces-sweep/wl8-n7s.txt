@@ -1,0 +1,26 @@
+[17:51:13] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=98, y=-59, z=840} gap=-1 lookdeg=7 instant=false turnsInWin=0
+[17:51:14] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=101, y=-59, z=842} turn=105.3 gapMs=1000 gapTicks=21 sweep=0
+[17:51:14] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=101, y=-59, z=842} gap=1000 lookdeg=6 instant=false turnsInWin=0
+[17:51:15] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=102, y=-59, z=839} turn=103.8 gapMs=950 gapTicks=19 sweep=0
+[17:51:15] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=102, y=-59, z=839} gap=950 lookdeg=9 instant=false turnsInWin=0
+[17:51:16] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=102, y=-59, z=840} turn=36.2 gapMs=1000 gapTicks=20 sweep=0
+[17:51:16] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=102, y=-59, z=840} gap=1000 lookdeg=3 instant=false turnsInWin=0
+[17:51:17] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=99, y=-59, z=842} turn=130.3 gapMs=950 gapTicks=19 sweep=0
+[17:51:17] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=99, y=-59, z=842} gap=950 lookdeg=15 instant=false turnsInWin=0
+[17:51:18] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=100, y=-59, z=838} turn=130.8 gapMs=900 gapTicks=18 sweep=0
+[17:51:18] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=100, y=-59, z=838} gap=900 lookdeg=9 instant=false turnsInWin=0
+[17:51:19] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=103, y=-59, z=839} turn=77.0 gapMs=950 gapTicks=19 sweep=0
+[17:51:19] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=103, y=-59, z=839} gap=950 lookdeg=4 instant=false turnsInWin=0
+[17:51:20] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=98, y=-59, z=839} turn=144.0 gapMs=950 gapTicks=19 sweep=0
+[17:51:20] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=98, y=-59, z=839} gap=950 lookdeg=12 instant=false turnsInWin=0
+[17:51:21] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=97, y=-59, z=840} turn=7.2 gapMs=899 gapTicks=18 sweep=0
+[17:51:21] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=97, y=-59, z=840} gap=899 lookdeg=8 instant=false turnsInWin=0
+[17:51:22] [Server thread/WARN]: [meshac] SIGNAL mcWl10 mining block broken through another block heat=1 -> setback
+[17:51:22] [Server thread/WARN]: [meshac] SIGNAL mcWl10 mining block broken through another block heat=2 -> setback
+[17:51:23] [Server thread/WARN]: [meshac] SIGNAL mcWl10 mining block broken through another block heat=3 -> setback
+[17:51:24] [Server thread/WARN]: [meshac] SIGNAL mcWl10 mining block broken through another block heat=4 -> hold
+[17:51:24] [Server thread/WARN]: [meshac] SIGNAL mcWl10 mining block broken through another block heat=4 -> hold
+[17:51:25] [Server thread/WARN]: [meshac] SIGNAL mcWl10 mining block broken through another block heat=5 -> hold
+[17:51:26] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=98, y=-59, z=842} gap=5201 lookdeg=13 instant=false turnsInWin=0
+[17:51:27] [Server thread/INFO]: [trace] sweep mcWl10 BlockPos{x=98, y=-59, z=841} turn=29.3 gapMs=999 gapTicks=20 sweep=0
+[17:51:27] [Server thread/INFO]: [trace] break mcWl10 BlockPos{x=98, y=-59, z=841} gap=999 lookdeg=4 instant=false turnsInWin=0

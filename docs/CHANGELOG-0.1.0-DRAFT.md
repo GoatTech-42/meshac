@@ -23,7 +23,7 @@ first public release. meshac is a server-side fabric anticheat: players install 
 - normal powder-snow struggle hops no longer risk a jump flag (unrun)
 - log-only shadow measurements for a future no-fall fall-damage handback and for partial-block tolerance. off by default, no gameplay change (unrun)
 
-versions: only claim a version here after it has been built and run. as of this draft the final branch has not been compiled on any of 1.21.11, 26.1, 26.2 or 26.3.
+versions: only claim a version here after it has been built and run. as of 10-18 the delivered 63-patch bundle compiled GREEN on all four targets (Box-reported 10-17 11:36pm, second-hand; 0067+ are tooling/docs only, and run review must re-prove a current apply manifest at the tip). No version has been RUN on the final jar.
 
 ## what it doesn't do (limits text)
 

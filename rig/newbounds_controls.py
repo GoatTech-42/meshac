@@ -41,8 +41,8 @@ S = {
    'falsifies': 'the 750 ms (eye,box) rewind window must not FP on a static in-range target'},
  'nb-combat-cheat': {'tp': G['combat_cheat'], 'needs': 'cheat', 'expect': 'signal', 'module': 'Aimbot', 'checks': ('combat',), 'yaw': -90,
    'legs': [('module', None), ('wait', 6), ('module', None)],
-   'row': 'POSITIVE CONTROL: Aimbot attacking from 4.5 blocks must SIGNAL combat (reach > 3.2)',
-   'falsifies': 'the reach check: silence here means reach > 3.2 is unseen on this jar'},
+   'row': 'POSITIVE CONTROL: Aimbot attacking from 4.5 blocks must SIGNAL combat (reach > 3.2). CONDITIONAL: combat SIGNAL is a dead path on d124 (control matrix 10-17, checklist 4.1; Luke ship-vs-fix decision OPEN) - on a d124-based jar expect BLIND CONTROL = INCONCLUSIVE + a d124 finding, not a grader failure',
+   'falsifies': 'the reach check: silence on a jar with a live emit path means reach > 3.2 is unseen'},
  # mining
  'nb-mine-legit': {'tp': G['mine_wall'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
    'legs': [('holdmouse', '1', 12)],

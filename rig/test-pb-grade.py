@@ -63,6 +63,24 @@ check(grade(g, [g])['verdict'] == 'PASS', 'on-target alternative accepted: ' + s
 # 15. a witness can now come from any known check, not just the legacy five
 r = grade(base(), [base(), base(scenario='w', expect='signal', needs='cheat', offState=None, signals=['[meshac] SIGNAL P fly hover dy 0.010'])])
 check(r['verdict'] == 'PASS', 'witness from a newly-bound check: ' + str(r))
+# 16b. T1 GS01-GS03 verdict paths (EXPECT-REBIND-PATCH1 + control matrix B2 strings; INCONCLUSIVE never CLEAN on zero signals)
+gs01 = base(scenario='gs01', expect='signal', needs='cheat', offState=None, checks=('nofall',),
+            signals=['[meshac] SIGNAL P nofall ground spoof heat=3 -> log'])
+check(grade(gs01, [gs01])['verdict'] == 'PASS', 'GS01 interleaved spoof binds nofall: ' + str(grade(gs01, [gs01])))
+gs01b = base(scenario='gs01', expect='signal', needs='cheat', offState=None, checks=('nofall',),
+             signals=['[meshac] SIGNAL P nofall ground flag in mid-air heat=3 -> log'])
+check(grade(gs01b, [gs01b])['verdict'] == 'PASS', 'GS01 alt nofall string binds: ' + str(grade(gs01b, [gs01b])))
+gs01silent = base(scenario='gs01', expect='signal', needs='cheat', offState=None, checks=('nofall',))
+r = grade(gs01silent, [gs01silent]); check(r['verdict'] == 'INVALID' and any('never PASS' in x for x in r['reasons']), 'GS01 blind control = INCONCLUSIVE never CLEAN: ' + str(r))
+gs02 = base(scenario='gs02', expect='signal', needs='cheat', offState=None, checks=('high',),
+            signals=['[meshac] SIGNAL P high jump rose 2.30 heat=1 -> log'])
+check(grade(gs02, [gs02])['verdict'] == 'PASS', 'GS02 split-rise binds high: ' + str(grade(gs02, [gs02])))
+gs03 = base(scenario='gs03', expect='signal', needs='cheat', offState=None, checks=('jump', 'step'),
+            signals=['[meshac] SIGNAL P jump dy 0.750 heat=2 -> log'])
+check(grade(gs03, [gs03])['verdict'] == 'PASS', 'GS03 above-band kick binds jump: ' + str(grade(gs03, [gs03])))
+gs03off = base(scenario='gs03', expect='signal', needs='cheat', offState=None, checks=('jump', 'step'),
+               signals=['[meshac] SIGNAL P nofall ground spoof heat=1 -> log'])
+r = grade(gs03off, [gs03off]); check(r['verdict'] == 'INVALID' and any('off-target' in x for x in r['reasons']), 'GS03 nofall-only is off-target: ' + str(r))
 # 16. a line that is not a SIGNAL for a known check is still silence
 g = base(scenario='x', expect='signal', needs='cheat', offState=None, signals=['[meshac] SIGNAL P wxyz made up'])
 check(grade(g, [g])['verdict'] == 'INVALID', 'unknown check is silence: ' + str(g))

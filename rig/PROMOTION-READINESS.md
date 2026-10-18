@@ -6,7 +6,7 @@ nothing here removes or damages a player (the server runs monitor/log posture th
 
 | # | commit | what it is | detection output | gate |
 |---|--------|-----------|------------------|------|
-| 1 | 78bcb3b | windowed nofall evidence (3-of-5 replaces 3-consecutive), spoof-claim chain-reset gate, powder jump band 0.60-0.70 | CHANGES what flags | zero-FP legit battery (window/threshold and band are PROPOSALS); reviewer GO was conditional on battery rows, now in the battery doc |
+| 1 | 78bcb3b | windowed nofall evidence (3-of-5 replaces 3-consecutive), spoof-claim chain-reset gate, powder jump band 0.60-0.70 | CHANGES what flags | zero-FP legit battery (window/threshold and band are PROPOSALS). NOTE: any reviewer-GO claim for this patch is UNCONFIRMED (parent, 10-17 7:39pm) - treat the patch as unreviewed until parent confirms |
 | 2/3 | e03f802 | O3 soft-grace shadow evidence; MESHAC_GROUND_TOL=classify keeps tolerated partial-shape claims out of the window | shadow: log only, never flags; classify: changes detection ONLY with the env var set (default off) | battery would-have-passed rates before classify is default-on; verdict on the resubmit outstanding |
 | 4/5 | ceb2540, 386448d | P3-strong shadow handback arm (count>=2) + WOULD-fire landing watcher + gndclaim/gndclear capture + GroundReplay harness | log only; never flags, never damages, MonitorGate untouched | battery run -> K1-K4 kill criteria (P3-STRONG-DRAFT.md) -> reviewer -> SEPARATE enforcement patch |
 | 6 | 126fac1 | GroundEvidence.decay() + GroundReplay decay-on-clear table | measurement only; decay() has NO production call site | battery D-rows; viable only at flagAt>=3 (GRACE-DECAY-FP-REVIEW.md) |

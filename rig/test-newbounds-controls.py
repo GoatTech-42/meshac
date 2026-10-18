@@ -109,6 +109,53 @@ def finish():
     if failed: raise SystemExit('%d failures' % failed)
     print('test-newbounds_controls ok')
 
+# combat family (nb-cbt-, W3/W4 draft rows, v2 after the 0048 retraction: LIVE path, monitor mode).
+# Placed BEFORE the negative controls so the single finish() at EOF gates on these too.
+cbt = sorted(k for k in S if k.startswith('nb-cbt-'))
+check(cbt == ['nb-cbt-aim-cheat', 'nb-cbt-crowd-legit', 'nb-cbt-flick-legit', 'nb-cbt-lag100-legit',
+              'nb-cbt-lag300-legit', 'nb-cbt-los-cheat', 'nb-cbt-multi-cheat', 'nb-cbt-reach-cheat'],
+      'nb-cbt- family: 4 cheat + 4 legit rows, got ' + str(cbt))
+for k in cbt:
+    check('DRAFT until' in S[k]['row'], k + ' stays a DRAFT until receipts')
+    check('CONDITIONAL' not in S[k]['row'] and 'BLIND' not in S[k]['row'] and 'dead path' not in S[k]['row'],
+          k + ': no retracted dead-path wording (0048)')
+for k in ('nb-cbt-reach-cheat', 'nb-cbt-los-cheat', 'nb-cbt-aim-cheat', 'nb-cbt-multi-cheat'):
+    check(S[k]['expect'] == 'signal' and S[k]['checks'] == ('combat',) and 'module' in S[k], k + ' is a bound combat cheat row')
+    check('monitor mode' in S[k]['row'] and 'LIVE' in S[k]['row'], k + ' targets the LIVE path under monitor mode (real mon heat)')
+    check('effect_check' in S[k], k + ' binds a server-confirmed receipt')
+    check('never EVADE' in (S[k]['row'] + S[k].get('effect_check', '')), k + ': failure stays INCONCLUSIVE, never EVADE')
+check('[a15]' in S['nb-cbt-reach-cheat']['effect_check'] and 'SEPARATELY' in S['nb-cbt-reach-cheat']['effect_check'],
+      'reach row binds the attack-attempt receipt separately from damage (vanilla may reject at 4.5 blocks)')
+check('silent=2' in S['nb-cbt-multi-cheat']['module'] and 'MISS-DRIVEN' in S['nb-cbt-multi-cheat']['row'],
+      'multi row is miss-driven (attack-before-rotate switching), not only the calibrated-quiet module')
+check('BY-DESIGN quiet' in S['nb-cbt-multi-cheat']['row'], 'multi row keeps the calibrated-KillAura quiet caveat honest')
+for k, tag in (('nb-cbt-multi-cheat', 'nbcbt_multi'), ('nb-cbt-crowd-legit', 'nbcbt_crowd'), ('nb-cbt-flick-legit', 'nbcbt_flick')):
+    check(all(('Tags:["%s"]' % tag) in c for c in S[k]['setup_rcon'] if c.startswith('/summon')),
+          k + ': every summon carries the row-unique tag')
+    check(S[k]['teardown_rcon'] == ['/kill @e[type=minecraft:zombie,tag=%s]' % tag],
+          k + ': teardown kills only the row-owned tag (no untagged radius selector)')
+    check('minecraft:overworld' in S[k]['row'], k + ' pins the world')
+check('minecraft:overworld' in S['nb-cbt-los-cheat']['row'] and '/fill 157 70 158 157 73 162' in S['nb-cbt-los-cheat']['setup_rcon'][0],
+      'los row pins world + absolute fill coords')
+check('minecraft:iron_sword' in ' '.join(S['nb-cbt-crowd-legit']['setup_rcon']), 'crowd setup hands the bot an iron sword')
+check(S['nb-cbt-crowd-legit']['legs'] == [('click', '1', 1), ('wait', 0.8)] * 8,
+      'crowd legs: 8 full-charge swings at 800 ms spacing (cooldown-true)')
+check('625 ms' in S['nb-cbt-crowd-legit']['row'] and '800 ms' in S['nb-cbt-crowd-legit']['row'],
+      'crowd row shows the cooldown arithmetic (800 > 625)')
+check(S['nb-cbt-lag100-legit'].get('ping_ms') == 100 and S['nb-cbt-lag300-legit'].get('ping_ms') == 300,
+      'lag rows pin the W3 100/300 ms passes')
+check('TARGET' in S['nb-cbt-lag100-legit']['row'] and 'TARGET' in S['nb-cbt-flick-legit']['row'],
+      'unconsumed fields (ping_ms, flick macro) are labeled TARGET')
+check('no runtime GO' in S['nb-cbt-lag100-legit']['row'] and 'no runtime GO' in S['nb-cbt-lag300-legit']['row']
+      and 'no runtime GO' in S['nb-cbt-flick-legit']['row'], 'executor-less TARGET rows are DRAFT, no runtime GO')
+check('never emit' in S['nb-cbt-flick-legit']['row'], 'flick row pins low-confidence patterns as evidence-only')
+check('dead path' not in S['nb-combat-cheat']['row'] and 'monitor mode' in S['nb-combat-cheat']['row'],
+      'nb-combat-cheat positive control targets the live monitor-mode path (0048 retraction)')
+for k in ('nb-cbt-los-cheat', 'nb-cbt-multi-cheat', 'nb-cbt-crowd-legit', 'nb-cbt-flick-legit'):
+    for f in ('setup_rcon', 'teardown_rcon'):
+        if f in S[k]:
+            check(isinstance(S[k][f], list) and all(c.startswith('/') for c in S[k][f]), k + '.' + f + ' shape')
+
 # negative controls (skipped inside a mutated run - no recursion)
 if not os.environ.get('MESHAC_TEST_MUTATE'):
     import subprocess

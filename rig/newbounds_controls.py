@@ -161,7 +161,7 @@ S = {
  # Guard and clone receipts are TYPED (a gated clone success count or a command failure),
  # never a uniform numeric success gate; the LOS restore is gated on the setup backup receipt.
  # Until then every row stays DRAFT and a run without receipts is INCONCLUSIVE material only.
- # ground-spoof zero-FP battery rows (reviewer GO conditions on patch 1, relayed via parent 10-17 7:44pm)
+ # ground-spoof zero-FP battery rows (reviewer GO conditions on patch 1, relayed 10-17, NOT re-verified - blockers doc v4 provenance rule: only the 7:39:54pm patch-3/patch-4 relays are transcript-confirmed)
  'nb-gc01-sneakedge': {'tp': G['sneak_edge'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': 0,
    'legs': [('hold2', 'w', 'Shift_L', 1), ('hold2', 's', 'Shift_L', 1)] * 150,  # 150 x 2s = 300s - the pre-committed 5-minute bound, bound IN the legs
    'row': 'GC01 (reviewer row 1): sneak-edge oscillation, worst-case partial overhang work. The legs themselves carry the bound: 150 cycles x 2s = 300s; a shorter run does not satisfy the row. DRAFT until the driver receipt (leg log + 300s wall-clock span in the capture) proves the duration. PRE-COMMITTED jitter-density bound: ZERO nofall SIGNAL lines over the whole row; a single flag kills the shipped window-5/flag-3 proposal and goes back to the reviewer with the gndclaim trace lines, no silent widening',

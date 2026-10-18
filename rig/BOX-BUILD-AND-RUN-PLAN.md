@@ -1,5 +1,15 @@
 # Box: one-pass build + battery run plan (bundle HEAD = patch 0025)
 
+> SUPERSEDED SERIES MANIFEST (10-18, patch 0068): the series table in section 0 covers delivered
+> patches through 0025 only, and its "verified clean" note applies to a 17-patch predecessor, not
+> the 25 it sits next to. The delivered bundle is meshac-series-9353fbd-to-a078d4b-box.tar.gz
+> (63 patch files spanning 0001-0066, tar sha256
+> 3f0dea27f1e67380114c893716886d9ec2a017dc2704cf54f1d69b6e24aa9602) with its own
+> MANIFEST.txt / PATCHES-SHA256.txt; BOX-REPORTED 10-17 11:36pm: clean apply onto c4b3fe8,
+> javac harness GREEN (85 test mains, exit 0), full compile x4 GREEN. Follow the DELIVERED-bundle
+> manifest for the current apply order; the table below is HISTORICAL. The build/run STEPS below
+> remain the intended shape.
+
 ## 0. Inputs
 - Base: meshac main line c4b3fe8 (bundle base commit 9353fbd).
 - Series: meshac-series-0001-0022.tar.gz = 25 format-patch files, git-numbered 0001-0025 in APPLY

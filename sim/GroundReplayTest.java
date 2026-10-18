@@ -1,12 +1,23 @@
 import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
 public final class GroundReplayTest {
+	static String k4last = "";
+	static int k4Run(String javaBin, String cp, String log) throws Exception {
+		Path f = Files.createTempFile("k4nc", ".log");
+		Files.writeString(f, log);
+		Process pr = new ProcessBuilder(javaBin, "-cp", cp, "GroundReplay", f.toString()).redirectErrorStream(true).start();
+		k4last = new String(pr.getInputStream().readAllBytes());
+		return pr.waitFor();
+	}
+
 	static int fails;
 	static void check(boolean ok, String m) { if (!ok) { fails++; System.out.println("FAIL " + m); } }
 	static void eq(long[] r, long claims, long un, long max, long flags, long arms, String m) {
 		check(r[0] == claims && r[1] == un && r[2] == max && r[3] == flags && r[4] == arms,
 			m + " got claims=" + r[0] + " un=" + r[1] + " max=" + r[2] + " flags=" + r[3] + " arms=" + r[4]);
 	}
-	public static void main(String[] a) {
+	public static void main(String[] a) throws Exception {
 		// interleaved spoof under the 3-of-5 flag: count 1,1,2,2,3 - one arm at >=2 (third claim), one flag at 3
 		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(true)), 5, 3, 2), 5, 3, 3, 1, 1, "interleaved spoof arms below the flag then flags");
 		// eviction: five supported claims drain the window; a refill re-flags (rising edges counted separately)
@@ -113,6 +124,17 @@ public final class GroundReplayTest {
 			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true));
 		eq(GroundReplay.score(d6, 5, 3, 2, true), 4, 4, 3, 1, 2, "D6 soft boundary under decay: forgives one - the same stream FLAGS");
 		eq(GroundReplay.score(d6, 5, 3, 2), 4, 4, 2, 0, 2, "D6 soft boundary under live: full clear - sub-flag");
+		// === K4 fail-closed NEGATIVE CONTROLS: the 0028 gate must actually fire, not just exist in text ===
+		String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();
+		String cp = System.getProperty("java.class.path");
+		check(k4Run(javaBin, cp, "[trace] gndclaim Bot air=true count=7\n") == 1, "K4 negative control: a mismatched jar count exits 1 (harness computes 1, receipt claims 7)");
+		check(k4last.contains("K4 FAILS CLOSED: jar-vs-harness state disagreement"), "K4 mismatch prints the disagreement line");
+		check(k4Run(javaBin, cp, "[trace] gndclaim Bot air=true count=1\n[trace] gndclaim Bot air=true\n") == 1, "K4 negative control: a mixed counted/uncounted capture exits 1");
+		check(k4last.contains("K4 FAILS CLOSED: counted and uncounted capture lines BOTH present"), "K4 mixed capture prints the fail-closed line (0029 both-order wording)");
+		check(k4Run(javaBin, cp, "[trace] gndclaim Bot air=true\n") == 0, "receiptless capture exits 0 (diagnostic only, never a pass)");
+		check(k4last.contains("K4 NOT RUN"), "receiptless capture is labeled K4 NOT RUN");
+		check(k4Run(javaBin, cp, "[trace] gndclaim Bot air=true count=1\n[trace] gndclaim Bot air=true count=2\n") == 0, "positive control: consistent jar counts exit 0");
+		check(!k4last.contains("FAILS CLOSED") && k4last.contains("2 claim receipts (0 mismatches)"), "positive control: agreement prints, no fail-closed");
 		System.out.println(fails == 0 ? "GroundReplayTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

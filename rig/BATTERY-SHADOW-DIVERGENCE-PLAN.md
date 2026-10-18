@@ -45,7 +45,7 @@ have manufactured a flag, and now no reset goes uncaptured. K4 is a real gate: i
 (exit 1) on any per-receipt mismatch or a mixed counted/uncounted capture; a log with no receipts
 is labeled "K4 NOT RUN" and reads as presence-semantics only - that exit code 0 is DIAGNOSTIC, not
 a K4 pass; consumers must check for the NOT RUN line, never rc0 alone. Flag agreement per row is
-asserted under this gate.
+will be asserted under this gate when the battery runs; as of 10-18 no captures exist, so no agreement has ever been evaluated.
 
 ## Stage-2 gate (unchanged from GRACE-DECAY-PROMOTION-DRAFT.md section 6)
 

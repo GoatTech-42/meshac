@@ -35,7 +35,7 @@ get credit for catching a crippled attack, and meadow does not get an EVADE for 
 
 ## Run order and scoring
 
-1. Ladder order A, B, D, E - all four are runnable (A/B/D/E need only meadow NoFall + flat/water terrain) and EVERY runnable preregistered row is required. C runs only when a driver exists (else explicit SKIP, incomplete coverage); C2 likely SKIP until MicroHop lands; F stays blocked. A C SKIP never drops or substitutes a runnable row - E in particular always runs.
+1. Ladder order A, B, D, E - all four are fully specified (they need only meadow NoFall + flat/water terrain) but UNEXECUTED: no named runner exists for them today, so each requires rig time, a driver run and receipts before it is anything but a DRAFT; every specified preregistered row is required once a run is authorized. C runs only when a driver exists (else explicit SKIP, incomplete coverage); C2 is SKIP-DRIVER-MISSING until MicroHop lands; F stays blocked. A C SKIP never drops or substitutes a specified row - E in particular is never droppable.
 2. Per row: config receipt -> liveness -> fall >= 8 blocks -> grade the bound string (checks=('nofall',))
    -> attack-effect proof (damage avoided? handback?) -> verdict per the table.
 3. Scoreboard mapping: any MEADOW-EVADE finding = MEADOW (EVADE) on the nofall check. MESHAC on

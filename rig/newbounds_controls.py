@@ -53,6 +53,8 @@ S = {
  # --- Combat family (W3/W4, 10-17 v5 = 0054, reviewer 10:35pm): DRAFT-only rows, prefix nb-cbt-. W1 re-scoped 10-17 (0048): combat is LIVE
  # on d124 (AttackMixin -> Combat.check -> Verdict.signal); rows run under MONITOR MODE against the real SIGNAL
  # line (real mon heat). 10b rescinded. Every command runs /execute in minecraft:overworld (world is real, not
+ # GRADER NOTE (0057): SIGNAL lines are combat-budgeted (30 per 60 s per player; SIGNAL-SUPPRESSED summaries
+ # are the durable counter receipt) - [a15] is the per-attempt receipt, do not count SIGNAL lines per attempt.
  # prose); <bot> and <run> are runner-substituted (the rig bot name; a per-run id so teardown never hits older
  # row entities or the wrong player). Nothing runs without reviewer GO + a rig slot. ---
  'nb-cbt-reach-cheat': {'tp': G['combat_cheat'], 'needs': 'cheat', 'expect': 'signal',

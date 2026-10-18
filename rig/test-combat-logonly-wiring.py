@@ -29,7 +29,14 @@ class LogOnly(unittest.TestCase):
   self.assertNotIn('remove(',body)
   self.assertNotIn('Step.REMOVE',body)
   self.assertIn('return Step.LOG;',body)
-  self.assertIn('sigLog',body)       # per-(player,check) log/alert budget (proposal pre-GO 1)
+  self.assertIn('sigLog',body)       # log/alert budget (proposal pre-GO 1)
+  self.assertIn('"combat".equals(check)',body)  # 0057: budget is combat-only, other families unthrottled
+  self.assertIn('System.nanoTime()',body)       # 0057: monotonic clock, wall rollback cannot reopen
+  self.assertIn('now - b[0] >= 60_000_000_000L',body)
+  self.assertNotIn('ms < b[0]',body)            # no reopen-on-rollback branch
+  self.assertIn('SIGNAL-SUPPRESSED',v)          # 0057: durable window-close summary
+  fgt=v.split('public static void forget(',1)[1].split('\n\t}',1)[0]
+  self.assertIn('SIGNAL-SUPPRESSED',fgt) and self.assertIn('disconnect flush',fgt)  # 0057: disconnect flush
   self.assertIn('if (cfg.monitor()) return signalLogOnly(pl, check, detail, weight);',v)  # one implementation
  def test_other_raw_denials_are_gated(self):
   for name,check in [('Interact','interact'),('Mining','mining')]:

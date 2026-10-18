@@ -15,7 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class Verdict {
 	public enum Step { SETBACK, HOLD, REMOVE, LOG }
-	private static final class H { final Ladder.Heat lh = new Ladder.Heat(), mon = new Ladder.Heat(); /* mon: heat of log-only signals, never feeds a removal */ int heat; long at; final ArrayDeque<String> trace = new ArrayDeque<>(); final java.util.LinkedHashMap<String, Integer> weight = new java.util.LinkedHashMap<>(); final Map<String, String> detail = new java.util.HashMap<>(); final Map<String, long[]> sigLog = new java.util.HashMap<>(); /* per-check log/alert budget windows {windowStart, used, suppressed}; keys bounded by the fixed check vocabulary */ }
+	private static final class H { final Ladder.Heat lh = new Ladder.Heat(), mon = new Ladder.Heat(); /* mon: heat of log-only signals, never feeds a removal */ int heat; long at; final ArrayDeque<String> trace = new ArrayDeque<>(); final java.util.LinkedHashMap<String, Integer> weight = new java.util.LinkedHashMap<>(); final Map<String, String> detail = new java.util.HashMap<>(); final Map<String, long[]> sigLog = new java.util.HashMap<>(); /* combat-only log/alert budget windows {windowStartNanos, used, suppressed} (0057); keys bounded by the fixed check vocabulary */ }
 	private static final Map<UUID, H> HEAT = new ConcurrentHashMap<>();
 
 	/** Cheap per-event note kept in a ring so a case can carry the lead-up. */
@@ -67,17 +67,26 @@ public final class Verdict {
 		if (cfg.skips(pl, check)) return Step.LOG; // same exemptions as signal()
 		H h = HEAT.computeIfAbsent(pl.getUUID(), k -> new H());
 		long ms = System.currentTimeMillis();
-		int mh; long sup;
+		int mh; long sup = 0; long winClose = 0; boolean emit = true;
 		synchronized (h) {
 			h.mon.add(check, weight, ms, cfg.ladderParams()); mh = (int) Math.round(h.mon.heat);
 			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + mh + " (log-only)"); if (h.trace.size() > 40) h.trace.poll();
-			// per-(player, check) log/alert budget (proposal pre-GO 1): a high-cps aura must not spam one WARN + alert
-			// per attack. 30 lines per 60 s fixed window per (player, check) - PROPOSAL value, reviewer-tunable.
-			long[] b = h.sigLog.computeIfAbsent(check, k -> new long[3]);
-			if (b[0] == 0 || ms < b[0] || ms - b[0] >= 60_000) { b[0] = ms; b[1] = 0; }
-			if (b[1] >= 30) { b[2]++; return Step.LOG; } // heat + trace still record every signal; only the line/alert is capped
-			b[1]++; sup = b[2]; b[2] = 0;
+			// 0057: the budget is COMBAT-ONLY - every other check family keeps the unthrottled monitor contract
+			// (FP coverage + positive controls unchanged). 30 lines per 60 s per player, combat (PROPOSAL value,
+			// reviewer-tunable); heat + trace still record every signal; only the line/alert is capped.
+			if ("combat".equals(check)) {
+				long now = System.nanoTime(); // monotonic: a wall-clock rollback must never reopen the budget
+				long[] b = h.sigLog.computeIfAbsent(check, k -> new long[3]);
+				if (b[0] == 0 || now - b[0] >= 60_000_000_000L) { // forward roll only: now < b[0] counts within the window, never reopens
+					if (b[2] > 0) winClose = b[2]; // durable window-close summary: suppressed positives always reach the log
+					b[0] = now; b[1] = 0; b[2] = 0;
+				}
+				if (b[1] >= 30) { b[2]++; emit = false; }
+				else { b[1]++; sup = b[2]; b[2] = 0; }
+			}
 		}
+		if (winClose > 0) Meshac.LOG.warn("[meshac] SIGNAL-SUPPRESSED {} {} count={} (window closed)", pl.getGameProfile().name(), check, winClose);
+		if (!emit) return Step.LOG;
 		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> log{}", pl.getGameProfile().name(), check, detail, mh, sup > 0 ? " (suppressed " + sup + ")" : "");
 		alert(pl, check + " " + detail + " heat " + mh + " log");
 		return Step.LOG;
@@ -124,5 +133,12 @@ public final class Verdict {
 
 	public static void clearPendingActions() { HEAT.clear(); }
 
-	public static void forget(UUID id) { HEAT.remove(id); }
+	public static void forget(UUID id) {
+		H h = HEAT.remove(id);
+		if (h != null) { // 0057: suppressed log-only positives must reach a durable log even when the player disconnects
+			synchronized (h) {
+				for (var e : h.sigLog.entrySet()) if (e.getValue()[2] > 0) Meshac.LOG.warn("[meshac] SIGNAL-SUPPRESSED {} {} count={} (disconnect flush)", id, e.getKey(), e.getValue()[2]);
+			}
+		}
+	}
 }

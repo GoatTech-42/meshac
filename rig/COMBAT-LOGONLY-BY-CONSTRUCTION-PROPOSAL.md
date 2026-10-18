@@ -3,8 +3,10 @@
 Status: APPLIED by patch 0055 (10-17, parent decision under Luke standing meshac autonomy,
 report-after): shape B shipped - Verdict.signalLogOnly (mon bucket + budgeted SIGNAL line +
 alert, always LOG) and both AttackMixins call it, never cancel, not cancellable. Pre-GO 1
-(per-player SIGNAL budget: 30 lines per 60 s per (player, check), proposal value) shipped in
-the same patch. Pre-GO 2 (server-thread reentry proof) and 3 (Box compile + rig FP replay)
+shipped as COMBAT-ONLY after the 0055 review (0057): 30 lines per 60 s per player for combat only
+(other check families keep the unthrottled monitor contract), monotonic-clock windows that a
+rollback cannot reopen, and durable suppressed-count receipts (window-close + disconnect-flush
+SIGNAL-SUPPRESSED lines) so capped positives always reach the log. Pre-GO 2 (server-thread reentry proof) and 3 (Box compile + rig FP replay)
 remain outstanding - Box compile is the standing gate. Original commissioning note: Commissioned
 by the Instinct re-scope (10-17 10:14pm, report-after, not a Luke quote): "draft (2) as a
 separate, small, reviewable proposal only: AttackMixin never cancels/punishes combat

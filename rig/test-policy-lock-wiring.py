@@ -60,10 +60,23 @@ class PolicyLockWiring(unittest.TestCase):
   # 0091 shipped two compile errors my regex tests could not see (cur used as Config). Guard the exact shapes.
   c = strip((S/'Config.java').read_text())
   load = body(c, 'public static AdminLog.ReloadResult load(')
-  self.assertIn('Config next = cur.cfg;', load)
   self.assertIn('documented(g, cur.cfg)', load)
   self.assertNotIn('= cur;', load)           # cur is a Snapshot, never a Config
   self.assertNotIn('(g, cur)', load)
+  # 0093: missing-file load validates a round-trip COPY, never the published instance
+  self.assertIn('next = g.fromJson(g.toJson(cur.cfg), Config.class);', load)
+  # 0093: validation is inside the commit lock, before the wipe and the publish
+  i_lock = load.index('synchronized (POLICY_LOCK)')
+  i_val = load.index('next.validatePolicy()')
+  i_wipe = load.index('Verdict.clearPendingActions()')
+  i_pub = load.index('cur = new Snapshot(')
+  self.assertLess(i_lock, i_val); self.assertLess(i_val, i_wipe); self.assertLess(i_wipe, i_pub)
+ def test_disabledchecks_volatile_read_once(self):
+  c = strip((S/'Config.java').read_text())
+  self.assertIn('public volatile java.util.List<String> disabledChecks', c)
+  dis = body(c, 'public boolean disabled(')
+  self.assertIn('var l = disabledChecks;', dis)   # read the volatile reference once
+  self.assertEqual(dis.count('disabledChecks'), 1)
  def test_setcheck_copy_on_write_locked(self):
   mc = strip((S/'MeshCommands.java').read_text())
   sc = body(mc, 'private static int setCheck(')

@@ -51,8 +51,8 @@ public final class Config {
 	public boolean isEgregious(String check) { if (egregiousChecks == null) return false; for (String e : egregiousChecks) if (e != null && e.equalsIgnoreCase(check)) return true; return false; } // case-insensitive like the other check lists
 	public boolean enforce(String check) { return !monitor() && !policyInvalid(); } // soft mode: raw action refusals (break/click/use) follow the same gate as verdicts; an invalid policy pauses enforcement (log-only) until a valid reload
 	public java.util.Map<String, java.util.List<String>> exemptChecks = new java.util.HashMap<>(); // check name -> player names exempt from that check only
-	public java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off (Luke "Exempt that check rn" 2026-10-11)
-	public boolean disabled(String check) { if (disabledChecks == null) return false; for (String d : disabledChecks) if (d != null && d.equalsIgnoreCase(check)) return true; return false; }
+	public volatile java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off (Luke "Exempt that check rn" 2026-10-11). Copy-on-write swapped under POLICY_LOCK (/mesh check on|off); volatile so unsynchronized readers see the swap (0093)
+	public boolean disabled(String check) { var l = disabledChecks; if (l == null) return false; for (String d : l) if (d != null && d.equalsIgnoreCase(check)) return true; return false; } // read the volatile reference ONCE: the null check and the iteration must see the same list (0093)
 	public boolean exemptFrom(net.minecraft.server.level.ServerPlayer pl, String check) { if (exemptChecks == null) return false; String n = pl.getGameProfile().name(); for (var en : exemptChecks.entrySet()) { if (en.getKey() == null || !en.getKey().equalsIgnoreCase(check) || en.getValue() == null) continue; for (String e : en.getValue()) if (e != null && e.equalsIgnoreCase(n)) return true; } return false; } // keys are matched case-insensitively like names
 	/** Every name Verdict.signal / disabled() / enforce() is called with. Movement sub-checks use the first word of their message (hit.split(" ")[0]). Keep in sync when a check is added. */
 	public static final java.util.Set<String> KNOWN_CHECKS = CheckNames.ALL;
@@ -133,7 +133,9 @@ public final class Config {
 	 *  (one cfg+epoch pair, read once), not deep immutability: exactly two post-publication mutations are sanctioned,
 	 *  both under POLICY_LOCK - monitorOnly (in-place Boolean write, atomic) and disabledChecks (copy-on-write list
 	 *  swap, so unsynchronized readers iterating in disabled() can never hit a ConcurrentModificationException). Every
-	 *  other write to a Config instance happens pre-publication (Gson parse, validatePolicy). */
+	 *  other write to a Config instance happens before publication (Gson parse, the missing-file round-trip copy, and
+	 *  validatePolicy - which runs inside the commit lock on the unpublished next). lastValidLadder is written only by
+	 *  validatePolicy (static init + commit) and never read by a decision path. */
 	public static final class Snapshot {
 		public final Config cfg; public final long epoch;
 		private Snapshot(Config cfg, long epoch) { this.cfg = cfg; this.epoch = epoch; }
@@ -158,7 +160,7 @@ public final class Config {
  public static AdminLog.ReloadResult load() {
   Path p = FabricLoader.getInstance().getConfigDir().resolve("meshac.json");
   Gson g = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-  Config next = cur.cfg; String output; boolean existed = Files.exists(p); // 0092: cur is the Snapshot; the config being replaced is cur.cfg
+  Config next; String output; boolean existed = Files.exists(p);
   try {
    if (existed) {
     var root = com.google.gson.JsonParser.parseString(Files.readString(p)).getAsJsonObject();
@@ -170,10 +172,10 @@ public final class Config {
     var defaults = com.google.gson.JsonParser.parseString(documented(g, new Config())).getAsJsonObject();
     for (var entry : defaults.entrySet()) if (!root.has(entry.getKey())) root.add(entry.getKey(), entry.getValue());
     output = g.toJson(root) + "\n";
-   } else output = documented(g, cur.cfg);
+   } else { next = g.fromJson(g.toJson(cur.cfg), Config.class); output = documented(g, cur.cfg); } // 0093: a missing file means "keep current settings", but validate a round-trip COPY - never mutate the published instance outside the commit lock (the copy carries exactly the persistable fields; validatePolicy recomputes the transient policy)
   } catch (Exception e) { Meshac.LOG.warn("[meshac] config read/parse failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
-  try { next.validatePolicy(); } catch (RuntimeException e) { Meshac.LOG.warn("[meshac] config validation failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
-  synchronized (POLICY_LOCK) { // atomic commit: a decision holding the lock acts entirely before or entirely after the new policy - none can straddle the wipe and the publish
+  synchronized (POLICY_LOCK) { // atomic commit: a decision holding the lock acts entirely before or entirely after the new policy - none can straddle validation, the wipe, or the publish
+   try { next.validatePolicy(); } catch (RuntimeException e) { Meshac.LOG.warn("[meshac] config validation failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; } // 0093: inside the lock - validatePolicy writes (the policy field on next, the lastValidLadder static) are commit-side state, never visible to a decision mid-flight. next is always an unpublished instance here (fresh Gson parse, or the round-trip copy)
    Movement.clearPendingActions(); Verdict.clearPendingActions(); // wipe ALL ladder evidence first (Verdict.clearPendingActions clears HEAT); evidence loss on a reload is fail-closed
    cur = new Snapshot(next, cur.epoch + 1); // volatile publish of the immutable bundle AFTER the wipe, still inside the lock
   }

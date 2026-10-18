@@ -187,11 +187,24 @@ Reviewer round on 0091, three corrections folded:
   Step a signal RETURNS is consumed by the check caller - cancel/setback/refusal in Movement, Interact,
   Mining, Glide, Inventory, Vehicle, Totem, Fish and the packet-listener mixin - AFTER POLICY_LOCK is
   released. A commit can land between the return and that caller action; outer actions are explicitly NOT
-  covered. Bounding a stale outer action: it is one in-flight event's cancel/setback/refusal computed under
-  the previous policy; it never touches heat, cases, or bans (those all stayed inside the lock).
+  covered. Stale outer actions have NO count bound (corrected in 0093): any number of off-thread callers
+  can retain returned Steps and all act after a commit. The bound is qualitative only: outer actions never
+  touch heat, cases, or bans (those all stayed inside the lock).
 - MUTATION DISCIPLINE: the Snapshot guarantees identity, not deep immutability. Exactly two post-publication
   mutations are sanctioned, both under POLICY_LOCK: monitorOnly (in-place Boolean write) and disabledChecks
   (copy-on-write swap - /mesh check on|off now builds a new list and swaps the reference, so unsynchronized
   readers iterating disabled() can never see a half-mutated list or a ConcurrentModificationException; the
   in-place removeIf/add it replaces carried that risk since the command was added). Every other Config write
   is pre-publication (Gson parse, validatePolicy).
+
+## 0093 addendum: reviewer small-items round
+
+- The 0092 "one in-flight event" bound is WITHDRAWN: it was per-decision wording, not a real bound. Any
+  number of off-thread callers can retain returned Steps and all act after a commit; only the qualitative
+  bound holds (outer actions never touch heat/cases/bans).
+- disabledChecks is now volatile and disabled() reads the reference once into a local: the copy-on-write
+  swap is immediately visible to unsynchronized readers and the null check plus iteration see the same list.
+- Missing-file load() no longer validates the published instance: next is a Gson round-trip COPY of cur.cfg
+  (exactly the persistable fields; validatePolicy recomputes the transient policy), and validatePolicy now
+  runs INSIDE the commit lock, so its writes (the policy field on the unpublished next, the lastValidLadder
+  static) are commit-side state. "Exactly two sanctioned post-publication mutations" is now exact.

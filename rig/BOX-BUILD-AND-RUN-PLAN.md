@@ -1,8 +1,8 @@
-# Box: one-pass build + battery run plan (bundle HEAD = patch 0018)
+# Box: one-pass build + battery run plan (bundle HEAD = patch 0019)
 
 ## 0. Inputs
 - Base: meshac main line c4b3fe8 (bundle base commit 9353fbd).
-- Series: meshac-series-0001-0018.tar.gz = 17 format-patch files, git-numbered 0001-0017 in APPLY
+- Series: meshac-series-0001-0019.tar.gz = 18 format-patch files, git-numbered 0001-0018 in APPLY
   ORDER. Mapping to the delivered numbering (reviewer verdicts cite the DELIVERED numbers):
 
   | series file | delivered patch | content |
@@ -15,22 +15,28 @@
   | 0006 | 7 | grader TEXT2CHECK all 23 checks (NOT reviewed) |
   | 0007 | 8 | newbounds capture spec (NOT reviewed) |
   | 0008 | 9 | grace-decay FP review + pin (NOT reviewed) |
-  | 0009 | 0010 | promotion readiness + changelog (NOT reviewed) |
-  | 0010 | 0011 | strike unconfirmed GO claim + GS fixtures (static GO 8:17pm) |
-  | 0011 | 0012 | readiness cites conditional GO (static GO 8:17pm) |
-  | 0012 | 0013 | xdotool_legs driver + blink-lane pins (static GO 8:17pm) |
-  | 0013 | 0014 | FIX 2 (K4) + GC01/02/05 + boatfly + coverage/scoreboard docs |
-  | 0014 | 0015 | gap rows (nuker/GhostHand/HighJump/Timer/ElytraFly/AutoTotem) + skeleton |
-  | 0015 | 0016 | microhop/kb rows + honest ground-spoof red-team plan |
-  | 0016 | 0017 | meadow attack specs (MicroHop, NoFall interleave) |
-  | 0017 | 0018 | this plan + readiness update |
+  | 0009 | 0010 | promotion readiness + changelog (NOT reviewed - jar is RIG-ONLY) |
+  | 0010 | 0011 | strike unconfirmed GO claim + GS fixtures (static GO 8:20pm, GroundReplay lineage) |
+  | 0011 | 0012 | readiness cites conditional GO (static GO 8:20pm, GroundReplay lineage) |
+  | 0012 | 0013 | xdotool_legs driver + blink-lane pins (static GO 8:20pm, GroundReplay lineage) |
+  | 0013 | 0014 | FIX 2 (K4) + GC01/02/05 + boatfly + coverage/scoreboard docs (static GO 8:20pm, GroundReplay lineage) |
+  | 0014 | 0015 | gap rows (nuker/GhostHand/HighJump/Timer/ElytraFly/AutoTotem) + skeleton (static GO 8:20pm, GroundReplay lineage) |
+  | 0015 | 0016 | microhop/kb rows + honest ground-spoof red-team plan (static GO 8:20pm, GroundReplay lineage) |
+  | 0016 | 0017 | meadow attack specs (MicroHop, NoFall interleave) (NOT reviewed) |
+  | 0017 | 0018 | this plan + readiness update (static GO 8:20pm) |
+  | 0018 | 0019 | citation correction + rig-only jar label |
+
+  CITATION GUARD: the "8:17pm 0011-0013 GO" relay named MONITOR-SERIES items, a different
+  numbering - the GroundReplay-lineage GO is 0011-0016 + 0018, relayed 8:20pm. The battery jar
+  carries UNREVIEWED patches 6-9 + 0010: label the jar RIG-ONLY in the manifest and never cite
+  those patches as reviewed.
 
   Delivered patch 2 was NO-GO'd and is absent by design.
 
 ## 1. Apply + tree check
   git clone <c4b3fe8 base> meshac-build && cd meshac-build
-  git am series/*.patch        # 17 patches, clean apply (verified 10-17 on a fresh worktree)
-  git log --oneline | head -17 # subjects must match the table above; git am rewrites committer
+  git am series/*.patch        # 18 patches; 17-patch predecessor verified clean 10-17 on a fresh worktree
+  git log --oneline | head -18 # subjects must match the table above; git am rewrites committer
                                # ids, so compare TREES/subjects, not commit hashes
 
 ## 2. Compile (JDK 21)

@@ -31,9 +31,12 @@ nothing here removes or damages a player (the server runs monitor/log posture th
 ## Outstanding before any of this promotes
 
 1. Box: battery run on the patch-3+4 jar with TRACE on (rows in the battery doc).
-2. Reviewer: patches 3 and 4/5 GO (relayed via parent 10-17 7:42pm); 0011, 0012, 0013 static GO
-   (relayed 10-17 8:17pm). Verdicts outstanding on 6, 7, 8, 9, 0010, 0014, 0015, 0016, 0017, 0018.
-   Patches 6-9 are NOT reviewed - never cite them as surviving.
+2. Reviewer: patches 3 and 4/5 GO (relayed via parent 10-17 7:42pm); GroundReplay-LINEAGE patches
+   0011-0016 static GO + rebind v5 + patch 0018 static GO (reviewer, relayed via parent 10-17
+   8:20pm). CITATION GUARD: an earlier 8:17pm relay citing "0011-0013 GO" named MONITOR-SERIES
+   items - a different numbering; never cross-cite the two 0011-0016 numberings. Verdicts
+   outstanding on 6, 7, 8, 9, 0010, 0017. Patches 6-9 and 0010 are NOT reviewed: the battery jar
+   carries them, so the jar is labeled RIG-ONLY and they are never cited as reviewed.
 3. GroundReplay over the battery traces -> arm level + decay viability from the score tables.
 4. Only then: the separate, separately-reviewed enforcement patches (P3-strong wiring,
    classify default-on, grace-decay policy, O2 per the lead's ordering).

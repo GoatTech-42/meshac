@@ -17,7 +17,10 @@ is service doubles. Scope labels, stated honestly:
   doubled. Live-server bot runs remain spec-S territory (held).
 Prereqs are HARD requirements: missing javac or Gson jar FAILS the test (exit != 0) - a skip that exits 0 masks a
 never-run gate. Toolchain identity (javac version, exact Gson jar path + sha256) and a fixture source manifest hash
-are printed on every run; subprocesses are timeout-bound with bounded output."""
+are printed on every run; subprocesses are timeout-bound and output-capped: RLIMIT_FSIZE is a PER-FILE limit on
+ALL child writes (these logs AND javac's .class outputs alike), wall time is bounded by timeouts (the timeout kills
+the direct child only - no process-group cleanup), and only seek-based bounded log tails are read back. preexec_fn
+is POSIX-only. A dry control-flow run with declared tool doubles lives in test-policy-reload-integration-dry.sh."""
 from pathlib import Path
 import glob, hashlib, os, resource, shutil, subprocess, tempfile, unittest
 R = Path(os.environ.get('MESHAC_TEST_TREE', Path(__file__).resolve().parents[1]))
@@ -177,12 +180,15 @@ public final class ReloadHarness {
 
 class PolicyReloadIntegration(unittest.TestCase):
     def run_logged(self, cmd, log, timeout):
-        """Output-bounded subprocess: the child gets RLIMIT_FSIZE=LOG_CAP (dies with SIGXFSZ on excess, so both
-        memory and disk stay flat no matter how much it prints); the timeout bounds wall time; only a seek-based
-        bounded tail is ever read back into memory. Detection is size-based, not signal-based: children that
-        ignore SIGXFSZ (CPython does; it raises EFBIG instead) still cannot grow the log past the cap, so a log
-        at cap size means truncated output and fails the test. Verified locally: a child attempting 8 MB under a
-        1 MB cap leaves exactly 1048576 bytes; an under-cap child completes rc=0."""
+        """Output-capped subprocess. RLIMIT_FSIZE=LOG_CAP is a PER-FILE limit on every write the child makes:
+        it caps this log AND any other file the child writes (javac's .class outputs included - a single output
+        file over the cap would kill a real compile, which is why the cap is 16 MiB and not smaller). The timeout
+        bounds wall time but kills the direct child only (no process-group cleanup; neither javac nor the harness
+        java forks here). Only a seek-based bounded tail of the log is read back - no whole-log reads. Detection
+        is size-based, not signal-based: children that ignore SIGXFSZ (CPython does; it raises EFBIG instead)
+        still cannot grow a file past the cap, so a log at cap size means truncated output and fails the test.
+        preexec_fn is POSIX-only. Verified locally: a child attempting 8 MB under a 1 MB cap leaves exactly
+        1048576 bytes; an under-cap child completes rc=0."""
         with open(log, 'wb') as lf:
             try:
                 r = subprocess.run(cmd, stdout=lf, stderr=subprocess.STDOUT, timeout=timeout,
@@ -200,15 +206,15 @@ class PolicyReloadIntegration(unittest.TestCase):
         self.assertTrue(shutil.which('javac'), 'HARD prereq missing: javac not on PATH - this test must RUN, not skip (Box provides the JDK)')
         self.assertIsNotNone(gj, 'HARD prereq missing: no Gson jar (set GSON_JAR or use the gradle cache) - this test must RUN, not skip')
         self.assertTrue(Path(gj).name.startswith('gson-'), f'gson jar sanity: {gj}')
-        rc, jvt = self.run_logged(['javac','-version'], root/'javac-version.log', 30)
-        self.assertEqual(rc, 0, 'javac -version failed:\n' + jvt)
-        rc, vvt = self.run_logged(['java','-version'], root/'java-version.log', 30)
-        self.assertEqual(rc, 0, 'java -version failed:\n' + vvt)
-        print('TOOLCHAIN javac:', shutil.which('javac'), jvt.strip().splitlines()[0])
-        print('TOOLCHAIN java:', shutil.which('java'), vvt.strip().splitlines()[0])
         print('TOOLCHAIN gson jar:', gj, 'sha256', sha(Path(gj).read_bytes()))
         with tempfile.TemporaryDirectory(prefix='reload-it-') as d:
             root = Path(d); cfgdir = root/'config'; cfgdir.mkdir()
+            rc, jvt = self.run_logged(['javac','-version'], root/'javac-version.log', 30)
+            self.assertEqual(rc, 0, 'javac -version failed:\n' + jvt)
+            rc, vvt = self.run_logged(['java','-version'], root/'java-version.log', 30)
+            self.assertEqual(rc, 0, 'java -version failed:\n' + vvt)
+            print('TOOLCHAIN javac:', shutil.which('javac'), jvt.strip().splitlines()[0])
+            print('TOOLCHAIN java:', shutil.which('java'), vvt.strip().splitlines()[0])
             sources, manifest = [], []
             for rel, text in sorted(DOUBLES.items()):
                 f = root/rel; f.parent.mkdir(parents=True, exist_ok=True); f.write_text(text); sources.append(str(f))

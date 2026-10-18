@@ -20,6 +20,13 @@ public final class GroundReplayTest {
 		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(true)), 3, 2, 2), 5, 3, 2, 2, 2, "W=3 T=2 eviction re-triggers edges");
 		// armAt == flagAt behaves like the flag itself
 		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true)), 5, 3, 3), 3, 3, 3, 1, 1, "arm at the flag level mirrors the flag");
+		// decay policy: a clear forgives only the oldest unsupported claim - the same stream that stays
+		// sub-flag under full clear now flags (grace-boundary persistence catches the grace-farming spoofer)
+		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true)), 5, 3, 2, true), 4, 4, 3, 1, 2, "decay keeps all but the oldest evidence across a grace boundary; arm re-fires after dipping below");
+		// decay on an empty window is a no-op, same as clear
+		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(false), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true)), 5, 3, 2, true), 2, 1, 1, 0, 0, "decay on a zero window is a no-op");
+		// decay drops the flag latch only when the surviving count falls below the level: flag re-fires, arm does not
+		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true)), 5, 3, 2, true), 4, 4, 3, 2, 1, "decay re-flags without re-arming while the arm level holds");
 		System.out.println(fails == 0 ? "GroundReplayTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

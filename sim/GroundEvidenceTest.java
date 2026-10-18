@@ -40,6 +40,23 @@ public final class GroundEvidenceTest {
 		check(!e.flagged() && e.unsupported() == 0, "clear did not reset");
 		feed(e, "UU"); check(!e.flagged(), "flagged after clear with only 2");
 
+		// decay() forgives the OLDEST unsupported claim only (grace-boundary persistence candidate)
+		e = new GroundEvidence(5, 3);
+		feed(e, "UUSU"); e.decay();
+		check(e.unsupported() == 2, "decay dropped UUSU to 2");
+		feed(e, "S"); check(e.unsupported() == 2, "supported claim after decay keeps count");
+		feed(e, "S"); check(e.unsupported() == 2, "the forgiven slot evicts first, count unchanged");
+		feed(e, "S"); check(e.unsupported() == 1, "next eviction drops the oldest real unsupported");
+
+		// decay at count 0 is a no-op
+		e = new GroundEvidence(5, 3);
+		feed(e, "SUS"); e.decay(); check(e.unsupported() == 0, "decay removed the only unsupported");
+		e.decay(); check(e.unsupported() == 0, "decay at zero is a no-op");
+
+		// decay can drop a flagged window below threshold without a full clear
+		e = new GroundEvidence(5, 3);
+		feed(e, "UUUS"); check(e.flagged(), "UUUS flagged");
+		e.decay(); check(!e.flagged() && e.unsupported() == 2, "decay un-flagged at 2");
 		// window 1 threshold 1 degenerates to "this claim"
 		e = new GroundEvidence(1, 1);
 		e.add(true); check(e.flagged(), "1/1 window did not flag on U");

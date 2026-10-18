@@ -33,4 +33,16 @@ public final class GroundEvidence {
 	public boolean flagged() { return count >= threshold; }
 	/** Fresh start (exempt/grace ground claim, setback, teleport). */
 	public void clear() { ring = 0; filled = 0; count = 0; }
+
+	/** Forgive the OLDEST unsupported claim in the window (count - 1, no-op at 0). PROPOSAL
+	 * (P3-FOLLOWUPS "grace-boundary persistence"): decay-by-one across a grace boundary instead of a
+	 * full clear, so a spoofer that buys a fresh window by self-damage or a medium dip keeps most of
+	 * its evidence. No production call site: the live path still clear()s. GroundReplay scores the
+	 * policy offline from gndclear traces through this real implementation; promotion to the live
+	 * path is a separate reviewed patch gated on battery D-row evidence, per the follow-up note. */
+	public void decay() {
+		if (count == 0) return;
+		for (int i = filled - 1; i >= 0; i--) // bit 0 is the newest claim, so scan down from the oldest
+			if ((ring >> i & 1) != 0) { ring &= ~(1 << i); count--; return; }
+	}
 }

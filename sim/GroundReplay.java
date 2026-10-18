@@ -15,6 +15,14 @@ import java.util.regex.Pattern;
  * live window's buf=, not the raw claim stream. Setback/flag/teleport clears are not captured (rare);
  * scores those spans as if the window lived on - an over-count, i.e. conservative for FP reading.
  *
+ * Two policy tables: the live policy (full clear at every captured gndclear) and the decay-on-clear
+ * candidate (P3-FOLLOWUPS "grace-boundary persistence": a grace/exempt reset forgives only the OLDEST
+ * unsupported claim instead of clearing, so a spoofer that re-arms grace by self-damage or medium dips
+ * keeps most of its evidence). Decay is scored through the real GroundEvidence.decay(); the live jar
+ * never calls it - this table is the measurement stage, not a shipped behavior. Captured clears do not
+ * say which kind they were (exempt vs grace), so decay is applied at every captured clear; on legit
+ * rows that retains more evidence than the real policy would, i.e. conservative for FP reading.
+ *
  * Usage: java -cp <suite-out> GroundReplay <trace-log>...
  * Columns: window flagAt armAt | claims unsupported maxCount flags strongArms | players with >=1 strong-arm. */
 public final class GroundReplay {
@@ -22,13 +30,22 @@ public final class GroundReplay {
 	public static final class Ev { final boolean claim, air; Ev(boolean claim, boolean air) { this.claim = claim; this.air = air; }
 		public static Ev claim(boolean air) { return new Ev(true, air); } public static Ev clear() { return new Ev(false, false); } }
 
-	/** Replay one event stream. Returns {claims, unsupported, maxCount, flagRisingEdges, armRisingEdges}. */
-	public static long[] score(List<Ev> events, int window, int flagAt, int armAt) {
+	/** Replay one event stream under the live clear policy. Returns {claims, unsupported, maxCount, flagRisingEdges, armRisingEdges}. */
+	public static long[] score(List<Ev> events, int window, int flagAt, int armAt) { return score(events, window, flagAt, armAt, false); }
+
+	/** Replay one event stream. decayOnClear=true scores the grace-boundary persistence candidate: a captured
+	 * clear decays the window by its oldest unsupported claim instead of clearing it, and the flag/arm latches
+	 * only drop when the surviving count actually falls below their level. */
+	public static long[] score(List<Ev> events, int window, int flagAt, int armAt, boolean decayOnClear) {
 		GroundEvidence ev = new GroundEvidence(window, flagAt);
 		long claims = 0, un = 0, max = 0, flags = 0, arms = 0;
 		boolean wasFlag = false, wasArm = false;
 		for (Ev e : events) {
-			if (!e.claim) { ev.clear(); wasFlag = false; wasArm = false; continue; }
+			if (!e.claim) {
+				if (decayOnClear) { ev.decay(); wasFlag = ev.flagged(); wasArm = ev.unsupported() >= armAt; }
+				else { ev.clear(); wasFlag = false; wasArm = false; }
+				continue;
+			}
 			ev.add(e.air); claims++; if (e.air) un++;
 			int c = ev.unsupported();
 			if (c > max) max = c;
@@ -54,12 +71,19 @@ public final class GroundReplay {
 		}
 		if (per.isEmpty()) { System.out.println("no gndclaim lines found (jar older than the P3-strong draft? capture ships with it)"); return; }
 		System.out.println("players: " + per.keySet());
+		printTable(per, false);
+		System.out.println();
+		System.out.println("policy=decay-on-clear (grace-boundary persistence candidate, P3-FOLLOWUPS; measurement only - the live jar still full-clears):");
+		printTable(per, true);
+	}
+
+	private static void printTable(TreeMap<String, List<Ev>> per, boolean decayOnClear) {
 		System.out.println("window flagAt armAt | claims unsupported maxCount flags strongArms | players with >=1 strong-arm");
 		for (int w = 3; w <= 7; w++) for (int t = 2; t <= Math.min(w, 4); t++) for (int a = 2; a <= t; a++) {
 			long[] tot = new long[5];
 			List<String> armed = new ArrayList<>();
 			for (var e : per.entrySet()) {
-				long[] r = score(e.getValue(), w, t, a);
+				long[] r = score(e.getValue(), w, t, a, decayOnClear);
 				for (int i = 0; i < 5; i++) tot[i] += r[i];
 				tot[2] -= r[2]; if (r[2] > tot[2]) tot[2] = r[2]; // maxCount is a max across players, not a sum
 				if (r[4] > 0) armed.add(e.getKey() + "(" + r[4] + ")");

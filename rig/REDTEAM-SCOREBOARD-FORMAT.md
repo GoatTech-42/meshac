@@ -8,11 +8,12 @@ whom, per check, with evidence. Nothing here is a result; the page fills at batt
 - MESHAC (defense wins the check): every cheat row fired its bound SIGNAL string AND every
   legit twin stayed quiet.
 - MEADOW: the attack won. Two flavors, always labeled:
-  - EVADE - a cheat row ran clean (silent where its check was bound and bot liveness proven).
+  - EVADE - a cheat row ran clean: silent where its check was bound AND bot liveness proven AND attack-effect proven (the effect the row binds: damage avoided, block placed, boat risen, totem refilled, knockback denied). Silent + liveness WITHOUT attack-effect proof is NOT an EVADE.
   - FP - a legit twin flagged.
 - SPLIT: cheat caught but an FP fired too (or the reverse). Record both halves.
-- INCONCLUSIVE: blind control (bot/module unproven), a dead path (combat SIGNAL on d124), or
-  SKIP (missing rig piece, e.g. Geyser). Never counts as a win for either side.
+- INCONCLUSIVE: blind control (bot/module unproven), a silent cheat row WITHOUT attack-effect
+  proof (setup unproven - e.g. GhostHand facing away placing nothing), a dead path (combat SIGNAL
+  on d124), or SKIP (missing rig piece, e.g. Geyser). Never counts as a win for either side.
 
 A check with any FP twin can never be scored MESHAC - the FP-free gate outranks detection.
 

@@ -27,7 +27,10 @@ import java.util.regex.Pattern;
  * Columns: window flagAt armAt | claims unsupported maxCount flags strongArms | players with >=1 strong-arm.
  * The final section prints the K4 agreement metrics (reviewer FIX 2): the jar latches arm/flag, so agreement with
  * jar-captured state is per-player maxCount equality + flag presence/absence + first-arm presence - edge counts
- * are tuning signal only, never the agreement metric. */
+ * are tuning signal only, never the agreement metric. When the capture carries the jar's own counts (gndclaim
+ * count= post-add live count; gndclear decayCount= pre-decay shadow count), the parse loop ALSO replays every
+ * receipt through real GroundEvidence instances and reports per-receipt mismatches - a captured jar-state
+ * comparison, not harness-vs-harness. */
 public final class GroundReplay {
 	/** One event: claim (unsupported?) or clear. */
 	public static final class Ev { final boolean claim, air; Ev(boolean claim, boolean air) { this.claim = claim; this.air = air; }
@@ -60,18 +63,48 @@ public final class GroundReplay {
 		return new long[] {claims, un, max, flags, arms};
 	}
 
-	private static final Pattern CLAIM = Pattern.compile("\\[trace] gndclaim (\\S+) air=(true|false)");
-	private static final Pattern CLEAR = Pattern.compile("\\[trace] gndclear (\\S+)");
+	private static final Pattern CLAIM = Pattern.compile("\\[trace] gndclaim (\\S+) air=(true|false)(?: count=(\\d+))?");
+	private static final Pattern CLEAR = Pattern.compile("\\[trace] gndclear (\\S+)(?: decayCount=(\\d+))?");
 
 	public static void main(String[] args) throws Exception {
 		if (args.length == 0) { System.err.println("usage: GroundReplay <trace-log>..."); System.exit(2); }
 		TreeMap<String, List<Ev>> per = new TreeMap<>();
+		// K4 jar-state comparison: when the capture lines carry the jar's own counts, replay the same
+		// events through REAL GroundEvidence instances (live policy + decay shadow) and compare per
+		// receipt. A mismatch means the capture and the jar disagree - an uncaptured full reset
+		// (teleport/setback/post-flag) or a jar bug; investigate before reading the tables.
+		TreeMap<String, GroundEvidence> liveJar = new TreeMap<>(), decayJar = new TreeMap<>();
+		int claimReceipts = 0, claimMismatch = 0, clearReceipts = 0, clearMismatch = 0;
+		List<String> k4Lines = new ArrayList<>();
 		for (String f : args) for (String ln : Files.readAllLines(Path.of(f))) {
 			Matcher m = CLAIM.matcher(ln);
-			if (m.find()) { per.computeIfAbsent(m.group(1), k -> new ArrayList<>()).add(Ev.claim(Boolean.parseBoolean(m.group(2)))); continue; }
+			if (m.find()) {
+				String name = m.group(1); boolean air = Boolean.parseBoolean(m.group(2));
+				per.computeIfAbsent(name, k -> new ArrayList<>()).add(Ev.claim(air));
+				if (m.group(3) != null) { // count = the jar's live window AFTER the add
+					GroundEvidence g = liveJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+					GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+					g.add(air); d.add(air); claimReceipts++;
+					if (g.unsupported() != Integer.parseInt(m.group(3))) { claimMismatch++; k4Lines.add("K4 claim mismatch " + name + ": jar=" + m.group(3) + " harness=" + g.unsupported()); }
+				}
+				continue;
+			}
 			m = CLEAR.matcher(ln);
-			if (m.find()) per.computeIfAbsent(m.group(1), k -> new ArrayList<>()).add(Ev.clear());
+			if (m.find()) {
+				String name = m.group(1);
+				per.computeIfAbsent(name, k -> new ArrayList<>()).add(Ev.clear());
+				GroundEvidence g = liveJar.get(name); if (g != null) g.clear();
+				if (m.group(2) != null) { // decayCount = the jar's shadow window BEFORE its decay
+					GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+					clearReceipts++;
+					if (d.unsupported() != Integer.parseInt(m.group(2))) { clearMismatch++; k4Lines.add("K4 boundary mismatch " + name + ": jarDecay=" + m.group(2) + " harness=" + d.unsupported()); }
+					d.decay();
+				}
+			}
 		}
+		System.out.println("K4 jar-state comparison: " + claimReceipts + " claim receipts (" + claimMismatch + " mismatches), " + clearReceipts + " boundary receipts (" + clearMismatch + " mismatches)");
+		for (String l : k4Lines) System.out.println("  " + l);
+		if (claimReceipts + clearReceipts == 0) System.out.println("  (capture lines carried no jar counts - pre-0025 jar? agreement then rests on presence semantics only)");
 		if (per.isEmpty()) { System.out.println("no gndclaim lines found (jar older than the P3-strong draft? capture ships with it)"); return; }
 		System.out.println("players: " + per.keySet());
 		printTable(per, false);

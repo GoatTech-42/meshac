@@ -77,10 +77,12 @@ S = {
    'legs': [('module', None), ('click', '3', 1), ('wait', 5), ('module', None)],
    'row': 'POSITIVE CONTROL: ChestStealer on the full chest must SIGNAL inventory (burst)',
    'falsifies': 'InventoryBurst vs chest stealing'},
+ # STATUS: every row in this file is a DRAFT until its driver run + receipts prove the setup,
+ # duration and attack effect; the scoreboard only records verdicts from receipt-backed runs.
  # ground-spoof zero-FP battery rows (reviewer GO conditions on patch 1, relayed via parent 10-17 7:44pm)
  'nb-gc01-sneakedge': {'tp': G['sneak_edge'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': 0,
-   'legs': [('hold2', 'w', 'Shift_L', 1), ('hold2', 's', 'Shift_L', 1)] * 8,
-   'row': 'GC01 (reviewer row 1): sneak-edge oscillation, worst-case partial overhang work - Box loops the cycle for 5 minutes. PRE-COMMITTED jitter-density bound: ZERO nofall SIGNAL lines over the whole row; a single flag kills the shipped window-5/flag-3 proposal and goes back to the reviewer with the gndclaim trace lines, no silent widening',
+   'legs': [('hold2', 'w', 'Shift_L', 1), ('hold2', 's', 'Shift_L', 1)] * 150,  # 150 x 2s = 300s - the pre-committed 5-minute bound, bound IN the legs
+   'row': 'GC01 (reviewer row 1): sneak-edge oscillation, worst-case partial overhang work. The legs themselves carry the bound: 150 cycles x 2s = 300s; a shorter run does not satisfy the row. DRAFT until the driver receipt (leg log + 300s wall-clock span in the capture) proves the duration. PRE-COMMITTED jitter-density bound: ZERO nofall SIGNAL lines over the whole row; a single flag kills the shipped window-5/flag-3 proposal and goes back to the reviewer with the gndclaim trace lines, no silent widening',
    'falsifies': 'the 3-of-5 window is a strict superset of the old 3-consecutive trigger - sustained off-edge jitter is exactly the marginal FP surface'},
  'nb-gc02-autostep': {'tp': G['autostep_lane'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
    'legs': [('hold', 'w', 10), ('wait', 1), ('hold', 'w', 10)],
@@ -88,7 +90,7 @@ S = {
    'falsifies': 'auto-step rise packets (dy ~0.6, fewer than 6 rising) must not arm or count the window'},
  'nb-gc05-jb-powder': {'tp': G['powder_pit'], 'needs': 'vanilla', 'expect': 'zero',
    'legs': [('hold', 'space', 20), ('wait', 2), ('hold', 'space', 20)],
-   'row': 'GC05 (reviewer row 2): Jump Boost I then II powder struggle climb-out (Box: /effect give @p jump_boost 60 0, then repeat at amplifier 1; NO leather boots). Acceptance: 0 nofall flags. REPORT the measured struggle dy values - never widen the 0.60-0.70 band silently (calibrated to ~0.63 vanilla struggle). The nofall exempt gate has NO powder entry (Movement.java:159-172, verified 10-17): this row is the only mitigation for in-powder unsupported claims; a flag here routes to rig/POWDER-EXEMPT-DRAFT.md',
+   'row': 'GC05 (reviewer row 2): Jump Boost I then II powder struggle climb-out. Two phases, same legs each: PHASE 1 Box RCON /effect give @p jump_boost 60 0 (JB I) + verify no boots (/clear @p minecraft:leather_boots must report 0 removed), run legs; PHASE 2 Box RCON /effect give @p jump_boost 60 1 (JB II) + re-verify no boots, run legs; teardown /effect clear @p jump_boost. DRAFT until the setup receipts (both effect results + both no-boots verifications) are captured. Acceptance: 0 nofall flags. REPORT the measured struggle dy values - never widen the 0.60-0.70 band silently (calibrated to ~0.63 vanilla struggle). The nofall exempt gate has NO powder entry (Movement.java:159-172, verified 10-17): this row is the only mitigation for in-powder unsupported claims; a flag here routes to rig/POWDER-EXEMPT-DRAFT.md',
    'falsifies': 'a legit JB struggle-exit landing outside the band, or in-powder +gnd claims reading unsupported (powder collision is entity-conditional), accumulates window evidence - this row proves whether the real client ever emits that pattern'},
  # boatfly (bound from source 10-17: Vehicle.java:29 - "boat climbing in open air" after 5 consecutive rising vehicle packets with no water/ground/bubble column, RISE_AT=5)
  'nb-boatfly-legit': {'tp': G['boat_lake'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
@@ -97,7 +99,7 @@ S = {
    'falsifies': 'normal paddling and small wave bobbing must not count as open-air climbing'},
  'nb-boatfly-cheat': {'tp': G['boat_pad'], 'needs': 'cheat', 'expect': 'signal', 'module': 'BoatFly (rig-only, -Prig build)', 'checks': ('boatfly',), 'yaw': -90,
    'legs': [('module', None), ('hold', 'space', 6), ('module', None)],
-   'row': 'POSITIVE CONTROL: rig BoatFly climbing in open air must SIGNAL boatfly ("boat climbing in open air") after 5 consecutive rising vehicle packets with no lift (Vehicle.java: RISE_AT=5)',
+   'row': 'POSITIVE CONTROL: rig BoatFly climbing in open air must SIGNAL boatfly ("boat climbing in open air") after 5 consecutive rising vehicle packets with no lift (Vehicle.java: RISE_AT=5). Executable preconditions (Box RCON): /give @p minecraft:oak_boat 1; the bot places and boards the boat at boat_pad BEFORE the module leg. Attack effect = the boat RISES in open air during the hold (Box compares /data get entity @e[type=minecraft:boat,sort=nearest,limit=1] Pos[1] before/after); without a measured rise the row is INCONCLUSIVE, never EVADE. DRAFT until receipts',
    'falsifies': 'the vehicle rise counter: silence here means open-air boat climbing is unseen'},
  # nuker (matrix r04): same mining check as nb-mine, different detail strings
  'nb-nuker-cheat': {'tp': G['mine_wall'], 'needs': 'cheat', 'expect': 'signal', 'module': 'Nuker', 'checks': ('mining',), 'yaw': -90,
@@ -107,7 +109,7 @@ S = {
  # GhostHand (matrix r03): wrong-face/behind placement
  'nb-ghosthand-cheat': {'tp': G['place_floor'], 'needs': 'cheat', 'expect': 'signal', 'module': 'GhostHand', 'checks': ('interact',), 'yaw': 90,
    'legs': [('module', None), ('click', '3', 10), ('module', None)],
-   'row': 'POSITIVE CONTROL: GhostHand placing while facing AWAY (yaw 90, back to the floor) must SIGNAL interact ("clicked a block it is not looking at" / "clicked a block through another block"); legit twin = nb-interact-legit',
+   'row': 'POSITIVE CONTROL: GhostHand placing while facing AWAY (yaw 90, back to the floor) must SIGNAL interact ("clicked a block it is not looking at" / "clicked a block through another block"); legit twin = nb-interact-legit. Facing away, the clicks may place NOTHING: attack-effect proof = a block actually placed at the target (Box: /execute if block at the target coords) or the placement packets observed; without effect proof the row is INCONCLUSIVE, never EVADE. DRAFT until receipts',
    'falsifies': 'the look-ray interact checks vs behind-the-back placement'},
  # high jump (matrix r02 control)
  'nb-high-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
@@ -130,20 +132,20 @@ S = {
  # glide (matrix BF13): elytra equipped by Box via RCON before both rows
  'nb-glide-legit': {'tp': G['sneak_edge'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': 0,
    'legs': [('hold', 'w', 1), ('tap', 'space'), ('wait', 1), ('tap', 'space'), ('hold', 'w', 3)],
-   'row': 'legit elytra hop-glide off the edge (Box: /item replace entity @p armor.chest with elytra; if the hop is too shallow to deploy, Box substitutes a 3-block pillar at these coords): zero glide SIGNAL',
+   'row': 'legit elytra hop-glide off the edge (Box RCON: /item replace entity @p armor.chest with minecraft:elytra, receipt captured; if the hop is too shallow to deploy, Box substitutes a 3-block pillar at these coords): zero glide SIGNAL. DRAFT until the equip receipt is captured',
    'falsifies': 'a real fall-start glide must not read as restarted gliding'},
  'nb-glide-cheat': {'tp': G['lane_start'], 'needs': 'cheat', 'expect': 'signal', 'module': 'ElytraFly', 'checks': ('glide',), 'yaw': -90,
    'legs': [('module', None), ('tap', 'space'), ('hold', 'w', 8), ('module', None)],
-   'row': 'POSITIVE CONTROL: ElytraFly (elytra equipped via RCON) must SIGNAL glide ("restarted gliding..." / "flying at ...")',
+   'row': 'POSITIVE CONTROL: ElytraFly must SIGNAL glide ("restarted gliding..." / "flying at ..."). Executable precondition (Box RCON before the legs): /item replace entity @p armor.chest with minecraft:elytra. Attack effect = the bot glides flat WITHOUT a firework or fall-start (Box reads y over the hold from the capture); without it INCONCLUSIVE, never EVADE. DRAFT until receipts',
    'falsifies': 'the glide re-arm and no-air-drag checks vs a firework-free flat-glide module'},
- # auto-totem (matrix totem rows): Box pops the totem via RCON /damage mid-row
+ # auto-totem (matrix totem rows): executable setup below; the pop is /damage mid-row
  'nb-totem-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90, 'expectMove': False,
    'legs': [('wait', 10)],
-   'row': 'one totem in the offhand, Box RCON /damage to pop it, NO refill: zero inventory SIGNAL (Totem.java:39 fires on the fast refill, not the pop)',
+   'row': 'one totem in the offhand, popped, NO refill: zero inventory SIGNAL (Totem.java:39 fires on the fast refill, not the pop). Executable steps (Box RCON): /item replace entity @p weapon.offhand with minecraft:totem_of_undying; mid-wait /damage @p 20; the pop receipt = the death-protection log line. DRAFT until receipts',
    'falsifies': 'a vanilla pop leaving the offhand empty must not read as auto-totem'},
  'nb-totem-cheat': {'tp': G['lane_start'], 'needs': 'cheat', 'expect': 'signal', 'module': 'AutoTotem (totems in hotbar)', 'checks': ('inventory',), 'yaw': -90, 'expectMove': False,
    'legs': [('module', None), ('wait', 10), ('module', None)],
-   'row': 'POSITIVE CONTROL: AutoTotem with totems in inventory, Box RCON /damage to pop: the offhand refill must SIGNAL inventory ("off hand filled <n> ms after a totem popped...")',
+   'row': 'POSITIVE CONTROL: AutoTotem: the offhand refill must SIGNAL inventory ("off hand filled <n> ms after a totem popped..."). Executable steps (Box RCON): /give @p minecraft:totem_of_undying 8 (hotbar) + /item replace entity @p weapon.offhand with minecraft:totem_of_undying before the module leg; mid-wait /damage @p 20. Attack effect = the offhand is REFILLED after the pop (Box: /data get entity @p Inventory); without an observed refill the row is INCONCLUSIVE, never EVADE. DRAFT until receipts',
    'falsifies': 'the totem-refill timer vs an inventory-touching totem module'},
  # microhop (matrix r01): FP-side row only - meadow has NO microhop module (Speed has no hop modes),
    # and scripted driver hops are vanilla jumps, NOT a packet-level microhop. The cheat row waits on a
@@ -155,11 +157,11 @@ S = {
  # antiknockback: the zombie is the second actor (hitter); Box keeps the bot alive via RCON (armor + Resistance II)
  'nb-kb-legit': {'tp': G['kb_pen'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
    'legs': [('wait', 12)],
-   'row': 'stand at the zombie pen taking ~3 melee hits (Box: iron armor + Resistance II via RCON; hits land ~1/s): vanilla knockback moves the bot ~0.5/hit - zero antiknockback SIGNAL',
+   'row': 'stand at the zombie pen taking ~3 melee hits: vanilla knockback moves the bot ~0.5/hit - zero antiknockback SIGNAL. Executable setup (Box RCON): /summon minecraft:zombie 158.5 70 160 (penned, AI on so it lands hits), /item replace entity @p armor.chest with minecraft:iron_chestplate, /effect give @p minecraft:resistance 60 1. Baseline required: a measured vanilla knockback from the capture before this row reads as anything; DRAFT until receipts',
    'falsifies': 'normal knockback must clear the movement eval within 450 ms of each hit'},
  'nb-kb-cheat': {'tp': G['kb_pen'], 'needs': 'cheat', 'expect': 'signal', 'module': 'Velocity (horizontal 0.0)', 'checks': ('antiknockback',), 'yaw': -90, 'expectMove': False,
    'legs': [('module', None), ('wait', 12), ('module', None)],
-   'row': 'POSITIVE CONTROL: Velocity horizontal=0.0 taking ~3 zombie melee hits (same armor/resistance setup, open space behind the bot): "no push after three hits" must SIGNAL antiknockback',
+   'row': 'POSITIVE CONTROL: Velocity horizontal=0.0 taking ~3 zombie melee hits: "no push after three hits" must SIGNAL antiknockback. Same executable setup as nb-kb-legit (summon/armor/resistance commands there), open space behind the bot. Attack effect = measured knockback ~0 under the module vs the legit-row baseline; without BOTH measurements the row is INCONCLUSIVE, never EVADE. DRAFT until receipts',
    'falsifies': 'the three-strike no-push counter vs a zero-knockback module'},
 }
 

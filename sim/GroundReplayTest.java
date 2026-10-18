@@ -69,6 +69,15 @@ public final class GroundReplayTest {
 			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true),
 			GroundReplay.Ev.clear(), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true));
 		eq(GroundReplay.score(d4, 5, 3, 2, true), 4, 4, 3, 1, 2, "D4 decay: two boundaries forgive exactly two claims");
+		// capture-format pins: the K4 receipt fields parse, and pre-0025 lines (no counts) still parse
+		java.util.regex.Matcher mc = GroundReplay.CLAIM.matcher("[trace] gndclaim Bot air=true count=3");
+		check(mc.find() && mc.group(1).equals("Bot") && mc.group(2).equals("true") && mc.group(3).equals("3"), "gndclaim with the jar count parses (K4 receipt)");
+		java.util.regex.Matcher mc2 = GroundReplay.CLAIM.matcher("[trace] gndclaim Bot air=false");
+		check(mc2.find() && mc2.group(3) == null, "pre-0025 gndclaim (no count) still parses");
+		java.util.regex.Matcher mk = GroundReplay.CLEAR.matcher("[trace] gndclear Bot decayCount=2");
+		check(mk.find() && mk.group(1).equals("Bot") && mk.group(2).equals("2"), "gndclear with the shadow decayCount parses");
+		java.util.regex.Matcher mk2 = GroundReplay.CLEAR.matcher("[trace] gndclear Bot");
+		check(mk2.find() && mk2.group(2) == null, "pre-0025 gndclear (no decayCount) still parses");
 		System.out.println(fails == 0 ? "GroundReplayTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

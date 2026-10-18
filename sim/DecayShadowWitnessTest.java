@@ -41,6 +41,7 @@ public final class DecayShadowWitnessTest {
 		check(t.contains("[trace] nofall decay-shadow {} count={} liveCount={} liveFlagged={}"), "shadow telemetry reports both windows (a simultaneous live+shadow flag is never invisible)");
 		check(t.contains("s.decayLogAt = nowMs"), "shadow telemetry is rate-limited");
 		check(t.contains("TRACE && (s.bufGround > 0 || s.gndEvDecay.unsupported() > 0)"), "gndclear capture fires at every boundary holding state in EITHER window (replay sees every decay boundary)");
+		check(t.contains("[trace] gndclaim {} air={} count={}"), "gndclaim carries the post-add live count (the K4 jar-state receipt)");
 		check(t.contains("private static final boolean TRACE = System.getenv(\"MESHAC_TRACE\") != null;"), "TRACE is the MESHAC_TRACE env switch, unset by default: the shadow is off by default");
 		System.out.println(fails == 0 ? "DecayShadowWitnessTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);

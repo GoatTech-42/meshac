@@ -326,7 +326,7 @@ public final class Movement {
 				s.bufGround = s.gndEv.unsupported();
 				if (GROUND_TOL_COMPARE && claimAir) groundTolCompare(pl, s, pl.getBoundingBox().move(dx, dy, dz));
 				if (TRACE && (claimAir || s.bufGround > 0)) groundCtx(pl, s, s.gndEv.flagged() && hit == null, claimAir, ground, dy, s.prevDtS, exempt);
-				if (TRACE && (claimAir || s.bufGround > 0)) Meshac.LOG.info("[trace] gndclaim {} air={}", pl.getGameProfile().name(), claimAir); // replay-harness capture (sim/GroundReplay): one line per scored claim
+				if (TRACE) Meshac.LOG.info("[trace] gndclaim {} air={} count={}", pl.getGameProfile().name(), claimAir, s.gndEv.unsupported()); // replay-harness capture (sim/GroundReplay): one line per scored claim, carrying the post-add live count so K4 compares JAR state, not just harness tables
 				if (s.nfStrongAt == 0 && s.gndEv.unsupported() >= STRONG_ARM_AT && hit == null) { s.nfStrongAt = nowMs; Meshac.LOG.info("[trace] nofall strong-arm {} count={} (P3-strong draft, log-only)", pl.getGameProfile().name(), s.gndEv.unsupported()); }
 				if (s.gndEv.flagged() && hit == null) hit = "nofall ground spoof";
 			}

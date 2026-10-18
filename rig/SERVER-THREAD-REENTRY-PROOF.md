@@ -208,3 +208,11 @@ Reviewer round on 0091, three corrections folded:
   (exactly the persistable fields; validatePolicy recomputes the transient policy), and validatePolicy now
   runs INSIDE the commit lock, so its writes (the policy field on the unpublished next, the lastValidLadder
   static) are commit-side state. "Exactly two sanctioned post-publication mutations" is now exact.
+
+## 0094 addendum: missing-file copy captured under the commit lock
+
+The 0093 round-trip copy of cur.cfg ran outside POLICY_LOCK, so a monitor/check toggle could interleave and
+the committed copy (or the persisted document) could mix pre/post-toggle posture. The copy and the document
+are now captured inside the commit lock: toggle, copy, validation, wipe and publish are mutually exclusive.
+The existed-file path parses a fresh instance from the file - no live state involved; "file wins over
+toggles" is reload semantics, unchanged.

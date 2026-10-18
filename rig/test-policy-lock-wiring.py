@@ -60,13 +60,15 @@ class PolicyLockWiring(unittest.TestCase):
   # 0091 shipped two compile errors my regex tests could not see (cur used as Config). Guard the exact shapes.
   c = strip((S/'Config.java').read_text())
   load = body(c, 'public static AdminLog.ReloadResult load(')
-  self.assertIn('documented(g, cur.cfg)', load)
   self.assertNotIn('= cur;', load)           # cur is a Snapshot, never a Config
   self.assertNotIn('(g, cur)', load)
-  # 0093: missing-file load validates a round-trip COPY, never the published instance
+  # 0093/0094: missing-file load validates a round-trip COPY, never the published instance, captured under the lock
   self.assertIn('next = g.fromJson(g.toJson(cur.cfg), Config.class);', load)
-  # 0093: validation is inside the commit lock, before the wipe and the publish
+  self.assertIn('documented(g, next)', load)
   i_lock = load.index('synchronized (POLICY_LOCK)')
+  i_copy = load.index('next = g.fromJson(g.toJson(cur.cfg), Config.class);')
+  self.assertLess(i_lock, i_copy)  # 0094: copy captured under the commit lock - no toggle can interleave
+  # 0093: validation is inside the commit lock, before the wipe and the publish
   i_val = load.index('next.validatePolicy()')
   i_wipe = load.index('Verdict.clearPendingActions()')
   i_pub = load.index('cur = new Snapshot(')

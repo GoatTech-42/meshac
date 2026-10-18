@@ -115,6 +115,7 @@ public final class LadderTierATest {
 		Ladder.Params rawInvalid = new Ladder.Params(Double.NaN, 0, -1, 0, 0, 0, 0);
 		Ladder.Heat rawBad = new Ladder.Heat();
 		check(rawBad.add("glide", 3, T0, rawInvalid) == Ladder.Step.LOG && rawBad.add("glide", 3, T0 + 200, rawInvalid) == Ladder.Step.LOG, "explicit invalid-policy contract: raw invalid params record evidence but the step is LOG - no action of any kind, even for a caller that skips Config");
+		check(rawBad.heat > 3, "the invalid-period evidence ACCUMULATES within its own epoch (heat " + rawBad.heat + " after two weight-3 flags, not reset to 3 by the public zero-read) - diagnostic value without action");
 		check(rawBad.add("glide", 3, T0 + 400, def) == Ladder.Step.HOLD, "invalid->valid same-values regression: evidence collected under invalid params (sanitized to the defaults) belongs to a DIFFERENT epoch - the first valid default-params burst starts fresh (one burst, HOLD) instead of instantly removing on the invalid period's counts");
 		check(!rawBad.confirmedTierA(rawInvalid) && rawBad.now(T0 + 300, rawInvalid) == 0, "read entry points require bound + valid params: invalid params read as nothing");
 		check(new Ladder.Heat().now(T0, def) == 0 && !new Ladder.Heat().confirmedTierA(def), "a never-fed (unbound) heat reads as zero and confirms nothing, even with valid params");

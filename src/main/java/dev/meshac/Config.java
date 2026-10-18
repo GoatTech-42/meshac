@@ -128,6 +128,8 @@ public final class Config {
 		root.add("_help", help); return g.toJson(root) + "\n";
 	}
 	private static volatile Config cur = new Config(); // volatile publication; the only writer is the reload path (brigadier runs /mesh reload on the server thread), readers are the server and network threads
+	private static volatile long reloadEpoch; // bumped on every applied load: Verdict drops any ACTION computed across a policy transition (evidence loss on a reload is fail-closed)
+	public static long reloadEpoch() { return reloadEpoch; }
 	static { cur.validatePolicy(); } // first-boot instance is validated before any enforce() call can read it
 	public static Config get() { return cur; }
 
@@ -151,7 +153,7 @@ public final class Config {
    } else output = documented(g, cur);
   } catch (Exception e) { Meshac.LOG.warn("[meshac] config read/parse failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
   try { next.validatePolicy(); } catch (RuntimeException e) { Meshac.LOG.warn("[meshac] config validation failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
-  Movement.clearPendingActions(); Verdict.clearPendingActions(); cur = next; // validated BEFORE publishing: no enforce() call can run ahead of discovery; reload wipes ALL ladder evidence (Verdict.clearPendingActions clears HEAT): invalid-period evidence never survives into a valid policy
+  Movement.clearPendingActions(); Verdict.clearPendingActions(); reloadEpoch++; cur = next; // order matters: validate, wipe ALL ladder evidence (Verdict.clearPendingActions clears HEAT), bump the epoch, THEN publish. A signal computed before this point acts on the old epoch and is dropped by Verdict's epoch guard; residual ordinary concurrent-signal behaviour is per-player synchronization as before - this does NOT claim all races closed
   try { Files.writeString(p, output); }
   catch (Exception e) { Meshac.LOG.warn("[meshac] config settings applied but file could not be saved: {}", e.toString()); return AdminLog.ReloadResult.APPLIED_NOT_SAVED; }
   return existed ? AdminLog.ReloadResult.APPLIED : AdminLog.ReloadResult.DEFAULTS_CREATED;

@@ -46,12 +46,14 @@ public final class Ladder {
 		private void bind(Params p, boolean invalid) { pHalf = p.halfLifeSec(); pHold = p.holdAt(); pRem = p.removeAt(); pMinc = p.minClusters(); pMinta = p.minClustersTierA(); pTaw = p.tierAWeight(); pCms = p.clusterMs(); pInvalid = invalid; bound = true; }
 		/** Unbound (never fed), stale-epoch, or invalid-params evidence reads as ZERO: old heat is never interpreted under a new decay curve, and corrupt params read as nothing. */
 		public double now(long t, Params p) { if (!bound || !p.valid() || epochStale(p, false)) return 0; return heat * Math.pow(0.5, Math.max(0, t - at) / 1000.0 / p.halfLifeSec()); }
+		/** add()'s decay read under the CURRENT posture (valid or invalid): evidence inside an invalid-policy period accumulates normally within its own epoch. */
+		private double nowInternal(long t, Params p, boolean invalid) { if (!bound || epochStale(p, invalid)) return 0; return heat * Math.pow(0.5, Math.max(0, t - at) / 1000.0 / p.halfLifeSec()); }
 		public Step add(String check, int weight, long t, Params p) {
 			boolean invalid = !p.valid(); // explicit invalid-policy contract: evidence is recorded under sanitized values, but the step is LOG (no action) - raw invalid params can never cause an effect, even for a caller that skips Config. The epoch binds the invalidity, so invalid-period evidence is never reclassified under a later valid policy.
 			if (invalid) p = p.sanitized();
 			if (epochStale(p, invalid)) reset(); // policy changed: old evidence is never reclassified under the new thresholds
 			bind(p, invalid);
-			double h = now(t, p);
+			double h = nowInternal(t, p, invalid); // NOT now(t, p): the public read treats an invalid-posture epoch as zero, which would cold-reset the evidence on every invalid flag instead of recording the period
 			// Intentional (decision relayed via parent 10-18, option a of the lane-A design question): tier-A evidence decays WITH the heat.
 			// Below the 0.25 floor the next flag wipes tierAClusters too, so 'tier A confirmed' only survives inside one active build-up. The
 			// window depends on the build-up's heat at the last flag: ~29 s from heat 3 (one weight-3 flag) or ~37 s from heat 6 at the default

@@ -29,6 +29,7 @@ public final class Verdict {
 	/** Weight 2 is for hits: a landed attack is worth more heat than one odd move packet. */
 	public static Step signal(ServerPlayer pl, String check, String detail, int weight) {
 		Config cfg = Config.get();
+		long epoch = Config.reloadEpoch(); // policy-transition guard: an ACTION computed under a policy that a reload has since replaced is dropped to LOG
 		if (cfg.skips(pl, check)) return Step.LOG; // exempt player, exempt check, disabled check, creative, spectator: no heat, no action, from any caller
 		H h = HEAT.computeIfAbsent(pl.getUUID(), k -> new H());
 		long ms = System.currentTimeMillis();
@@ -53,6 +54,7 @@ public final class Verdict {
 		}
 		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> {}", pl.getGameProfile().name(), check, detail, heatNow, step.name().toLowerCase());
 		alert(pl, check + " " + detail + " heat " + heatNow + " " + step.name().toLowerCase());
+		if (epoch != Config.reloadEpoch() && step != Step.LOG) { Meshac.LOG.warn("[meshac] policy reloaded mid-signal for {}: action dropped to LOG (evidence already wiped by the reload)", pl.getGameProfile().name()); return Step.LOG; } // a reload between decision and dispatch replaces the policy this step was computed under
 		if (step == Step.HOLD && heatNow - weight < cfg.holdAtI()) Discord.hold(pl.getGameProfile().name(), check, detail);
 		if (step == Step.REMOVE) remove(pl, why, ev);
 		return step;

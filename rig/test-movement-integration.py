@@ -100,6 +100,7 @@ public class DamageSources { public DamageSource fall() { return new DamageSourc
 public class AABB { public final double minX, minY, minZ, maxX, maxY, maxZ;
  public AABB(double x0, double y0, double z0, double x1, double y1, double z1) { minX=x0; minY=y0; minZ=z0; maxX=x1; maxY=y1; maxZ=z1; }
  public AABB move(double dx, double dy, double dz) { return new AABB(minX+dx, minY+dy, minZ+dz, maxX+dx, maxY+dy, maxZ+dz); }
+ public AABB inflate(double d) { return inflate(d, d, d); }
  public AABB inflate(double dx, double dy, double dz) { return new AABB(minX-dx, minY-dy, minZ-dz, maxX+dx, maxY+dy, maxZ+dz); }
  public AABB deflate(double d) { return inflate(-d, -d, -d); } }''',
 'net/minecraft/world/phys/shapes/VoxelShape.java': '''package net.minecraft.world.phys.shapes;

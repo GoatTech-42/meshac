@@ -23,7 +23,7 @@ Pure Java, no Minecraft: the hiding rules (three failed checks hide, near and ex
 
 ## What only the rig can tell us
 
-- Everything marked uncompiled still has to build on 1.21.11, 26.1, 26.2 and 26.3. I checked the tracked-set field names with javap on 26.2 only.
+- Everything marked uncompiled at branch time has since compiled on all four targets (1.21.11, 26.1.2, 26.2, 26.3) (Box-reported 10-17 11:36pm, series through 0066 - HISTORICAL; the current-tip binary is not verified). The tracked-set field names were checked with javap on 26.2 only - still the only direct check.
 - Whether the grid saves real time at real entity counts, and how many loaded entities are untracked.
 - The tick cost and the 200 ray per tick budget under 40 or more players.
 - A Bedrock client through Geyser: fake ore and hidden chests in chunks (shared, so Bedrock gets them too), and, with `veilBedrock` on, entities that come back after a wall.

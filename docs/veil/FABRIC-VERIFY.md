@@ -28,5 +28,5 @@ Note: 1.21.11 jars show Intermediary names (class_3222) because that Fabric API 
 
 My first version of the respawn change used `AFTER_PLAYER_CHANGE_WORLD`. It would not have compiled on any 26.x. The no-cull window for dimension changes and respawns is now started from the tick loop (`ViewerEpoch`), so no version split is needed.
 
-## Not verified here (game names, needs the Box compile)
-These carry `VERIFY` comments in the source and were not checked on the jars: `BlockState.canOcclude`, `ServerLevel.getSeed`, `LevelChunk.getMinY/getMaxY/getMinSectionY`, `LevelChunkSection.maybeHas`, `ChunkMap.getPlayers(ChunkPos, boolean)`, `Leashable`, `Entity.isCurrentlyGlowing`, `hasPassenger(Entity)`. The tracked-set names (`ChunkMap.entityMap`, `TrackedEntity.entity`) were checked with javap on 26.2 only.
+## Compile status of the formerly-VERIFY names (updated 10-18)
+These carried `VERIFY` comments in the source: `BlockState.canOcclude`, `ServerLevel.getSeed`, `LevelChunk.getMinY/getMaxY/getMinSectionY`, `LevelChunkSection.maybeHas`, `ChunkMap.getPlayers(ChunkPos, boolean)`, `Leashable`, `Entity.isCurrentlyGlowing`, `hasPassenger(Entity)`. They are now COMPILE-verified on all four targets (Box-reported 10-17 11:36pm, series through 0066 - HISTORICAL; the current-tip binary is not verified). Compile proves the names resolve, not behaviour: runtime evidence stays rig-only. The tracked-set names (`ChunkMap.entityMap`, `TrackedEntity.entity`) were checked with javap on 26.2 only - still the only direct check of those two.

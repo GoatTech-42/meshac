@@ -104,5 +104,52 @@ bloff = base(scenario='bl-burst', expect='signal', needs='cheat', offState=None,
              signals=['[meshac] SIGNAL P nofall ground spoof heat=1 -> log'])
 check(grade(bloff, [bloff])['verdict'] == 'INVALID', 'blink row with nofall signal is off-target: ' + str(grade(bloff, [bloff])))
 
+# 18. grace-boundary persistence (patch 6 Stage-1 battery rows, BATTERY-SHADOW-DIVERGENCE-PLAN).
+# Producer contract (pb-controls): 'signals' carries only "SIGNAL <player>" lines; the row's
+# 'shadowSignals' carries the captured [trace] decay-shadow telemetry. Shadow telemetry is log-only
+# and must NEVER bind as a signal; gndclaim/gndclear/gndreset go to GroundReplay, never the grader.
+SH = '[trace] nofall decay-shadow P count=3 liveCount=0 liveFlagged=false (grace-boundary persistence draft, log-only)'
+CAP = ['[trace] gndclaim P air=true count=3', '[trace] gndclear P decayCount=2', '[trace] gndreset P cause=post-flag count=0 decayCount=3']
+nf_ctrl = base(scenario='gs01', expect='signal', needs='cheat', offState=None, checks=('nofall',),
+               signals=['[meshac] SIGNAL P nofall ground spoof heat=3 -> log'])
+# GS-D grace-farm divergence row: live window silent by design today, shadow must FLAG -> PASS only with shadow telemetry + session witness
+gsd = base(scenario='gs-d', expect='zero', expectShadow=True, shadowSignals=[SH])
+r = grade(gsd, [gsd, nf_ctrl]); check(r['verdict'] == 'PASS', 'GS-D divergence row: ' + str(r))
+# GS-D blind (no shadow line) is INCONCLUSIVE, never divergence-PASS
+gsd_blind = base(scenario='gs-d', expect='zero', expectShadow=True)
+r = grade(gsd_blind, [gsd_blind, nf_ctrl]); check(r['verdict'] == 'INVALID' and any('divergence' in x for x in r['reasons']), 'GS-D blind shadow: ' + str(r))
+# GS-D with a LIVE nofall SIGNAL today = signals on a zero row -> FAIL (a live flag would mean the hole closed unreviewed)
+gsd_live = base(scenario='gs-d', expect='zero', expectShadow=True, signals=['[meshac] SIGNAL P nofall ground spoof heat=3 -> log'], shadowSignals=[SH])
+r = grade(gsd_live, [gsd_live, nf_ctrl]); check(r['verdict'] == 'FAIL', 'GS-D unexpected live flag: ' + str(r))
+# GS-E water-dip divergence row, same shape
+gse = base(scenario='gs-e', expect='zero', expectShadow=True, shadowSignals=[SH.replace('count=3', 'count=4')])
+r = grade(gse, [gse, nf_ctrl]); check(r['verdict'] == 'PASS', 'GS-E divergence row: ' + str(r))
+# Legit medium dip (shadowZero kill row): clean -> PASS; ANY decay-shadow line -> FAIL (pre-committed kill criterion)
+dip = base(scenario='legit-medium-dip', expect='zero', shadowZero=True)
+r = grade(dip, [dip, nf_ctrl]); check(r['verdict'] == 'PASS', 'legit dip clean: ' + str(r))
+dip_kill = base(scenario='legit-medium-dip', expect='zero', shadowZero=True, shadowSignals=[SH])
+r = grade(dip_kill, [dip_kill, nf_ctrl]); check(r['verdict'] == 'FAIL' and any('kill criterion' in x for x in r['reasons']), 'legit dip shadow flag = kill: ' + str(r))
+# Legit knockback landing + medium exit (elytra): the other two kill rows, both shapes
+for sc in ('legit-kb-landing', 'legit-medium-exit-elytra'):
+    row = base(scenario=sc, expect='zero', shadowZero=True)
+    check(grade(row, [row, nf_ctrl])['verdict'] == 'PASS', sc + ' clean: ' + str(grade(row, [row, nf_ctrl])))
+    kill = base(scenario=sc, expect='zero', shadowZero=True, shadowSignals=[SH.replace('liveFlagged=false', 'liveFlagged=true')])
+    check(grade(kill, [kill, nf_ctrl])['verdict'] == 'FAIL', sc + ' shadow flag = kill')
+# decay-shadow telemetry NEVER binds as a nofall signal, even on a check-scoped positive row
+pos_shadow_only = base(scenario='gs01', expect='signal', needs='cheat', offState=None, checks=('nofall',), shadowSignals=[SH])
+r = grade(pos_shadow_only, [pos_shadow_only]); check(r['verdict'] == 'INVALID', 'shadow line is not a catch: ' + str(r))
+pos_shadow2 = base(scenario='gs01', expect='signal', needs='cheat', offState=None, checks=('nofall',), shadowSignals=[SH.replace('liveFlagged=false', 'liveFlagged=true')])
+r = grade(pos_shadow2, [pos_shadow2]); check(r['verdict'] == 'INVALID', 'shadow line (liveFlagged=true) is not a catch: ' + str(r))
+# capture lines never bind either: positive nofall row whose signals list carries only gndclaim/gndclear/gndreset is INVALID
+pos_cap_only = base(scenario='gs01', expect='signal', needs='cheat', offState=None, checks=('nofall',), signals=CAP)
+r = grade(pos_cap_only, [pos_cap_only]); check(r['verdict'] == 'INVALID', 'capture lines are not a catch: ' + str(r))
+# a shadow-divergence row is NOT a session witness (witness must be a bound expect=signal row)
+r = grade(base(), [base(), gsd]); check(r['verdict'] == 'INVALID' and any('witness' in x for x in r['reasons']), 'divergence row is no witness: ' + str(r))
+r = grade(base(), [base(), gsd, nf_ctrl]); check(r['verdict'] == 'PASS', 'real nofall control witnesses the session: ' + str(r))
+# one-shape contract (0061): SIGNAL-SUPPRESSED receipts never bind as signals
+supp = base(scenario='gs01', expect='signal', needs='cheat', offState=None, checks=('nofall',),
+            signals=['[meshac] SIGNAL-SUPPRESSED P uuid nofall count=7 (window closed)'])
+r = grade(supp, [supp]); check(r['verdict'] == 'INVALID', 'SIGNAL-SUPPRESSED receipt is not a signal: ' + str(r))
+
 if failed: raise SystemExit('%d failures' % failed)
 print('test-pb-grade ok')

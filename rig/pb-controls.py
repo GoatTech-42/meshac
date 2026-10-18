@@ -175,6 +175,7 @@ def main():
         log = subprocess.check_output(['docker', 'logs', 'meshac-red', '--since', since], stderr=subprocess.STDOUT, text=True)
         (a.output / 'server.log').write_text(log)
         signals = [l for l in log.splitlines() if 'SIGNAL ' + a.player in l]
+        shadowSignals = [l for l in log.splitlines() if 'decay-shadow ' + a.player in l] # grace-boundary Stage-1 battery: log-only shadow telemetry for pb_grade expectShadow/shadowZero
         bound = signal_checks.bound(signals) # TEXT2CHECK: exact check-field binding, all CheckNames.ALL checks
         passed = (len(signals) == 0) if sc['expect'] == 'zero' else (bool(bound & set(sc['checks'])) if sc.get('checks') else bool(bound))
         result = {'scenario': a.scenario, 'row': sc['row'], 'player': a.player, 'jarSHA': a.jar_sha256, 'expect': sc['expect'],
@@ -182,7 +183,7 @@ def main():
             'offState': {'moduleOffPixelConfirmed': bool(a.prepared_vanilla_client_confirmed)} if sc['needs'] == 'vanilla' else None,
             'disarmVerified': disarm, 'tickHealth': tick_health, 'modLiveness': mod_liveness,
             'falsifies': sc.get('falsifies'), 'grading': GRADE['3fffe5a-expect'],
-            'events': events, 'signals': signals, 'checks': sc.get('checks'), 'verdict': 'PASS' if passed else ('FAIL' if sc['expect'] == 'zero' else 'INVALID'),
+            'events': events, 'signals': signals, 'shadowSignals': shadowSignals, 'checks': sc.get('checks'), 'verdict': 'PASS' if passed else ('FAIL' if sc['expect'] == 'zero' else 'INVALID'),
             'setupReceipt': a.setup_receipt.read_text(),
             'reviewRequired': 'Driver verdict is provisional; pb_grade.py owns the final verdict (provenance, session witness, OFF/disarm). Zero signals is INVALID on a cheat row, PASS-only on a zero row. xdotool legs are not a human motor baseline.'}
         (a.output / 'result.json').write_text(json.dumps(result, indent=2))

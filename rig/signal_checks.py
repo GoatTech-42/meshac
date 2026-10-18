@@ -29,6 +29,13 @@ TEXT2CHECK = {
     "glide": "restarted gliding / no air drag", "boatfly": "boat climbing in open air", "chat": "chat",
 }
 
+SHADOW = re.compile(r"\[trace\] nofall decay-shadow \S+ count=(\d+) liveCount=(\d+) liveFlagged=(true|false)")
+# The Stage-1 decay shadow (Movement.java:325) is log-only telemetry: it can never bind as a signal.
+
+def shadow_lines(lines):
+    """The decay-shadow telemetry lines among the given log lines (empty when none)."""
+    return [l for l in lines if SHADOW.search(l)]
+
 def bind(line):
     """The check a SIGNAL line is for, or None when the line is not a SIGNAL for a known check."""
     m = SIGNAL.search(line)

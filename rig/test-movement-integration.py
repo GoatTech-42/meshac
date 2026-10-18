@@ -212,6 +212,20 @@ public final class MovementHarness {
 
  static void adv(long ms) { TestClock.ms += ms; TestClock.ns += ms * 1000000L; }
  static int mark() { return Meshac.LOG.all.size(); }
+ static void drain(String label, int m) { for (int i = m; i < Meshac.LOG.all.size(); i++) System.out.println("[log+" + i + "] " + Meshac.LOG.all.get(i)); } // 0123 diag: print every new log line verbatim
+ static void diag(ServerPlayer p, String label) { // 0123 diag: read-only reflective peek at per-player window state; changes nothing
+  try {
+   java.lang.reflect.Field sf = dev.meshac.Movement.class.getDeclaredField("STATE"); sf.setAccessible(true);
+   Object s = ((java.util.Map<?,?>) sf.get(null)).get(p.getUUID());
+   if (s == null) { System.out.println("[diag] " + label + ": no S state"); return; }
+   java.lang.reflect.Field gf = s.getClass().getDeclaredField("gndEv"); gf.setAccessible(true);
+   Object ev = gf.get(s);
+   int unsup = (Integer) ev.getClass().getMethod("unsupported").invoke(ev);
+   java.lang.reflect.Field grf = s.getClass().getDeclaredField("grace"); grf.setAccessible(true);
+   java.lang.reflect.Field wf = dev.meshac.Movement.class.getDeclaredField("GROUND_WINDOW"); wf.setAccessible(true);
+   java.lang.reflect.Field tf = dev.meshac.Movement.class.getDeclaredField("GROUND_FLAG_AT"); tf.setAccessible(true);
+   System.out.println("[diag] " + label + " gndEv.unsupported=" + unsup + " grace=" + grf.getInt(s) + " WINDOW=" + wf.getInt(null) + " FLAG_AT=" + tf.getInt(null));
+  } catch (Exception e) { System.out.println("[diag] " + label + " reflection failed: " + e); } }
  static boolean since(String sub, int m) { return Meshac.LOG.containsSince(sub, m); }
  static ServerPlayer fresh(double y) { ServerPlayer p = new ServerPlayer("test"); p.setPos(0, y, 0); return p; }
  static double[] send(ServerPlayer p, double x, double y, double z, boolean g) {
@@ -259,11 +273,16 @@ public final class MovementHarness {
   // S3 nofall window (U1): 3-of-5 unsupported ground claims flag; 2-of-5 do not.
   net.minecraft.world.level.Level.reset(); ServerPlayer p3 = fresh(70); warmup(p3, 70);
   net.minecraft.world.level.Level.support = false; int m3 = mark();
-  send(p3, 0, 70, 0, true); send(p3, 0, 70, 0, true); ck(!since("nofall", m3), "S3a: 2 unsupported claims must not flag");
+  diag(p3, "S3a post-warmup");
+  send(p3, 0, 70, 0, true); diag(p3, "S3a after send 1"); drain("S3a-1", m3);
+  send(p3, 0, 70, 0, true); diag(p3, "S3a after send 2"); drain("S3a-2", m3);
+  ck(!since("nofall", m3), "S3a: 2 unsupported claims must not flag");
   send(p3, 0, 70, 0, true); ck(since("nofall", m3), "S3a: 3-of-5 unsupported claims must flag nofall");
   net.minecraft.world.level.Level.reset(); ServerPlayer p3b = fresh(70); warmup(p3b, 70);
   net.minecraft.world.level.Level.support = false; int m3b = mark();
-  send(p3b, 0, 70, 0, true); send(p3b, 0, 70, 0, true);
+  diag(p3b, "S3b post-warmup");
+  send(p3b, 0, 70, 0, true); diag(p3b, "S3b after send 1");
+  send(p3b, 0, 70, 0, true); diag(p3b, "S3b after send 2"); drain("S3b", m3b);
   net.minecraft.world.level.Level.support = true;
   send(p3b, 0, 70, 0, true); send(p3b, 0, 70, 0, true); send(p3b, 0, 70, 0, true);
   ck(!since("nofall", m3b), "S3b: 2-of-5 unsupported claims must NOT flag nofall");
@@ -275,7 +294,8 @@ public final class MovementHarness {
   send(p4, 0, 70.63, 0, true); ck(!since("SIGNAL", m4), "S4a: powder struggle dy 0.63 must produce NO signal");
   net.minecraft.world.level.Level.reset(); ServerPlayer p4b = fresh(70); warmup(p4b, 70);
   net.minecraft.world.level.Level.powderFeet = true; int m4b = mark();
-  send(p4b, 0, 70.75, 0, true); ck(since("step dy 0.750", m4b), "S4b: dy 0.75 near powder must flag (step dy 0.750 onGround)");
+  send(p4b, 0, 70.75, 0, true); drain("S4b", m4b);
+  ck(since("step dy 0.750", m4b), "S4b: dy 0.75 near powder must flag (step dy 0.750 onGround)");
 
   // S5 classify (U4): entry gate + eviction resistance. Both modes run the same packet streams.
   net.minecraft.world.level.Level.reset(); ServerPlayer p5 = fresh(70.625); warmup(p5, 70.625); // feet 0.125 above the scripted partial top (70.5): inside the 0.13+0.005 tolerance gap, nonzero so the gap arithmetic is real
@@ -290,7 +310,9 @@ public final class MovementHarness {
   if (classify) {
    net.minecraft.world.level.Level.reset(); ServerPlayer p5b = fresh(70.625); warmup(p5b, 70.625);
    net.minecraft.world.level.Level.support = false; int m5b = mark();
-   send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); // 2 real unsupported claims
+   diag(p5b, "S5b post-warmup");
+   send(p5b, 0, 70.625, 0, true); diag(p5b, "S5b after send 1");
+   send(p5b, 0, 70.625, 0, true); diag(p5b, "S5b after send 2"); drain("S5b", m5b); // 2 real unsupported claims
    net.minecraft.world.level.Level.partialBelow = true;
    send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); // 4 tolerated (gap 0.125)
    ck(!since("nofall", m5b), "S5b(classify): tolerated claims must not top up the window to 3");
@@ -303,7 +325,10 @@ public final class MovementHarness {
    // boundary is pinned by the direct helper checks in run() instead.
    net.minecraft.world.level.Level.reset(); ServerPlayer p5c = fresh(70.64); warmup(p5c, 70.64);
    net.minecraft.world.level.Level.support = false; net.minecraft.world.level.Level.partialBelow = true; int m5c = mark();
-   send(p5c, 0, 70.64, 0, true); send(p5c, 0, 70.64, 0, true); ck(!since("nofall", m5c), "S5c(classify): 2 out-of-gap claims must not flag yet");
+   diag(p5c, "S5c post-warmup");
+   send(p5c, 0, 70.64, 0, true); diag(p5c, "S5c after send 1");
+   send(p5c, 0, 70.64, 0, true); diag(p5c, "S5c after send 2"); drain("S5c", m5c);
+   ck(!since("nofall", m5c), "S5c(classify): 2 out-of-gap claims must not flag yet");
    send(p5c, 0, 70.64, 0, true);
    ck(since("nofall", m5c), "S5c(classify): outside the candidate strip the claim is plain unsupported - the 3rd claim flags");
   }

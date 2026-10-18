@@ -13,6 +13,9 @@ derived - stated honestly, this is a logic fixture, not a physics sim). Scope la
 - TRACE is OFF (MESHAC_TRACE unset): trace-only evidence lines are NOT exercised; the classify proof uses the
   non-trace-gated [groundtol] tolerated line. Doubled Glide/Interact/Mining/BounceBlocks/StuckBlocks no-op or return
   scripted constants; their real internals are NOT covered. No live deploy; this is rig-only.
+This fixture does NOT discharge any pending fixes owed on 0099 - the monitor-invariant fixture keeps its own queue.
+S5 geometry: feet 0.125 above the scripted partial top (inside tolerance) and 0.14 above it (outside); world answers stay
+SCRIPTED per phase - scripted logic, not physics.
 Prereqs are HARD: missing javac or Gson jar FAILS the test. Toolchain identity + fixture manifest hash printed on
 every run; subprocesses timeout-bound, output-capped (RLIMIT_FSIZE, per-file, covers .class outputs too), bounded
 seek-based log tails only; preexec_fn is POSIX-only. Dry control-flow run with declared tool doubles lives in
@@ -24,7 +27,8 @@ S = R/'src/main/java/dev/meshac'
 PROD = ['Movement','Verdict','Cases','Config','Ladder','AdminLog','SafeSwap','ActionEvidence','CheckNames',
         'ContextLogBudget','CompareLogBudget','BlinkOrigin','BlinkClock','BounceTracker','MediumExit',
         'StepAccumulator','MovementLifetime','MonitorGate','FpGuards','GroundEvidence','GroundTolerance',
-        'BoostWindow','GlideWindow','GroundTrace','SustainBudget','StepEvidence','MoveContext']
+        'BoostWindow','GlideWindow','GroundTrace','SustainBudget','StepEvidence','MoveContext',
+        'MovePath','TeleportDetect']
 CLOCK_MS = 'System.currentTimeMillis()'   # rebound in Movement (26 sites) and Verdict (5 sites); counts pinned
 CLOCK_NS = 'System.nanoTime()'            # rebound in Movement only (6 sites)
 PIN = {'Movement': (26, 6), 'Verdict': (5, None)}  # (ms sites rebound, ns sites rebound); Verdict's 2 nanoTime sites (combat log-only budget) stay on the real clock: no combat signals here, same as 0097
@@ -149,7 +153,7 @@ public class Level {
  public Object dimension() { return DIM; }
  public <T> List<T> getEntitiesOfClass(Class<T> c, net.minecraft.world.phys.AABB b) { return new ArrayList<>(); }
  public Server getServer() { return new Server(); }
- public static class Server { public Players getPlayerList() { return new Players(); } }
+ public static class Server { public int getTickCount() { return 0; } public Players getPlayerList() { return new Players(); } }
  public static class Players { public net.minecraft.server.level.ServerPlayer getPlayer(UUID u) { return null; } } }''',
 'net/minecraft/server/level/ServerPlayer.java': '''package net.minecraft.server.level; import java.util.UUID;
 public class ServerPlayer extends net.minecraft.world.entity.Entity {
@@ -263,9 +267,9 @@ public final class MovementHarness {
   send(p4b, 0, 70.75, 0, true); ck(since("step dy 0.750", m4b), "S4b: dy 0.75 near powder must flag (step dy 0.750 onGround)");
 
   // S5 classify (U4): entry gate + eviction resistance. Both modes run the same packet streams.
-  net.minecraft.world.level.Level.reset(); ServerPlayer p5 = fresh(70.5); warmup(p5, 70.5);
+  net.minecraft.world.level.Level.reset(); ServerPlayer p5 = fresh(70.625); warmup(p5, 70.625); // feet 0.125 above the scripted partial top (70.5): inside the 0.13+0.005 tolerance gap, nonzero so the gap arithmetic is real
   net.minecraft.world.level.Level.support = false; net.minecraft.world.level.Level.partialBelow = true; int m5 = mark();
-  for (int i = 0; i < 5; i++) send(p5, 0, 70.5, 0, true);
+  for (int i = 0; i < 5; i++) send(p5, 0, 70.625, 0, true);
   if (classify) {
    ck(since("[groundtol] tolerated", m5), "S5a(classify): tolerated partial-shape claims must emit the [groundtol] tolerated line");
    ck(!since("nofall", m5), "S5a(classify): 5 tolerated claims must NOT enter the nofall window");
@@ -273,15 +277,21 @@ public final class MovementHarness {
    ck(since("nofall", m5), "S5a(plain): without classify the same partial-shape claims are plain unsupported and MUST flag (the U4 status quo)");
   }
   if (classify) {
-   net.minecraft.world.level.Level.reset(); ServerPlayer p5b = fresh(70.5); warmup(p5b, 70.5);
+   net.minecraft.world.level.Level.reset(); ServerPlayer p5b = fresh(70.625); warmup(p5b, 70.625);
    net.minecraft.world.level.Level.support = false; int m5b = mark();
-   send(p5b, 0, 70.5, 0, true); send(p5b, 0, 70.5, 0, true); // 2 real unsupported claims
+   send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); // 2 real unsupported claims
    net.minecraft.world.level.Level.partialBelow = true;
-   send(p5b, 0, 70.5, 0, true); send(p5b, 0, 70.5, 0, true); send(p5b, 0, 70.5, 0, true); send(p5b, 0, 70.5, 0, true); // 4 tolerated
+   send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); // 4 tolerated (gap 0.125)
    ck(!since("nofall", m5b), "S5b(classify): tolerated claims must not top up the window to 3");
    net.minecraft.world.level.Level.partialBelow = false;
-   send(p5b, 0, 70.5, 0, true); // 3rd real unsupported: tolerated claims must NOT have evicted the first two
+   send(p5b, 0, 70.625, 0, true); // 3rd real unsupported: tolerated claims must NOT have evicted the first two
    ck(since("nofall", m5b), "S5b(classify): the 3rd unsupported claim after tolerated claims MUST flag (eviction resistance)");
+   // S5c boundary: feet 0.14 above the partial top - outside the 0.13+0.005 tolerance gap, so the claim is plain unsupported even under classify
+   net.minecraft.world.level.Level.reset(); ServerPlayer p5c = fresh(70.64); warmup(p5c, 70.64);
+   net.minecraft.world.level.Level.support = false; net.minecraft.world.level.Level.partialBelow = true; int m5c = mark();
+   send(p5c, 0, 70.64, 0, true); send(p5c, 0, 70.64, 0, true); ck(!since("nofall", m5c), "S5c(classify): 2 out-of-gap claims must not flag yet");
+   send(p5c, 0, 70.64, 0, true);
+   ck(since("nofall", m5c), "S5c(classify): gap 0.14 > 0.135 must NOT be tolerated - the 3rd claim flags (the tolerance has a real boundary)");
   }
   System.out.println("MovementHarness PASS mode=" + (classify ? "classify" : "plain") + " (" + checks + " checks)");
  }
@@ -294,7 +304,8 @@ class MovementIntegration(unittest.TestCase):
         the child makes (the log AND javac's .class outputs); timeout bounds wall time but kills the direct child
         only (neither javac nor the harness java forks here); only a seek-based bounded tail is read back; detection
         is size-based, so a log at cap size means truncated output and fails the test. preexec_fn is POSIX-only."""
-        env = dict(os.environ); env.update(env_extra or {})
+        env = {k: v for k, v in os.environ.items() if not k.startswith('MESHAC_')}  # never inherit control env (MESHAC_TRACE, MESHAC_GROUND_TOL, ...) into a run: modes are set explicitly per invocation
+        env.update(env_extra or {})
         with open(log, 'wb') as lf:
             try:
                 r = subprocess.run(cmd, stdout=lf, stderr=subprocess.STDOUT, timeout=timeout, env=env,

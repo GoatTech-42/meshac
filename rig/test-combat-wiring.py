@@ -30,13 +30,19 @@ def run(a26, a1211, mainmix, combat, mixins_json, gradle, versions, meshac):
         if not ok: lines.append('FAIL ' + what); f += 1
     c('@Inject(method = "handleAttack"' in a26 and 'ServerboundAttackPacket' in a26,
       'attack26 injects handleAttack(ServerboundAttackPacket)')
-    c('Combat.check(player, e)' in a26 and 'Verdict.signal(player, "combat", hit, 2)' in a26,
-      'attack26 calls Combat.check -> Verdict.signal weight 2 (the live d124 combat path)')
+    c('Combat.check(player, e)' in a26 and 'Verdict.signalLogOnly(player, "combat", hit, 2)' in a26,
+      'attack26 calls Combat.check -> Verdict.signalLogOnly weight 2 (log-only by construction, 0055)')
+    ab26 = a26.split('private void meshac$attack')[1].split('\n\t}')[0]  # attack handler body only; the interact handler keeps its own cancellable inject
+    c('Verdict.signal(player, "combat"' not in ab26 and 'ci.cancel()' not in ab26 and 'cancellable = true' not in ab26,
+      'attack26 combat handler never cancels and is not cancellable (0055)')
     c('if (e == null) return' in a26 and 'isSameThread()' in a26, 'attack26 keeps the null-target + same-thread gates')
     c('handleInteract' in a1211 and 'onAttack()' in a1211 and 'p.getTarget(player.level())' in a1211,
       'attack1211 routes interact onAttack -> target')
-    c('Combat.check(player, e)' in a1211 and 'Verdict.signal(player, "combat", hit, 2)' in a1211,
-      'attack1211 calls Combat.check -> Verdict.signal weight 2')
+    c('Combat.check(player, e)' in a1211 and 'Verdict.signalLogOnly(player, "combat", hit, 2)' in a1211,
+      'attack1211 calls Combat.check -> Verdict.signalLogOnly weight 2 (0055)')
+    ab1211 = a1211.split('private void meshac$attack')[1]
+    c('Verdict.signal(player, "combat"' not in ab1211 and 'ci.cancel()' not in ab1211 and 'cancellable = true' not in a1211,
+      'attack1211 combat handler never cancels and is not cancellable (0055)')
     c('"AttackMixin"' in mixins_json, 'meshac.mixins.json registers AttackMixin')
     c('attack_src' in gradle and 'src/${project.attack_src}/java' in gradle, 'build.gradle wires the per-version attack source set')
     c(versions.get('26.1') == 'attack26' and versions.get('26.2') == 'attack26' and versions.get('26.3') == 'attack26'
@@ -70,7 +76,7 @@ buf = io.StringIO()
 with contextlib.redirect_stdout(buf):
     mf, mlines = run(*mut_args)
 check(mf == 1, 'mutation control: removing Combat.check from attack26 fails exactly one pin (got %d)' % mf)
-check(mlines == ['FAIL attack26 calls Combat.check -> Verdict.signal weight 2 (the live d124 combat path)'],
+check(mlines == ['FAIL attack26 calls Combat.check -> Verdict.signalLogOnly weight 2 (log-only by construction, 0055)'],
       'mutation control emits the exact expected FAIL line: ' + str(mlines))
 if failed: raise SystemExit('%d failures' % failed)
 print('test-combat-wiring ok')

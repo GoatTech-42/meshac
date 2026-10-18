@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class AttackMixin {
 	@Shadow public ServerPlayer player;
 
-	@Inject(method = "handleAttack", at = @At("HEAD"), cancellable = true)
+	@Inject(method = "handleAttack", at = @At("HEAD")) // 0055: not cancellable - combat never denies the hit
 	private void meshac$attack(ServerboundAttackPacket p, CallbackInfo ci) {
 		if (dev.meshac.Meshac.skip(player)) return;
 		if (!player.level().getServer().isSameThread()) return;
@@ -25,8 +25,7 @@ public abstract class AttackMixin {
 		if (e == null) return;
 		String hit = Combat.check(player, e);
 		if (hit == null) return;
-		Verdict.Step step = Verdict.signal(player, "combat", hit, 2);
-		if (step != Verdict.Step.LOG) ci.cancel(); // log-only signals must never deny the hit
+		Verdict.signalLogOnly(player, "combat", hit, 2); // 0055: combat log-only BY CONSTRUCTION in every config; never feeds the removal ladder (gate: 100/300 ms FP replay + reviewer GO)
 	}
 
 	@Inject(method = "handleInteract", at = @At("HEAD"), cancellable = true)

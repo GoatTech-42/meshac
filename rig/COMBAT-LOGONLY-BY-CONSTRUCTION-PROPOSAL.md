@@ -1,6 +1,11 @@
 # DRAFT proposal: combat log-only BY CONSTRUCTION (option 2, 10-17) - NOT APPLIED, no GO asked
 
-Status: DRAFT for reviewer reading only. Nothing in the series implements it. Commissioned
+Status: APPLIED by patch 0055 (10-17, parent decision under Luke standing meshac autonomy,
+report-after): shape B shipped - Verdict.signalLogOnly (mon bucket + budgeted SIGNAL line +
+alert, always LOG) and both AttackMixins call it, never cancel, not cancellable. Pre-GO 1
+(per-player SIGNAL budget: 30 lines per 60 s per (player, check), proposal value) shipped in
+the same patch. Pre-GO 2 (server-thread reentry proof) and 3 (Box compile + rig FP replay)
+remain outstanding - Box compile is the standing gate. Original commissioning note: Commissioned
 by the Instinct re-scope (10-17 10:14pm, report-after, not a Luke quote): "draft (2) as a
 separate, small, reviewable proposal only: AttackMixin never cancels/punishes combat
 regardless of config, so W2 holds by construction."

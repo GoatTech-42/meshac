@@ -15,7 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class Verdict {
 	public enum Step { SETBACK, HOLD, REMOVE, LOG }
-	private static final class H { final Ladder.Heat lh = new Ladder.Heat(), mon = new Ladder.Heat(); /* mon: heat of log-only signals, never feeds a removal */ int heat; long at; final ArrayDeque<String> trace = new ArrayDeque<>(); final java.util.LinkedHashMap<String, Integer> weight = new java.util.LinkedHashMap<>(); final Map<String, String> detail = new java.util.HashMap<>(); }
+	private static final class H { final Ladder.Heat lh = new Ladder.Heat(), mon = new Ladder.Heat(); /* mon: heat of log-only signals, never feeds a removal */ int heat; long at; final ArrayDeque<String> trace = new ArrayDeque<>(); final java.util.LinkedHashMap<String, Integer> weight = new java.util.LinkedHashMap<>(); final Map<String, String> detail = new java.util.HashMap<>(); final Map<String, long[]> sigLog = new java.util.HashMap<>(); /* per-check log/alert budget windows {windowStart, used, suppressed}; keys bounded by the fixed check vocabulary */ }
 	private static final Map<UUID, H> HEAT = new ConcurrentHashMap<>();
 
 	/** Cheap per-event note kept in a ring so a case can carry the lead-up. */
@@ -32,12 +32,7 @@ public final class Verdict {
 		if (cfg.skips(pl, check)) return Step.LOG; // exempt player, exempt check, disabled check, creative, spectator: no heat, no action, from any caller
 		H h = HEAT.computeIfAbsent(pl.getUUID(), k -> new H());
 		long ms = System.currentTimeMillis();
-		if (cfg.monitor()) { // monitor mode: detector signals never enforce, including legacy egregious entries
-			int mh; synchronized (h) { h.mon.add(check, weight, ms, cfg.ladderParams()); mh = (int) Math.round(h.mon.heat); h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + mh + " (log-only)"); if (h.trace.size() > 40) h.trace.poll(); }
-			Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> log", pl.getGameProfile().name(), check, detail, mh);
-			alert(pl, check + " " + detail + " heat " + mh + " log");
-			return Step.LOG;
-		}
+		if (cfg.monitor()) return signalLogOnly(pl, check, detail, weight); // monitor mode: detector signals never enforce, including legacy egregious entries
 		int heatNow;
 		Step step;
 		List<String> ev;
@@ -61,6 +56,31 @@ public final class Verdict {
 		if (step == Step.HOLD && heatNow - weight < cfg.holdAtI()) Discord.hold(pl.getGameProfile().name(), check, detail);
 		if (step == Step.REMOVE) remove(pl, why, ev);
 		return step;
+	}
+
+	/** Log-only signals: monitor-mode behaviour for a caller that must never enforce in ANY config.
+	 * 0055 (parent decision 10-17, Luke standing autonomy): combat calls this BY CONSTRUCTION until the
+	 * 100/300 ms FP replay + reviewer GO. Only the mon bucket moves (real mon heat for the rig); the removal
+	 * ladder (lh, HOLD/REMOVE, cancel) never sees these signals. Always returns Step.LOG. */
+	public static Step signalLogOnly(ServerPlayer pl, String check, String detail, int weight) {
+		Config cfg = Config.get();
+		if (cfg.skips(pl, check)) return Step.LOG; // same exemptions as signal()
+		H h = HEAT.computeIfAbsent(pl.getUUID(), k -> new H());
+		long ms = System.currentTimeMillis();
+		int mh; long sup;
+		synchronized (h) {
+			h.mon.add(check, weight, ms, cfg.ladderParams()); mh = (int) Math.round(h.mon.heat);
+			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + mh + " (log-only)"); if (h.trace.size() > 40) h.trace.poll();
+			// per-(player, check) log/alert budget (proposal pre-GO 1): a high-cps aura must not spam one WARN + alert
+			// per attack. 30 lines per 60 s fixed window per (player, check) - PROPOSAL value, reviewer-tunable.
+			long[] b = h.sigLog.computeIfAbsent(check, k -> new long[3]);
+			if (b[0] == 0 || ms < b[0] || ms - b[0] >= 60_000) { b[0] = ms; b[1] = 0; }
+			if (b[1] >= 30) { b[2]++; return Step.LOG; } // heat + trace still record every signal; only the line/alert is capped
+			b[1]++; sup = b[2]; b[2] = 0;
+		}
+		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> log{}", pl.getGameProfile().name(), check, detail, mh, sup > 0 ? " (suppressed " + sup + ")" : "");
+		alert(pl, check + " " + detail + " heat " + mh + " log");
+		return Step.LOG;
 	}
 
 	/** Staff who ran /mesh watch see every flag as it happens. */

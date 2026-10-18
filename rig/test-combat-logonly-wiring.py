@@ -3,17 +3,34 @@ from pathlib import Path
 import unittest
 ROOT = Path(__file__).resolve().parents[1]
 class LogOnly(unittest.TestCase):
- def test_every_version_attacks_honor_returned_verdict(self):
+ def test_every_version_attacks_never_enforce(self):
+  # 0055: combat is log-only BY CONSTRUCTION in every config - both attack handlers call
+  # Verdict.signalLogOnly and can never cancel, whatever monitor mode says.
   for source,handler in [('attack1211','handleInteract'),('attack26','handleAttack')]:
    with self.subTest(source=source):
     s=(ROOT/f'src/{source}/java/dev/meshac/mixin/AttackMixin.java').read_text()
     attack=s.split('private void meshac$attack',1)[1].split('\n\t}',1)[0]
     self.assertIn(f'method = "{handler}"',s)
     self.assertIn('Combat.check(player, e)',attack)
-    self.assertIn('Verdict.Step step = Verdict.signal(player, "combat", hit, 2);',attack)
-    self.assertIn('if (step != Verdict.Step.LOG) ci.cancel();',attack)
-    self.assertEqual(attack.count('ci.cancel()'),1)
-    self.assertLess(attack.index('Verdict.Step step ='),attack.index('if (step != Verdict.Step.LOG)'))
+    self.assertIn('Verdict.signalLogOnly(player, "combat", hit, 2);',attack)
+    self.assertNotIn('Verdict.signal(player, "combat"',attack)
+    self.assertNotIn('ci.cancel()',attack)
+    attack_inj=[x for x in s.split('@Inject') if 'meshac$attack' in x]
+    self.assertEqual(len(attack_inj),1)
+    self.assertNotIn('cancellable = true',attack_inj[0])
+ def test_signallogonly_never_enforces(self):
+  import re
+  v=(ROOT/'src/main/java/dev/meshac/Verdict.java').read_text()
+  v=re.sub(r'/\*.*?\*/','',v,flags=re.S); v=re.sub(r'//[^\n]*','',v)
+  self.assertIn('public static Step signalLogOnly(',v)
+  body=v.split('public static Step signalLogOnly(',1)[1].split('\n\t}',1)[0]
+  self.assertIn('h.mon.add(',body)   # real mon heat for the rig
+  self.assertNotIn('h.lh.add(',body) # never feeds the removal ladder
+  self.assertNotIn('remove(',body)
+  self.assertNotIn('Step.REMOVE',body)
+  self.assertIn('return Step.LOG;',body)
+  self.assertIn('sigLog',body)       # per-(player,check) log/alert budget (proposal pre-GO 1)
+  self.assertIn('if (cfg.monitor()) return signalLogOnly(pl, check, detail, weight);',v)  # one implementation
  def test_other_raw_denials_are_gated(self):
   for name,check in [('Interact','interact'),('Mining','mining')]:
    s=(ROOT/f'src/main/java/dev/meshac/{name}.java').read_text()

@@ -23,7 +23,10 @@ class MonitorInvariant(unittest.TestCase):
   self.assertIn('LOG_AT.remove(id)',f)
   for src in ['attack1211','attack26']:
    a=(R/f'src/{src}/java/dev/meshac/mixin/AttackMixin.java').read_text()
-   self.assertIn('if (step != Verdict.Step.LOG) ci.cancel();',a)
+   self.assertIn('Verdict.signalLogOnly(player, "combat", hit, 2);',a)
+   attack=a.split('private void meshac$attack',1)[1].split('\n\t}',1)[0]
+   self.assertNotIn('ci.cancel()',attack)
+   self.assertNotIn('Verdict.signal(player, "combat"',attack)
  def test_movement_source_and_pure_pending_gates(self):
   if os.environ.get('MESHAC_TEST_BASELINE'):
    self.assertIn('monitorClear(s);',(S/'Movement.java').read_text())
@@ -170,7 +173,7 @@ public class MonitorHarness {
    case "CASES_STAFF_SCAN": Cases.Case staff=Cases.add("test",p.id,"ban","staff","operator",0,List.of());Cases.add("test",p.id,"ban","auto","meshac-fingerprint",0,List.of());ck(Cases.activeBan(p.id)==staff,"staff scan hidden by auto");break;
    case "FINGERPRINT_BRAND": case "FINGERPRINT_CHANNEL": cf.clientFingerprintBrands.add("test:bad");cf.clientFingerprintChannels.add("test:bad");if(row.endsWith("BRAND"))Fingerprints.brand(p.id,"test:bad");else Fingerprints.channels(p.id,Set.of("test:bad"));for(int i=0;i<20;i++)Fingerprints.check(p);ck(Meshac.LOG.fpLogs==1&&p.connection.disconnects==0&&Cases.of("test").isEmpty(),"fingerprint action/log");cf.monitorOnly=false;Fingerprints.check(p);ck(p.connection.disconnects==1,"fingerprint positive missing");break;
    case "FINGERPRINT_FORGET": cf.clientFingerprintBrands.add("test:bad");Fingerprints.brand(p.id,"test:bad");Fingerprints.check(p);Fingerprints.forget(p.id);Fingerprints.brand(p.id,"test:bad");Fingerprints.check(p);ck(Meshac.LOG.fpLogs==2&&p.connection.disconnects==0,"forget throttle/removal");break;
-   case "ATTACK": Class<?> mix=Class.forName("dev.meshac.mixin.AttackMixin");Object hook=Class.forName("dev.meshac.MonitorHarness$Attack").getConstructor().newInstance();mix.getField("player").set(hook,p);Class<?> packet=Class.forName(packetName);Method attack=mix.getDeclaredMethod("meshac$attack",packet,CallbackInfo.class);attack.setAccessible(true);CallbackInfo ci=new CallbackInfo();attack.invoke(hook,packet.getConstructor().newInstance(),ci);ck(!ci.canceled&&Meshac.LOG.signals>0,"attack cancel/no signal");cf.monitorOnly=false;ci=new CallbackInfo();attack.invoke(hook,packet.getConstructor().newInstance(),ci);ck(ci.canceled,"attack positive missing");break;
+   case "ATTACK": Class<?> mix=Class.forName("dev.meshac.mixin.AttackMixin");Object hook=Class.forName("dev.meshac.MonitorHarness$Attack").getConstructor().newInstance();mix.getField("player").set(hook,p);Class<?> packet=Class.forName(packetName);Method attack=mix.getDeclaredMethod("meshac$attack",packet,CallbackInfo.class);attack.setAccessible(true);CallbackInfo ci=new CallbackInfo();attack.invoke(hook,packet.getConstructor().newInstance(),ci);ck(!ci.canceled&&Meshac.LOG.signals>0,"attack cancel/no signal");int cb=Cases.of("test").size();cf.monitorOnly=false;ci=new CallbackInfo();attack.invoke(hook,packet.getConstructor().newInstance(),ci);ck(!ci.canceled,"combat denied with monitor off (0055 by-construction)");ck(p.connection.disconnects==0&&Cases.of("test").size()==cb,"by-construction removal");break;
    default:throw new AssertionError("missing row adapter "+row);
   }
   System.out.println("ROW "+row+" PASS");
@@ -194,7 +197,9 @@ public class MonitorHarness {
   UUID auto=UUID.randomUUID();Cases.add("auto",auto,"ban","auto","meshac",0,List.of());ck(Cases.activeBan(auto)==null,"auto ban active in monitor");
   Class<?> mix=Class.forName("dev.meshac.mixin.AttackMixin");Object hook=Class.forName("dev.meshac.MonitorHarness$Attack").getConstructor().newInstance();mix.getField("player").set(hook,p);
   Class<?> packet=Class.forName(args[0]);Method attack=mix.getDeclaredMethod("meshac$attack",packet,CallbackInfo.class);attack.setAccessible(true);CallbackInfo ci=new CallbackInfo();attack.invoke(hook,packet.getConstructor().newInstance(),ci);ck(!ci.canceled,"monitor cancels attack");
-  cf.monitorOnly=false;ck(cf.enforce("combat"),"enforced mode disabled");ci=new CallbackInfo();attack.invoke(hook,packet.getConstructor().newInstance(),ci);ck(ci.canceled,"positive enforced attack not denied");
+  cf.monitorOnly=false;ck(cf.enforce("combat"),"enforced mode disabled");int casesBefore=Cases.of("test").size();ci=new CallbackInfo();attack.invoke(hook,packet.getConstructor().newInstance(),ci);ck(!ci.canceled,"by-construction combat denied the hit with monitor off (0055)");ck(p.connection.disconnects==0&&Cases.of("test").size()==casesBefore,"by-construction removal in enforced config");
+  Field heatMap=Verdict.class.getDeclaredField("HEAT");heatMap.setAccessible(true);Object hh=((Map<?,?>)heatMap.get(null)).get(p.id);Field monF=hh.getClass().getDeclaredField("mon");monF.setAccessible(true);Field lhF=hh.getClass().getDeclaredField("lh");lhF.setAccessible(true);Field heatVal=Ladder.Heat.class.getDeclaredField("heat");heatVal.setAccessible(true);ck(heatVal.getDouble(monF.get(hh))>0,"log-only mon heat missing");ck(heatVal.getDouble(lhF.get(hh))==0.0,"combat leaked into the removal ladder (0055)");
+  int b4=Meshac.LOG.signals;for(int i=0;i<40;i++)Verdict.signalLogOnly(p,"combat","budget witness",1);ck(Meshac.LOG.signals-b4==8,"log-only budget cap wrong (30 per 60s, proposal value)");TestClock.ms+=60001;b4=Meshac.LOG.signals;Verdict.signalLogOnly(p,"combat","budget witness",1);ck(Meshac.LOG.signals-b4==1,"log-only budget window did not roll");
   ck(Cases.activeBan(auto)!=null,"enforced auto ban lost");
   Fingerprints.brand(p.id,"test:bad");Fingerprints.check(p);ck(p.connection.disconnects==1,"enforced fingerprint positive lost");
   route(true);clearVerdict();route(false);clearVerdict();ck(witnessed==18,"missing route witnesses");System.out.println("monitor invariant runtime doubles PASS "+args[0]);

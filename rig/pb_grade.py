@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Grader for PB/GS/BL capture results (jar 3fffe5a spec). Reviewer lesson set:
 provenance on every PASS, a positive witness in every session, disarm/OFF state verified.
-Zero signals without a witness is INVALID, never PASS. Usage: pb_grade.py RESULT.json [SESSION_DIR]"""
+Zero signals without a witness is INVALID, never PASS. Usage: pb_grade.py RESULT.json [SESSION_DIR]
+Signal lines bind to checks via signal_checks (TEXT2CHECK): any known check's SIGNAL counts; a row
+carrying 'checks' (tuple of check names from its scenario) must bind one of those specifically."""
 import json, sys
 
+import signal_checks
+
 REQ_PROV = ['scenario', 'row', 'player', 'jarSHA', 'expect', 'session', 'events', 'tickHealth', 'modLiveness', 'setupReceipt']
-SIGNAL_WORDS = ('air jump', 'step', 'nofall', 'ground spoof', 'blink')
 
 def _moved(events):
     for e in events:
@@ -29,10 +32,14 @@ def grade(result, session):
     if result['expect'] == 'zero':
         if sig:
             return {'verdict': 'FAIL', 'reasons': ['signals on a zero row: ' + '; '.join(sig[:3])]}
-        if not any(r.get('expect') == 'signal' and any(w in l for l in (r.get('signals') or []) for w in SIGNAL_WORDS) for r in session):
+        if not any(r.get('expect') == 'signal' and signal_checks.bound(r.get('signals') or []) for r in session):
             reasons.append('no positive witness: no signaled positive-control row in this session')
     else:
-        if not any(w in l for l in sig for w in SIGNAL_WORDS):
+        bound = signal_checks.bound(sig)
+        want = set(result.get('checks') or ())
+        if want and not (bound & want):
+            reasons.append('expected SIGNAL for ' + '/'.join(sorted(want)) + ' absent (bound: ' + ('/'.join(sorted(bound)) or 'none') + ') - zero or off-target signals is INVALID, never PASS')
+        elif not want and not bound:
             reasons.append('expected SIGNAL absent on a positive-control row (zero signals is INVALID, never PASS)')
     return {'verdict': 'INVALID' if reasons else 'PASS', 'reasons': reasons}
 

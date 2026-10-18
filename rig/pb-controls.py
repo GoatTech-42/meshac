@@ -5,6 +5,8 @@ Rows and pass criteria per rig/RIG-CAPTURE-REQUEST-POWDER-BOUNCE.md; falsificati
 import argparse, datetime, hashlib, json, os, subprocess, sys, time
 from pathlib import Path
 
+import signal_checks
+
 # World geometry per the capture request; the rep passes --setup-receipt confirming the actual built coordinates.
 G = {
  'powder_top': '8.5 70 8.5',      # drop point above the 3x3 powder pit, 6 deep on solid floor
@@ -30,9 +32,9 @@ S = {
    'legs': [('hold', 'space', 5), ('wait', 2)], 'row': 'powder climb 0.2/tick: no fly/high-jump/microhop/step SIGNAL'},
  'pb-d': {'tp': G['powder_exit'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': G['ledge_face'],
    'legs': [('hold', 'space', 2), ('hold2', 'space', 'w', 3), ('wait', 2)], 'row': 'climb exit onto 0.125 snow layer: no step fold SIGNAL'},
- 'pb-e': {'tp': G['powder_low'], 'needs': 'cheat', 'expect': 'signal',
+ 'pb-e': {'tp': G['powder_low'], 'needs': 'cheat', 'checks': ('air', 'step'), 'expect': 'signal',
    'legs': [('module', None), ('hold', 'space', 5), ('module', None)], 'row': 'POSITIVE CONTROL: air-jump kicks inside powder must SIGNAL (air jump and/or step)'},
- 'pb-l': {'tp': G['slime_top'], 'needs': 'cheat', 'expect': 'signal',
+ 'pb-l': {'tp': G['slime_top'], 'needs': 'cheat', 'checks': ('air',), 'expect': 'signal',
    'legs': [('hold', 'Shift_L', 3), ('wait', 1), ('module', None), ('hold', 'space', 5), ('module', None)],
    'row': 'POSITIVE CONTROL: kicks right after a sneak-disarm on slime must SIGNAL air jump',
    'falsifies': 'the no-hole claim for the disarm paths: silence here means the tracker still covers after vanilla stopped bouncing'},
@@ -40,7 +42,7 @@ S = {
    'legs': [('wait', 2)] + [('tap', 'space'), ('wait', 1.2)] * 5,
    'row': 'powder-snow rim: standing/jumping on the rim (near, not inside) - zero SIGNAL',
    'falsifies': 'the rim half of the body-intersection gate: legit small movement NEXT to powder must not flag'},
- 'pb-n': {'tp': G['rim_cheat'], 'needs': 'cheat', 'expect': 'signal', 'yaw': 0,
+ 'pb-n': {'tp': G['rim_cheat'], 'needs': 'cheat', 'checks': ('step',), 'expect': 'signal', 'yaw': 0,
    'legs': [('module', None), ('hold', 'w', 5), ('module', None)],
    'row': 'NEGATIVE (window-taint, near-not-in): step-module climb BESIDE the powder column, body never inside, must SIGNAL step - the 0.2 climb band must not be inherited from mere proximity',
    'falsifies': 'the body-intersection gate on powderClimb: silence here means near-powder hacks inherit the climb exemption'},
@@ -52,7 +54,7 @@ S = {
    'legs': [('wait', 8)],
    'row': 'bed-on-slime: 10-block drop onto a bed on slime - bed restitution (0.66) governs, zero SIGNAL',
    'falsifies': 'the landed-block restitution read: if the observed bounce is slime-scale (~1.2+ maxDy) with zero signals, the tracker over-covered by reading slime under the bed (hole); if it flags, it read no bounce (FP)'},
- 'pb-q': {'tp': G['powder_low'], 'needs': 'cheat', 'expect': 'signal',
+ 'pb-q': {'tp': G['powder_low'], 'needs': 'cheat', 'checks': ('step',), 'expect': 'signal',
    'legs': [('module', None), ('hold2', 'space', 'w', 5), ('module', None)],
    'row': 'NEGATIVE (window-taint): step-module mixed-height climb INSIDE powder (dy above and below 0.21) must SIGNAL step - the tainted window must count the band packets',
    'falsifies': 'the 3fffe5a window-taint no-hole claim: silence here means leading-hack-then-band slips through live'},
@@ -64,11 +66,11 @@ S = {
    'legs': [('hold2', 'Shift_L', 'w', 6)],
    'row': 'sneak-edge: sneak-walk along the strip edges - zero nofall SIGNAL (clamp preserves overlap, settled from source)',
    'falsifies': 'the sneak-edge source finding: a SIGNAL means the real client lost all XZ overlap under the box, contradicting the clamp'},
- 'gs-nofall': {'tp': G['strip_edge'], 'needs': 'cheat', 'expect': 'signal', 'yaw': 90,
+ 'gs-nofall': {'tp': G['strip_edge'], 'needs': 'cheat', 'checks': ('nofall',), 'expect': 'signal', 'yaw': 90,
    'legs': [('module', None), ('hold', 'w', 5), ('module', None)],
    'row': 'POSITIVE CONTROL: NoFall/ground-spoof module walking off the strip edge must SIGNAL nofall ground spoof',
    'falsifies': 'ground-spoof detection itself: silence here means the 0.1 strip check is dead in this jar'},
- 'bl-burst': {'tp': G['strip_start'], 'needs': 'cheat', 'expect': 'signal', 'yaw': 90,
+ 'bl-burst': {'tp': G['strip_start'], 'needs': 'cheat', 'checks': ('blink',), 'expect': 'signal', 'yaw': 90,
    'legs': [('module', None), ('hold', 'w', 4), ('module', None), ('wait', 3)],
    'row': 'POSITIVE CONTROL: Blink module hold-and-release while walking must SIGNAL blink (packet burst)',
    'falsifies': 'the blink burst detector: silence here means held-and-released packets are not seen in this jar'},
@@ -173,14 +175,14 @@ def main():
         log = subprocess.check_output(['docker', 'logs', 'meshac-red', '--since', since], stderr=subprocess.STDOUT, text=True)
         (a.output / 'server.log').write_text(log)
         signals = [l for l in log.splitlines() if 'SIGNAL ' + a.player in l]
-        words = ('air jump', 'step', 'nofall', 'ground spoof', 'blink')
-        passed = (len(signals) == 0) if sc['expect'] == 'zero' else any(w in l for l in signals for w in words)
+        bound = signal_checks.bound(signals) # TEXT2CHECK: exact check-field binding, all CheckNames.ALL checks
+        passed = (len(signals) == 0) if sc['expect'] == 'zero' else (bool(bound & set(sc['checks'])) if sc.get('checks') else bool(bound))
         result = {'scenario': a.scenario, 'row': sc['row'], 'player': a.player, 'jarSHA': a.jar_sha256, 'expect': sc['expect'],
             'needs': sc['needs'], 'session': a.session, 'expectMove': sc['expectMove'], 'needsDisarm': sc['needsDisarm'],
             'offState': {'moduleOffPixelConfirmed': bool(a.prepared_vanilla_client_confirmed)} if sc['needs'] == 'vanilla' else None,
             'disarmVerified': disarm, 'tickHealth': tick_health, 'modLiveness': mod_liveness,
             'falsifies': sc.get('falsifies'), 'grading': GRADE['3fffe5a-expect'],
-            'events': events, 'signals': signals, 'verdict': 'PASS' if passed else ('FAIL' if sc['expect'] == 'zero' else 'INVALID'),
+            'events': events, 'signals': signals, 'checks': sc.get('checks'), 'verdict': 'PASS' if passed else ('FAIL' if sc['expect'] == 'zero' else 'INVALID'),
             'setupReceipt': a.setup_receipt.read_text(),
             'reviewRequired': 'Driver verdict is provisional; pb_grade.py owns the final verdict (provenance, session witness, OFF/disarm). Zero signals is INVALID on a cheat row, PASS-only on a zero row. xdotool legs are not a human motor baseline.'}
         (a.output / 'result.json').write_text(json.dumps(result, indent=2))

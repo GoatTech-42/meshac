@@ -50,6 +50,22 @@ for w in ('[meshac] SIGNAL P nofall ground spoof', '[meshac] SIGNAL P blink held
     check(grade(g, [g])['verdict'] == 'PASS', 'keyword ' + w)
 # 12. witness from a FAIL-ing zero row does not count (no signals, so not a witness)
 r = grade(base(), [base(signals=['[meshac] SIGNAL P step rose 0.70'])]); check(r['verdict'] == 'INVALID', 'failed zero row is no witness: ' + str(r))
+# 13. formerly unbound checks now count as positive-control signals (TEXT2CHECK covers all CheckNames.ALL)
+for w in ('[meshac] SIGNAL P fly hover dy 0.010', '[meshac] SIGNAL P glide no air drag in flight',
+          '[meshac] SIGNAL P combat reach 4.2', '[meshac] SIGNAL P timer x1.2', '[meshac] SIGNAL P antiknockback no push after three hits'):
+    g = base(scenario='x', expect='signal', needs='cheat', offState=None, signals=[w])
+    check(grade(g, [g])['verdict'] == 'PASS', 'formerly unbound ' + w)
+# 14. 'checks' scoping: an off-target signal does not satisfy a check-scoped row
+g = base(scenario='pb-n', expect='signal', needs='cheat', offState=None, checks=('step',), signals=['[meshac] SIGNAL P air jump dy 0.5'])
+r = grade(g, [g]); check(r['verdict'] == 'INVALID' and any('off-target' in x for x in r['reasons']), 'off-target signal rejected: ' + str(r))
+g = base(scenario='pb-e', expect='signal', needs='cheat', offState=None, checks=('air', 'step'), signals=['[meshac] SIGNAL P step dy 0.610 onGround'])
+check(grade(g, [g])['verdict'] == 'PASS', 'on-target alternative accepted: ' + str(g))
+# 15. a witness can now come from any known check, not just the legacy five
+r = grade(base(), [base(), base(scenario='w', expect='signal', needs='cheat', offState=None, signals=['[meshac] SIGNAL P fly hover dy 0.010'])])
+check(r['verdict'] == 'PASS', 'witness from a newly-bound check: ' + str(r))
+# 16. a line that is not a SIGNAL for a known check is still silence
+g = base(scenario='x', expect='signal', needs='cheat', offState=None, signals=['[meshac] SIGNAL P wxyz made up'])
+check(grade(g, [g])['verdict'] == 'INVALID', 'unknown check is silence: ' + str(g))
 
 if failed: raise SystemExit('%d failures' % failed)
 print('test-pb-grade ok')

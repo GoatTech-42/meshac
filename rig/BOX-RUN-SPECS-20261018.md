@@ -1,4 +1,4 @@
-# Box run specs (10-18) - exact, one page each, for the four queued asks
+# Box run specs (10-18) - SUPERSEDED by rig/BOX-RUN-SPECS-v2-20261018.md (reviewer v1 round: frozen series/targets/toolchain, common run limits, spec S restore + rejoin proof, spec C detector-live + coverage, spec V per-version positive control). Kept for history; do not run from this file.
 
 Scope and safety for ALL four: isolated test rig only (never ilhsmc, never the live server,
 no live deploy); fresh throwaway world per spec unless stated; every run attaches its full

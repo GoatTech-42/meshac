@@ -1,0 +1,25 @@
+# RED-TEAM DELTA: meadow v36 Scaffold vs meshac interact checks (0109, standing queue item 5)
+
+Rig-only (meshac-red), static; never ilhsmc. Sources: meadow v36 tip 4d2d0f5 (v1211 Scaffold.java, ScaffoldSwap/Gate/Aim/Target/Tower/Blocks, PlacementContext); meshac bundle tip 0108 Interact.java. Extends the 10-17 MEADOW-SCAFFOLD-REDTEAM-REVIEW (v12 era). Same discipline: verdicts are SCOPED PREDICTIONS from source reads, not observed rig results.
+
+## Corrections to earlier work (definitive, from current source)
+- **F2 RESOLVED (from 0108): the "4.0 blocks/s bridging line" is REAL.** Interact.java:142-153: a 10-step chain of under-feet placements (each step dist>0.3, dt<700ms) averaging speed > 4.0 bps signals "bridging at %.1f blocks a second". Meadow ScaffoldGate's 3.0-3.6 bps session cap is an accurate answer to a real check. My 0108 F2 ("no such check found") was wrong - it lives in Interact (placement path), outside the Movement surface I had reviewed. No meshac action needed; meadow's comment is correct.
+- **The 10-17 review's "swap-use design hole" was a MISREAD.** Interact.use() (:60-71) is the use-ITEM path (throw/eat/bow); it only signals for items containing potion/pearl/snowball/egg. Block placements go through Interact.place() (:110), which never consults swapAt. So "every scaffold placement is a swap-use -> CAUGHT" never held for blocks. The v36 swap-pacing work (0029/0031/0035, ScaffoldSwap 60-120ms first-placement gap + 1.5s idle restore) is still good client hygiene, but it closes no meshac hole - none existed on the placement path.
+
+## v36 scaffold place path vs the checks that DO bind (Interact.place)
+| meshac check | v36 scaffold | verdict |
+|---|---|---|
+| placed-against-air (:115-116) | airplace=1 clicks the free block itself | predicted CAUGHT - positive control, unchanged |
+| look-ray (:118-129, +0.3 box, 8-block ray, 750ms pose ring) | human/legit: turn until arrived (3.0 deg) BEFORE placing; legit additionally requires the RENDERED crosshair on the exact support block+face and clicks the crosshair point | predicted PASSES - legit is now self-verifying against the client's own hitResult |
+| GhostHand outline ray (:132-138) | clicks the support face toward the target | predicted PASSES |
+| rate (:156->:160, >16 uses/s; pair within 5ms = 1; >=5 in 20ms = burst) | legit: >=110ms gaps (<=9/s) PASSES with headroom; blocks<=3 per tick stays under the burst bar | **human default (blocks=1, delay=0): one place per tick = 20/s sustained -> predicted CAUGHT ("more than 16 uses in a second") whenever the cadence actually sustains; real cadence dips when aim turns eat ticks, so this is cadence-dependent, not guaranteed** |
+| bridging chain (:142-153, >4.0 bps over 10 under-feet steps) | legit: walking capped 3.0-3.6 bps while a chain runs -> predicted PASSES by ~10-17% margin (a retuned 3.5 line catches it - stated in the 10-17 review too) | **human default + full walk (4.3 bps) or sprint (5.6): predicted CAUGHT ("bridging at 4.x blocks a second") IF the 10-step chain holds; sneak-pace (~1.3 bps) passes. The v36 delta does NOT pace default-mode walking - the cap only exists in legit mode** |
+
+## Findings
+- R1 (delta-explicit, main v36 red-team result): v36 polished the legit path (mouse-step-quantized aim, crosshair-verified clicks, eased walking cap, paced swaps) but the DEFAULT human mode (legit=0) still places up to once per tick with no walking cap: sustained default-mode bridging at full walk predicts CAUGHT by BOTH the 16/s rate check and the 4.0 bps bridging line. Only legit mode passes those two. If the rig needs a passing default-mode row, that is a meadow-side design gap, honestly reported - not a meshac bug.
+- R2 (defense-side, unchanged): no meshac check binds rotation snaps at placement. v36's legit aim is now quantized to whole mouse steps (gcdStep from the client sensitivity), making the cover strictly better; the ROTATION-SNAP-AT-PLACE proposal (unpinned) is the only meshac lever. Gap stands as previously priced.
+- R3: ScaffoldSwap's paced swap + selection-watch + idle-restore is clean (ownership bound, best-effort restore, never over the player). No server-visible surface; no meshac interaction. SafeWalk.external is client-side movement gating, no packets.
+- R4: findBlock prefers the held slot, then biggest full-cube stack; sand excluded unless sand=1. Placement support scan requires a non-replaceable block with a non-empty collision shape adjacent - airplace=0 can never produce a placed-against-air packet by construction (the only airclick is the deliberate airplace=1 positive control). Clean.
+
+## Verified vs not
+Verified by source read (both tips named above): every verdict and both corrections. NOT verified: any live run (rig-only lane, no ilhsmc; the catch-side rows belong to the reviewer-gated battery); cadence-dependent outcomes (R1's rate verdict needs a live cadence to be certain); meadow compile (no JDK here).

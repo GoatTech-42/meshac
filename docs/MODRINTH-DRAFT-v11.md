@@ -28,10 +28,11 @@ GATE (all four must hold before anything publishes):
 2. BUILD: Box-reported 10-17 11:36pm: the delivered 63-patch bundle (0001-0066) applied clean
    onto c4b3fe8, compile x4 GREEN, javac harness GREEN (85 test mains, exit 0). Second-hand
    (Box-reported) and it covers the series through 0066 only: the CURRENT SELECTED-TIP BINARY
-   IS NOT VERIFIED (tip at this draft: 8d28f88 = 0084; product-source-touching patches since
-   0066 include 0072v2 (MeshCommands capture audit calls), 0079 + 0083 + 0084 (Ladder tier-A
-   fixes and hardening, reviewer gate pending), and the posture change that invalid policy
-   pauses enforcement to log-only). The publication packet must carry (a) the selected-tip
+   IS NOT VERIFIED (tip at this draft: 69e5f7b = 0088; product-source-touching patches since
+   0066 include 0072v2 (MeshCommands capture audit calls) and 0079 + 0083 + 0084 + 0086 +
+   0088 (Ladder tier-A fixes and hardening, reviewer gate pending), including the posture
+   change that invalid policy pauses enforcement to log-only. The selected tip is refreshed
+   again at final freeze - this reference is informational). The publication packet must carry (a) the selected-tip
    product source snapshot and (b) the applied manifest produced by run-spec M
    (rig/BOX-RUN-SPECS-v5-20261018.md, PROPOSAL until its runner is verified) at that tip -
    not this historical 0066 evidence.
@@ -99,7 +100,7 @@ There are three presets (lenient, default, strict) and every number can be overr
 Bedrock players are not checked for combat, interaction, inventory or mining. Their movement is checked with looser speed limits, and some movement types (gliding, vehicles, climbing, levitation, slow falling, riptide) are not checked at all. A steady speed cheat up to about 9.6 blocks per second can pass on Bedrock (WORKER-DERIVED figure, pending independent review of the SustainBudget and speed pipeline: computed from the sustained budget of ~7.4 bps widened by the Bedrock 1.30 factor, SustainBudget.java:25 and :31; CORRECTED from the readiness doc's 8 bps, which had no source behind it). Per-check figures do not compose: a cheat under this per-check figure can still flag through other checks or combined evidence, and that combined behaviour is not measured. Bedrock players can also trigger more ground-claim flags on partial blocks (slabs, snow layers); meshac logs these and a single flag removes no one. None of this has been tried with a real Bedrock client yet.
 
 **Honest limits**
-Some hacks look exactly like legit play from the server side (a client that only sprints at normal speed, for example). meshac does not pretend to catch those. Combat: kill aura, reach, criticals, attack rate and attribute swapping flags are log-only by construction in this release - no removal and no denied hit can come from a combat flag in any configuration, and combat detection has no rig-tested punishment evidence yet; treat combat flags as review leads, not proof. Known misses, stated plainly, each with its pin and receipt: short blinks of about 0.4 s (receipt: rig-tested miss 10-11 on 26.2, Meteor pulse 8; pin file: sim/BlinkClockTest.java pins the 450-500 ms floor); elytra boosts above about 45 blocks per second (pin: Glide.java:57 switches the check off above 45 b/s; receipt: the legit 67 b/s dive false-flag on the rig, FALSE-POSITIVES.md 10-11 entry); surround (no check or collector exists - absence verified at the call graph: every Verdict.signal/signalLogOnly call site in the tree was enumerated 10-18; the literal check names are antiknockback/blink/boatfly/chat/glide/interact/inventory/mining/movement/noclip/nofall plus combat, with Movement sub-checks carried as detail under "movement" (Movement.java:343); none is surround); bow aimbot (no verdict check exists; CORRECTED from v9's flat 'no check exists': Interact.java:36-41 is a data-only trace collector with no verdict path, pending a human-baseline decision - the view-snap-on-release signal at Interact.java:32 is an interact check, not an aimbot check); explosion knockback is exempt on purpose (FALSE-POSITIVES.md item 3); kill aura detection is intermittent and a patient, aimed aura is not caught every run. A scaffold or auto-builder that turns its view before placing, keeps a block in hand and stays under about 4 blocks a second is a predicted miss based on source reading, not rig-verified; and per-check figures do not compose - combined-evidence behaviour is unmeasured. A proposal explores this gap; nothing is shipped for it. Test results, misses included, are in docs/coverage.md in the repo.
+Some hacks look exactly like legit play from the server side (a client that only sprints at normal speed, for example). meshac does not pretend to catch those. Combat: kill aura, reach, criticals, attack rate and attribute swapping flags are log-only by construction in this release - no removal and no denied hit can come from a combat flag in any configuration, and combat detection has no rig-tested punishment evidence yet; treat combat flags as review leads, not proof. Known misses, stated plainly, each with its pin and receipt: short blinks of about 0.4 s (receipt: rig-tested miss 10-11 on 26.2, Meteor pulse 8; pin file: sim/BlinkClockTest.java pins the 450-500 ms floor); elytra boosts above about 45 blocks per second (pin: Glide.java:57 switches the check off above 45 b/s; receipt: the legit 67 b/s dive false-flag on the rig, FALSE-POSITIVES.md 10-11 entry); surround (no dedicated surround-named check or collector identified in the reviewed sources 10-18 - worker-authored receipts: a regex enumeration of Verdict.signal/signalLogOnly call sites (not an exhaustive call graph) plus a zero-hit 'surround' text search across src/, sim/, rig/); bow aimbot (no verdict check exists; CORRECTED from v9's flat 'no check exists': Interact.java:36-41 is a data-only trace collector with no verdict path, pending a human-baseline decision - the view-snap-on-release signal at Interact.java:32 is an interact check, not an aimbot check); explosion knockback is exempt on purpose (FALSE-POSITIVES.md item 3); kill aura detection is intermittent and a patient, aimed aura is not caught every run. A scaffold or auto-builder that turns its view before placing, keeps a block in hand and stays under about 4 blocks a second is a predicted miss based on source reading, not rig-verified; and per-check figures do not compose - combined-evidence behaviour is unmeasured. A proposal explores this gap; nothing is shipped for it. Test results, misses included, are in docs/coverage.md in the repo.
 
 Detection logic is exercised against our own test client (meadow) and a scripted bot rig on an isolated server, plus a legit-play suite that has to stay at zero flags. Earlier builds were also run against Wurst on the 26.1.2 test rig (notes in docs/coverage.md). Combat rows on the current build are drafted but not run yet.
 
@@ -110,6 +111,17 @@ Detection logic is exercised against our own test client (meadow) and a scripted
 4. /mesh watch flag feed during a test
 
 Status: draft only. Screenshots 1-4 still need to be captured on the test server - that is a rig/Box ask (needs a live server + client), not something the paper lane can produce. Nothing is published.
+
+## v11r3 verification notes (v11 reviewer round 2, 10-18)
+
+1. Surround entry narrowed per reviewer: "no dedicated surround-named check or collector
+   identified in the reviewed sources" - the receipts are worker-authored (regex enumeration
+   of signal call sites is NOT an exhaustive call graph; the zero-hit text search proves
+   literal-name absence only). The bow-aimbot entry's data-only-collector correction stands.
+2. Selected-tip reference refreshed to 69e5f7b (0088); it goes stale with every further
+   product patch and is refreshed again at final freeze. The controls rerun (gate 3) is what
+   makes any tip claim real.
+3. Nothing published; this is not a release or publication GO.
 
 ## v11r2 verification notes (v11 reviewer round, 10-18)
 

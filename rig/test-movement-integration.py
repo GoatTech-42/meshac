@@ -14,7 +14,7 @@ derived - stated honestly, this is a logic fixture, not a physics sim). Scope la
   non-trace-gated [groundtol] tolerated line. Doubled Glide/Interact/Mining/BounceBlocks/StuckBlocks no-op or return
   scripted constants; their real internals are NOT covered. No live deploy; this is rig-only.
 This fixture does NOT discharge any pending fixes owed on 0099 - the monitor-invariant fixture keeps its own queue.
-S5 geometry: feet 0.125 above the scripted partial top (inside tolerance) and 0.14 above it (outside); world answers stay
+S5 geometry: feet 0.125 above the scripted partial top (inside tolerance) and 0.14 above it (outside the candidate strip - a strip negative, not a tolerated() boundary test); world answers stay
 SCRIPTED per phase - scripted logic, not physics.
 Prereqs are HARD: missing javac or Gson jar FAILS the test. Toolchain identity + fixture manifest hash printed on
 every run; subprocesses timeout-bound, output-capped (RLIMIT_FSIZE, per-file, covers .class outputs too), bounded
@@ -286,12 +286,12 @@ public final class MovementHarness {
    net.minecraft.world.level.Level.partialBelow = false;
    send(p5b, 0, 70.625, 0, true); // 3rd real unsupported: tolerated claims must NOT have evicted the first two
    ck(since("nofall", m5b), "S5b(classify): the 3rd unsupported claim after tolerated claims MUST flag (eviction resistance)");
-   // S5c boundary: feet 0.14 above the partial top - outside the 0.13+0.005 tolerance gap, so the claim is plain unsupported even under classify
+   // S5c: feet 0.14 above the partial top - OUTSIDE THE CANDIDATE STRIP: supportHit's 0.13 reach never finds a top 0.14 below the feet, so this exits before tolerated() is consulted (it does NOT isolate the 0.135 tolerated-gap boundary - that boundary would need a top between 0.13 and 0.135 below the feet, which this script's 0.5-step shapes cannot place; labeled honestly as the candidate-strip negative)
    net.minecraft.world.level.Level.reset(); ServerPlayer p5c = fresh(70.64); warmup(p5c, 70.64);
    net.minecraft.world.level.Level.support = false; net.minecraft.world.level.Level.partialBelow = true; int m5c = mark();
    send(p5c, 0, 70.64, 0, true); send(p5c, 0, 70.64, 0, true); ck(!since("nofall", m5c), "S5c(classify): 2 out-of-gap claims must not flag yet");
    send(p5c, 0, 70.64, 0, true);
-   ck(since("nofall", m5c), "S5c(classify): gap 0.14 > 0.135 must NOT be tolerated - the 3rd claim flags (the tolerance has a real boundary)");
+   ck(since("nofall", m5c), "S5c(classify): outside the candidate strip the claim is plain unsupported - the 3rd claim flags");
   }
   System.out.println("MovementHarness PASS mode=" + (classify ? "classify" : "plain") + " (" + checks + " checks)");
  }

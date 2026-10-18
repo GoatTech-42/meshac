@@ -4,8 +4,10 @@
 
 Box's mutation 7/7 ran green on 785bbe1 (0095 tip). `git diff --stat 785bbe1..HEAD -- src/ sim/`
 is EMPTY (0096-0105 touched rig/*.py, rig/*.sh and rig/*.md only), so the Java mutation surface
-is byte-identical to the last green run: every existing mutation target lands on the same line
-and the 7/7 result carries over mechanically. No re-derivation was forced by drift.
+is byte-identical to the last green run. HONEST STATUS: that is a SOURCE-DIFF reading, not a carried
+result - claiming 7/7 for the current tip requires the actual old run receipts AND the same harness,
+toolchain and config; none of that is re-verified here. Until Box re-runs (or produces the receipts),
+the carryover is an expectation, not evidence.
 
 ## Derived 7-target manifest (anchors verified on tip 4eace9a)
 

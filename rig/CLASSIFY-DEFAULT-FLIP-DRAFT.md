@@ -18,8 +18,10 @@ not voxel-exact - noted there).
 ## Why default-on is still a proposal
 
 The flip changes what counts as evidence for every player by default. It is safe only if
-tolerated partial-shape claims are never attack-relevant - a claim a spoofer could ride. That
-is an empirical statement, not a source-level one, so the pin is battery data, not argument.
+tolerated partial-shape claims are not attack-relevant IN THE BATTERY'S TESTED ROWS - a claim a spoofer
+could ride. A finite battery cannot prove "never attack-relevant"; it can only bound the rows it ran.
+That is an empirical statement, not a source-level one, so the pin is battery data, not argument, and the
+claim stays scoped to the rows actually tested.
 
 ## Pin path
 

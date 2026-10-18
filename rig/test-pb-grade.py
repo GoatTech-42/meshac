@@ -85,5 +85,24 @@ r = grade(gs03off, [gs03off]); check(r['verdict'] == 'INVALID' and any('off-targ
 g = base(scenario='x', expect='signal', needs='cheat', offState=None, signals=['[meshac] SIGNAL P wxyz made up'])
 check(grade(g, [g])['verdict'] == 'INVALID', 'unknown check is silence: ' + str(g))
 
+# 17. blink lane vs the control matrix (intentional blink = control; legit bunching BF08/BF14 = FP-risk rows)
+# intentional blink (packet hold/release) binds 'blink' with the exact matrix string
+bl = base(scenario='bl-burst', expect='signal', needs='cheat', offState=None, checks=('blink',),
+          signals=['[meshac] SIGNAL P blink held its movement packets back and released them in one burst heat=2 -> log'])
+check(grade(bl, [bl])['verdict'] == 'PASS', 'intentional blink binds (control works): ' + str(grade(bl, [bl])))
+# blind blink control = INCONCLUSIVE, never CLEAN (matrix reading rule 1)
+blsilent = base(scenario='bl-burst', expect='signal', needs='cheat', offState=None, checks=('blink',))
+check(grade(blsilent, [blsilent])['verdict'] == 'INVALID', 'blind blink control: ' + str(grade(blsilent, [blsilent])))
+# BF08 legit bunching (hold 800ms, release): a blink FLAG here is an FP finding - zero row with a signal FAILs (finding, never CLEAN)
+bf08 = base(scenario='bf08', expect='zero', signals=['[meshac] SIGNAL P blink held its movement packets back and released them in one burst heat=1 -> log'])
+r = grade(bf08, [bl]); check(r['verdict'] == 'FAIL' and any('signals on a zero row' in x for x in r['reasons']), 'BF08 bunching flag = FP finding: ' + str(r))
+# BF08 clean (no blink line on legit bunching) grades PASS with a witness - the check stayed quiet, as hoped
+bf08clean = base(scenario='bf08', expect='zero')
+check(grade(bf08clean, [bf08clean, bl])['verdict'] == 'PASS', 'BF08 clean bunching: ' + str(grade(bf08clean, [bf08clean, bl])))
+# a nofall line on a blink-scoped row is off-target (check-scoped controls cannot borrow each other)
+bloff = base(scenario='bl-burst', expect='signal', needs='cheat', offState=None, checks=('blink',),
+             signals=['[meshac] SIGNAL P nofall ground spoof heat=1 -> log'])
+check(grade(bloff, [bloff])['verdict'] == 'INVALID', 'blink row with nofall signal is off-target: ' + str(grade(bloff, [bloff])))
+
 if failed: raise SystemExit('%d failures' % failed)
 print('test-pb-grade ok')

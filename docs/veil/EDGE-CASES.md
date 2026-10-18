@@ -5,8 +5,8 @@ What was read in the adapter, what each case does today, and what is tested. Pur
 ## Chunk borders
 - A neighbour in an unloaded chunk counts as see-through, so an ore on the border is shown. It fails open. Tested.
 - A change at a border block invalidates the cached plan of the chunk next door and re-sends to the players tracking that chunk. This was already right.
-- Known leak, designed but not wired (docs/veil/BORDER-LEAKS.md): if a block next to a border is changed without an update (no-update setblock, WorldEdit), the cached plan of the other chunk is not told. The freshness check only compares a chunk's own blocks. Result: a real ore stays hidden although it is now next to air, until that chunk is planned again. The player-visible effect is a missing ore, not an extra one. Rare.
-- A chunk planned while its neighbour was unloaded shows its border ore for good, since nothing re-plans it when the neighbour loads. A tiny leak, in the safe direction.
+- Known leak, WIRED on d124 (Veil.mods -> PlanGuard.check -> BorderGuard; mis-documented as "designed but not wired" until the 10-17 sweep in 0048): a no-update change next to a border (WorldEdit, no-update setblock) is caught on the next send of that section, which drops the cached plan and replans. Residual, fail-open: an ore that should now be HIDDEN because a neighbour became solid has no plan entry and stays visible. A retroactive resend triggered by the change itself (without a send) is still design-only. Runtime replan behaviour not rig-verified.
+- A chunk planned while its neighbour was unloaded is replanned on its next send once that neighbour loads (the PlanGuard NeighbourMask leg, also wired on d124). Between the load and the next send the border ore still shows: a tiny leak, in the safe direction.
 
 ## Piston and explosion updates
 - Pistons, explosions, players and fluids all go through setBlock, which calls our reveal step. That path is right for blocks that become see-through.

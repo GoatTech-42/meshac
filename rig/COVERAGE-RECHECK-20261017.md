@@ -7,7 +7,7 @@ after patch 0014. Strings verified against the matrix doc and source where cited
 |---|---|---|---|---|
 | fly | fly | hover/ascend strings | nb-fly-legit/cheat | COVERED |
 | speed | speed | speed strings | nb-speed-legit/cheat | COVERED |
-| combat (reach etc) | combat | computed hit strings | nb-combat-legit/cheat | COVERED - CONDITIONAL: SIGNAL is a dead path on d124 (matrix; Luke ship-vs-fix OPEN), blind control = INCONCLUSIVE |
+| combat (reach etc) | combat | hard hit strings | nb-combat-legit/cheat | COVERED - combat is LIVE on d124 (AttackMixin -> Combat.check -> Verdict.signal); rows run under monitor mode (log-only, real mon heat). The 10-17 "dead path" claim was retracted (0048) |
 | mining work rate | mining | work-rate strings | nb-mine-legit/cheat | COVERED |
 | nuker / fast nuke (r04) | mining | "breaks blocks in every direction"; "block broken through another block"; "broke a block it is not looking at" | none | GAP - same check, different detail: nb-mine's NoBreakDelay/PacketMine trips the work-rate path, not the nuker strings. Meadow Nuker exists; row draftable |
 | interact use rate | interact | uses/s strings | nb-interact-legit/cheat | COVERED |
@@ -30,7 +30,7 @@ after patch 0014. Strings verified against the matrix doc and source where cited
 | jesus / slippery | movement | "slippery ground: speed barely drops on a normal block" (:154) | none | GAP |
 | levitation abuse | levitation | "levitation dy %.3f" (:177) | none | GAP |
 | ladder fly | ladder | "ladder dy %.3f" (:181) | none | GAP |
-| aimbot / not-looking | combat | "not looking at target" computed, never emitted | n/a | DEAD (matrix) - same d124 combat hole |
+| aimbot / not-looking | combat | "not looking at target" | n/a | LIVE (monitor-gated) - was mis-listed DEAD from the retracted 10-17 no-caller claim (0048) |
 
 Grader note: all 23 checks bind by the structured check field (patch 7), so every GAP is a
 missing row/geometry/module, not grader wiring. Rows for nuker, GhostHand, HighJump, Timer,

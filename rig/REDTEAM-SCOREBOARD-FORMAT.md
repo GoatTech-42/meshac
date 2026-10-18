@@ -12,8 +12,9 @@ whom, per check, with evidence. Nothing here is a result; the page fills at batt
   - FP - a legit twin flagged.
 - SPLIT: cheat caught but an FP fired too (or the reverse). Record both halves.
 - INCONCLUSIVE: blind control (bot/module unproven), a silent cheat row WITHOUT attack-effect
-  proof (setup unproven - e.g. GhostHand facing away placing nothing), a dead path (combat SIGNAL
-  on d124), or SKIP (missing rig piece, e.g. Geyser). Never counts as a win for either side.
+  proof (setup unproven - e.g. GhostHand facing away placing nothing), or SKIP (missing rig
+  piece, e.g. Geyser). Never counts as a win for either side. (The combat-SIGNAL-on-d124
+  "dead path" example was retracted 10-17: combat is live, monitor-gated - 0048.)
 
 A check with any FP twin can never be scored MESHAC - the FP-free gate outranks detection.
 

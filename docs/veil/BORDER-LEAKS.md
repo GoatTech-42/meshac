@@ -1,5 +1,11 @@
 # Chunk border leaks: design
 
+> UPDATE 10-17 (0048 sweep): the leak-1/leak-2 wiring described below as branch-only IS
+> present in the d124 main line (Veil.java:111 PlanGuard.check with maskOf + borderUnchanged;
+> BorderGuard.compute at :166-168; all in the c4b3fe8 base). The "wired on branch,
+> uncompiled" framing is stale: it compiled as part of the 26.3 Box build; runtime replan
+> behaviour is not rig-verified. The retroactive resend remains design-only.
+
 Both leaks fail open (an ore stays visible or stays hidden wrongly at a chunk edge). Neither is a false positive against a player. Pure parts and tests are in place (`sim/VeilBorderTest.java`). Leaks 1 and 2 are wired on branch `veil-border-wiring-20261016` (uncompiled, names marked VERIFY): the cache now holds a `Plan` (mods, neighbour mask, border blocks and their outward bits) and `Veil.mods` runs `PlanGuard.check`. `PlanLifecycleTest` runs a two-chunk toy world through the same pure pieces. The retroactive resend is still design only.
 
 ## Leak 1: a no-update change next to a border

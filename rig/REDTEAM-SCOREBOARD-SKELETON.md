@@ -7,7 +7,7 @@ Jar: <sha256, patch level> | meadow build: <sha> | rig: <id> | run date: <date>
 | nofall | GroundSpoof (interleaved; exact config bound at run time per battery nit 3) | "ground spoof"; "ground flag in mid-air" (RE-BIND from the built battery jar - B2 hold) | nb-gc01-sneakedge, nb-gc02-autostep, nb-gc05-jb-powder | | | |
 | fly | Fly (abilities mode) | hover/ascend strings | nb-fly-legit | | | |
 | speed | Speed | speed strings | nb-speed-legit | | | |
-| combat | Aimbot @ 4.5 blocks | "reach %.2f" etc - DEAD on d124, alive-pending-replay on the emit-fixed build (checklist 10b-C) | nb-combat-legit | | | |
+| combat | Aimbot @ 4.5 blocks | "reach %.2f" etc - LIVE on d124 under monitor mode (log-only, real mon heat); the 10-17 dead-path claim was retracted (0048) | nb-combat-legit | | | |
 | mining | NoBreakDelay + PacketMine | work-rate strings | nb-mine-legit | | | |
 | mining | Nuker | "breaks blocks in every direction" / "through another block" / "not looking at" | nb-mine-legit | | | |
 | interact | FastPlace | uses/s strings | nb-interact-legit | | | |

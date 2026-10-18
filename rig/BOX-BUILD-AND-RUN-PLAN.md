@@ -62,8 +62,8 @@ pen + boat placements per the spec's G table. Legs driven by rig/xdotool_legs.py
 ORDER (GO conditions first):
  1. GC01 nb-gc01-sneakedge (loop 5 min), GC05 nb-gc05-jb-powder (JB I then II), GC02 nb-gc02-autostep
  2. GS01-GS03 verdict rows (rebind v5 expectations; checks=('nofall',),('high',),('jump','step'))
- 3. newbounds control pairs: fly, speed, combat (CONDITIONAL - dead path on d124; grade only on the
-    emit-fixed build per checklist 10b-C, else INCONCLUSIVE), mine, nuker, interact, ghosthand, inv,
+ 3. newbounds control pairs: fly, speed, combat (LIVE on d124 - monitor mode required, log-only
+    real-heat SIGNAL; the 10-17 dead-path note was retracted in 0048), mine, nuker, interact, ghosthand, inv,
     totem, boatfly (meadow -Prig build for the rig BoatFly module), high, timer, glide, kb
  4. nb-microhop-legit (snow ramp + ceiling)
  5. pb rows incl. blink (bl-burst control + BF08/BF14 legit-bunching pins)

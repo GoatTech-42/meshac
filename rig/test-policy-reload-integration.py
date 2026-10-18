@@ -19,11 +19,18 @@ Prereqs are HARD requirements: missing javac or Gson jar FAILS the test (exit !=
 never-run gate. Toolchain identity (javac version, exact Gson jar path + sha256) and a fixture source manifest hash
 are printed on every run; subprocesses are timeout-bound with bounded output."""
 from pathlib import Path
-import glob, hashlib, os, shutil, subprocess, tempfile, unittest
+import glob, hashlib, os, resource, shutil, subprocess, tempfile, unittest
 R = Path(os.environ.get('MESHAC_TEST_TREE', Path(__file__).resolve().parents[1]))
 S = R/'src/main/java/dev/meshac'
 PROD = ['Config','Ladder','Verdict','Cases','SafeSwap','AdminLog','CheckNames','ActionEvidence','Vehicle']
 CLOCK_NEEDLE = 'System.currentTimeMillis()'  # rebound in Verdict only; count asserted, not assumed
+LOG_CAP = 16 * 1024 * 1024  # proposal: per-log RLIMIT_FSIZE cap; the child dies with SIGXFSZ on excess - a cap that actually caps
+
+def bounded_tail(path, nbytes=4000):
+    # seek-based tail: never reads more than nbytes into memory, whatever the file size
+    with open(path, 'rb') as f:
+        f.seek(0, os.SEEK_END); size = f.tell(); f.seek(max(0, size - nbytes))
+        return f.read(nbytes).decode(errors='replace'), size
 
 def gson_jar():
     if os.environ.get('GSON_JAR') and Path(os.environ['GSON_JAR']).exists(): return os.environ['GSON_JAR']
@@ -169,15 +176,36 @@ public final class ReloadHarness {
 '''
 
 class PolicyReloadIntegration(unittest.TestCase):
+    def run_logged(self, cmd, log, timeout):
+        """Output-bounded subprocess: the child gets RLIMIT_FSIZE=LOG_CAP (dies with SIGXFSZ on excess, so both
+        memory and disk stay flat no matter how much it prints); the timeout bounds wall time; only a seek-based
+        bounded tail is ever read back into memory. Detection is size-based, not signal-based: children that
+        ignore SIGXFSZ (CPython does; it raises EFBIG instead) still cannot grow the log past the cap, so a log
+        at cap size means truncated output and fails the test. Verified locally: a child attempting 8 MB under a
+        1 MB cap leaves exactly 1048576 bytes; an under-cap child completes rc=0."""
+        with open(log, 'wb') as lf:
+            try:
+                r = subprocess.run(cmd, stdout=lf, stderr=subprocess.STDOUT, timeout=timeout,
+                                   preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_FSIZE, (LOG_CAP, LOG_CAP)))
+            except subprocess.TimeoutExpired:
+                self.fail(f'{cmd[0]} exceeded the {timeout} s bound')
+        tail, size = bounded_tail(log)
+        print(f'{cmd[0]} log {size} bytes (cap {LOG_CAP}) at {log}')
+        if size >= LOG_CAP:
+            self.fail(f'{cmd[0]} hit the {LOG_CAP}-byte output cap - log truncated (rc={r.returncode}); cap-brushing output is never a pass')
+        return r.returncode, tail
+
     def test_reload_integration(self):
         gj = gson_jar()
         self.assertTrue(shutil.which('javac'), 'HARD prereq missing: javac not on PATH - this test must RUN, not skip (Box provides the JDK)')
         self.assertIsNotNone(gj, 'HARD prereq missing: no Gson jar (set GSON_JAR or use the gradle cache) - this test must RUN, not skip')
         self.assertTrue(Path(gj).name.startswith('gson-'), f'gson jar sanity: {gj}')
-        jv = subprocess.run(['javac','-version'], capture_output=True, text=True, timeout=30, check=True)
-        vv = subprocess.run(['java','-version'], capture_output=True, text=True, timeout=30, check=True)
-        print('TOOLCHAIN javac:', shutil.which('javac'), (jv.stderr or jv.stdout).strip())
-        print('TOOLCHAIN java:', shutil.which('java'), (vv.stderr or vv.stdout).strip().splitlines()[0])
+        rc, jvt = self.run_logged(['javac','-version'], root/'javac-version.log', 30)
+        self.assertEqual(rc, 0, 'javac -version failed:\n' + jvt)
+        rc, vvt = self.run_logged(['java','-version'], root/'java-version.log', 30)
+        self.assertEqual(rc, 0, 'java -version failed:\n' + vvt)
+        print('TOOLCHAIN javac:', shutil.which('javac'), jvt.strip().splitlines()[0])
+        print('TOOLCHAIN java:', shutil.which('java'), vvt.strip().splitlines()[0])
         print('TOOLCHAIN gson jar:', gj, 'sha256', sha(Path(gj).read_bytes()))
         with tempfile.TemporaryDirectory(prefix='reload-it-') as d:
             root = Path(d); cfgdir = root/'config'; cfgdir.mkdir()
@@ -209,25 +237,11 @@ class PolicyReloadIntegration(unittest.TestCase):
             print('FIXTURE-MANIFEST sha256', mhash)
             for row in manifest: print('MANIFEST-ROW', row)
             out = root/'out'
-            # an output cap that actually caps: subprocess output goes to FILES (memory stays flat), only bounded tails are read back; sizes reported
-            jlog, hlog = root/'javac.log', root/'harness.log'
-            with open(jlog,'w') as lf:
-                try:
-                    subprocess.run(['javac','-J-Xmx256m','-cp',gj,'-d',str(out)]+sources, check=True, timeout=300, stdout=lf, stderr=subprocess.STDOUT)
-                except subprocess.TimeoutExpired:
-                    self.fail('javac exceeded the 300 s bound')
-                except subprocess.CalledProcessError as e:
-                    self.fail(f'javac rc={e.returncode}, log {jlog.stat().st_size} bytes, tail:\n' + jlog.read_bytes()[-4000:].decode(errors='replace'))
-            print(f'javac log {jlog.stat().st_size} bytes at {jlog}')
-            with open(hlog,'w') as lf:
-                try:
-                    r = subprocess.run(['java','-Xmx256m',f'-Dmeshac.test.configdir={cfgdir}','-cp',f'{out}:{gj}','dev.meshac.ReloadHarness'], stdout=lf, stderr=subprocess.STDOUT, timeout=180)
-                except subprocess.TimeoutExpired:
-                    self.fail('harness exceeded the 180 s bound')
-            htail = hlog.read_bytes()[-4000:].decode(errors='replace')
-            self.assertEqual(r.returncode, 0, f'harness rc={r.returncode}, log {hlog.stat().st_size} bytes, tail:\n' + htail)
+            rc, jtail = self.run_logged(['javac','-J-Xmx256m','-cp',gj,'-d',str(out)]+sources, root/'javac.log', 300)
+            self.assertEqual(rc, 0, 'javac failed, bounded tail:\n' + jtail)
+            rc, htail = self.run_logged(['java','-Xmx256m',f'-Dmeshac.test.configdir={cfgdir}','-cp',f'{out}:{gj}','dev.meshac.ReloadHarness'], root/'harness.log', 180)
+            self.assertEqual(rc, 0, f'harness rc={rc}, bounded tail:\n' + htail)
             self.assertIn('ReloadHarness PASS', htail)
-            print(f'harness log {hlog.stat().st_size} bytes at {hlog}')
             print(htail.strip())
 
 if __name__ == '__main__': unittest.main()

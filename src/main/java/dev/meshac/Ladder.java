@@ -19,6 +19,7 @@ public final class Ladder {
 				tierAWeight <= 0 ? d.tierAWeight() : tierAWeight,
 				clusterMs <= 0 ? d.clusterMs() : clusterMs);
 		}
+		public boolean valid() { return halfLifeSec > 0 && Double.isFinite(halfLifeSec) && holdAt > 0 && Double.isFinite(holdAt) && removeAt > 0 && Double.isFinite(removeAt) && minClusters > 0 && minClustersTierA > 0 && tierAWeight > 0 && clusterMs > 0; }
 		/** Comma-joined names of the knobs sanitized() would replace; empty when the params are valid. For the caller's diagnostic log. */
 		public static String problems(Params p) {
 			StringBuilder b = new StringBuilder();
@@ -43,22 +44,25 @@ public final class Ladder {
 			return bound && (pHalf != p.halfLifeSec() || pHold != p.holdAt() || pRem != p.removeAt() || pMinc != p.minClusters() || pMinta != p.minClustersTierA() || pTaw != p.tierAWeight() || pCms != p.clusterMs());
 		}
 		private void bind(Params p) { pHalf = p.halfLifeSec(); pHold = p.holdAt(); pRem = p.removeAt(); pMinc = p.minClusters(); pMinta = p.minClustersTierA(); pTaw = p.tierAWeight(); pCms = p.clusterMs(); bound = true; }
-		public double now(long t, Params p) { return heat * Math.pow(0.5, Math.max(0, t - at) / 1000.0 / p.halfLifeSec()); }
+		/** Stale-epoch evidence reads as ZERO: after a config change the old heat is never interpreted under the new decay curve. */
+		public double now(long t, Params p) { if (epochStale(p)) return 0; return heat * Math.pow(0.5, Math.max(0, t - at) / 1000.0 / p.halfLifeSec()); }
 		public Step add(String check, int weight, long t, Params p) {
+			if (!p.valid()) p = p.sanitized(); // public entry point: raw invalid params never drive the maths, even for a caller that skips Config
 			if (epochStale(p)) reset(); // policy changed: old evidence is never reclassified under the new thresholds
 			bind(p);
 			double h = now(t, p);
 			// Intentional (decision relayed via parent 10-18, option a of the lane-A design question): tier-A evidence decays WITH the heat.
-			// Below the 0.25 floor (~25-28 s after the last flag at the default 8 s half-life) the next flag wipes tierAClusters too, so
-			// 'tier A confirmed' only survives inside one active build-up. Strictest option, chosen while enforcement is log-only;
-			// revisit a separate, longer tier-A evidence lifetime (option b) before any enforcement-ON proposal.
+			// Below the 0.25 floor the next flag wipes tierAClusters too, so 'tier A confirmed' only survives inside one active build-up. The
+			// window depends on the build-up's heat at the last flag: ~29 s from heat 3 (one weight-3 flag) or ~37 s from heat 6 at the default
+			// 8 s half-life - not a fixed duration. Strictest option, chosen while enforcement is log-only; revisit a separate, longer
+			// tier-A evidence lifetime (option b) before any enforcement-ON proposal.
 			if (h < 0.25) { h = 0; clusters = 0; tierAClusters = 0; clusterMax = 0; clusterAt = 0; }
 			if (clusterAt == 0 || t - clusterAt > p.clusterMs()) { clusterAt = t; clusters++; clusterMax = 0; if (weight >= p.tierAWeight()) tierAClusters++; }
 			else if (weight >= p.tierAWeight() && clusterMax < p.tierAWeight()) tierAClusters++;
 			if (weight > clusterMax) { h += weight - clusterMax; clusterMax = weight; }
 			heat = h; at = t;
 			// Shortcut reachability: two tier-A bursts add at least 2 * tierAWeight heat, so two MINIMUM-weight bursts clear the removeAt - 1 floor
-			// only when removeAt <= 2 * tierAWeight + 1. Weight 3 is the only tier-A weight signalled today (Glide.java:58 and :71, both weight 3);
+			// only when removeAt <= 2 * tierAWeight + 1. Weight 3 is the only tier-A weight signalled today (Movement.java:343 for fly and step; Glide.java:58 and :71);
 			// with those bursts the branch is live on default (6 <= 7) and strict (5 <= 7) and subsumed on the shipped lenient preset (removeAt 8 > 7:
 			// two weight-3 bursts cap at 5.95 < 7 and the third burst trips the generic gate in the same add() call). A future weight-4+ tier-A
 			// signal would clear the lenient floor and make the branch live there too. Documented behavior, unchanged (Box lane A, 10-18).
@@ -68,7 +72,7 @@ public final class Ladder {
 			return Step.SETBACK;
 		}
 		public void reset() { heat = 0; clusters = 0; tierAClusters = 0; clusterMax = 0; clusterAt = 0; bound = false; }
-		public boolean confirmedTierA(Params p) { return tierAClusters >= p.minClustersTierA(); } // honors the configured bar (requireClustersTierA), not a hardcoded 2
+		public boolean confirmedTierA(Params p) { return !epochStale(p) && tierAClusters >= p.minClustersTierA(); } // honors the configured bar (requireClustersTierA); evidence from before a config change does not confirm under the new bar
 	}
 
 	/** Offences forgive themselves: each one counts 0.5^(age / halfLifeDays). */
@@ -85,7 +89,12 @@ public final class Ladder {
 	/** A fresh offence counts 0.99995 after a minute, not 1, because it already started to decay. Without this tolerance floor() put a repeat offence minutes later back on the kick rung. */
 	static final double TOLERANCE = 0.05;
 	/** Rung 1 is a kick. Rung r >= 2 is a tempban of base * growth^(r-2) minutes, capped. Tier A evidence skips one rung. */
-	public static int rung(double effective, int kicks, boolean skip) { if (!Double.isFinite(effective) || effective < 0) effective = 0; return (int) Math.floor(effective + TOLERANCE) + 1 + (skip ? 1 : 0); } // non-finite/negative input fails closed to the kick rung
+	public static int rung(double effective, int kicks, boolean skip) {
+		if (!Double.isFinite(effective) || effective < 0) return 1; // invalid input: the kick rung, and no tier-A skip benefit on corrupt data
+		long r = (long) Math.floor(effective + TOLERANCE);
+		if (r > Integer.MAX_VALUE - 2) r = Integer.MAX_VALUE - 2; // saturating: a huge offence history cannot wrap the int cast negative
+		return (int) r + 1 + (skip ? 1 : 0);
+	}
 	public static long tempMinutes(int rung, int kicks, double base, double growth, double max) {
 		int idx = rung - 1 - kicks; // 0 = first tempban
 		return (long) Math.min(max, base * Math.pow(growth, Math.max(0, idx)));

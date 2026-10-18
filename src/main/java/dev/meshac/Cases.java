@@ -52,7 +52,8 @@ public final class Cases {
 	public static synchronized double offences(UUID id) {
 		double hl = Config.get().offenceHalfLifeDays(); long now = System.currentTimeMillis(); java.util.List<Double> ages = new java.util.ArrayList<>();
 		for (Case c : all) if (c.uuid.equals(id.toString()) && !c.pardoned && c.by.equals("meshac") && (now - (double) c.at) < hl * 8 * 86_400_000.0) ages.add((now - (double) c.at) / 86_400_000.0); // double arithmetic: a corrupt extreme timestamp cannot overflow a long subtraction before the age clamp
-		double[] a = new double[ages.size()]; for (int k = 0; k < a.length; k++) a[k] = ages.get(k);
+		int corrupt = 0; double[] a = new double[ages.size()]; for (int k = 0; k < a.length; k++) { a[k] = ages.get(k); if (Double.isNaN(a[k])) corrupt++; }
+		if (corrupt > 0) Meshac.LOG.warn("[meshac] {} stored offence(s) have unreadable timestamps and were not counted (fail closed)", corrupt);
 		return Ladder.effectiveOffences(a, hl);
 	}
 	/** Lifts every active ban on this player but keeps the offences on record, so the next one still escalates. Returns how many were lifted. */

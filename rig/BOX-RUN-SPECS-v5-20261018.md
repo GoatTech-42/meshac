@@ -62,7 +62,7 @@ until spec M proves them. Pre-apply sha256 verification of every Part-2 file; mi
 
 ## FROZEN TARGETS + TOOLCHAIN (unchanged)
 1.21.11 (JDK 21 runtime), 26.1.2, 26.2, 26.3 (JDK 25 runtime). Driver JDK 25.
-Harness exactly `sh sim/run-tests.sh` (now includes LadderTierATest, patch 0079).
+Harness exactly `sh sim/run-tests.sh`, as wired in the frozen tree (no added tests are claimed in this closure).
 
 ## Spec M - offline build + apply manifest (runs only after section 0 is verified)
 1. Fresh git archive import of meshac main c4b3fe8 (read-only input).

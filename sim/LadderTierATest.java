@@ -110,7 +110,16 @@ public final class LadderTierATest {
 		check(Ladder.effectiveOffences(new double[]{1}, 0) == 0 && Ladder.effectiveOffences(new double[]{1}, Double.NaN) == 0 && Ladder.effectiveOffences(new double[]{1}, -14) == 0, "invalid offence half-life fails closed: no offences counted, no punishment inflation");
 		check(Ladder.effectiveOffences(new double[]{Double.NaN, 5}, 14) == Ladder.effectiveOffences(new double[]{5}, 14), "a NaN age (corrupt case data) is skipped, not counted");
 		check(Ladder.effectiveOffences(new double[]{Double.POSITIVE_INFINITY}, 14) == 0, "an infinitely old offence is fully decayed");
-		check(Ladder.rung(Double.NaN, 1, false) == 1 && Ladder.rung(-3, 1, false) == 1, "non-finite or negative effective offences fail closed to the kick rung");
+		check(Ladder.rung(Double.NaN, 1, false) == 1 && Ladder.rung(-3, 1, false) == 1 && Ladder.rung(Double.NaN, 1, true) == 1, "non-finite or negative effective offences fail closed to the kick rung - with NO tier-A skip benefit on corrupt data");
+		check(Ladder.rung(1e300, 1, false) == Integer.MAX_VALUE - 1 && Ladder.rung(1e300, 1, true) == Integer.MAX_VALUE, "a huge offence history saturates instead of wrapping the int cast negative");
+		Ladder.Params rawInvalid = new Ladder.Params(Double.NaN, 0, -1, 0, 0, 0, 0);
+		Ladder.Heat rawBad = new Ladder.Heat();
+		rawBad.add("glide", 3, T0, rawInvalid); rawBad.add("glide", 3, T0 + 200, rawInvalid);
+		check(!rawBad.confirmedTierA(rawInvalid), "a caller that skips Config and hands Heat raw invalid params gets no confirmation: the params are sanitized at the door");
+		Ladder.Heat gate = new Ladder.Heat();
+		gate.add("glide", 3, T0, wantFour); gate.add("glide", 3, T0 + 200, wantFour);
+		check(!gate.confirmedTierA(wantOne), "epoch-gated read: evidence collected under a bar of 4 does not confirm when read with a bar of 1 (no new add needed to lose confirmation)");
+		check(gate.now(T0 + 500, wantOne) == 0, "epoch-gated read: stale-epoch heat reads as zero under the new params, never old heat under a new decay curve");
 
 		// policy epoch: a config change wipes old evidence instead of reclassifying it (fail closed)
 		Ladder.Heat epoch = new Ladder.Heat();

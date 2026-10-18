@@ -49,7 +49,7 @@ public final class Config {
 	public java.util.List<String> exemptPlayers = new java.util.ArrayList<>(); // names (case-insensitive) skipped by the movement and combat checks
 	public java.util.List<String> egregiousChecks = new java.util.ArrayList<>(); // legacy setting retained for file compatibility; never bypasses monitor mode
 	public boolean isEgregious(String check) { if (egregiousChecks == null) return false; for (String e : egregiousChecks) if (e != null && e.equalsIgnoreCase(check)) return true; return false; } // case-insensitive like the other check lists
-	public boolean enforce(String check) { return !monitor(); } // soft mode: raw action refusals (break/click/use) follow the same gate as verdicts
+	public boolean enforce(String check) { return !monitor() && !policyInvalid; } // soft mode: raw action refusals (break/click/use) follow the same gate as verdicts; an invalid policy pauses enforcement (log-only) until a valid reload
 	public java.util.Map<String, java.util.List<String>> exemptChecks = new java.util.HashMap<>(); // check name -> player names exempt from that check only
 	public java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off (Luke "Exempt that check rn" 2026-10-11)
 	public boolean disabled(String check) { if (disabledChecks == null) return false; for (String d : disabledChecks) if (d != null && d.equalsIgnoreCase(check)) return true; return false; }
@@ -77,11 +77,20 @@ public final class Config {
 	public int holdAtI() { return (int) Math.round(holdAtD()); }
 	public double holdAtD() { return holdAt != null ? holdAt : 3; }
 	public double removeAtD() { return removeAt != null ? removeAt : switch (preset.toLowerCase()) { case "lenient" -> 8; case "strict" -> 5; default -> 6; }; }
+	/** Last ladder params that passed validation; a reload with invalid values keeps these instead of the broken ones. */
+	private static transient Ladder.Params lastValidLadder;
+	/** True while the active config carries an invalid policy value: enforcement pauses (log-only) until a valid reload. Transient: never written to meshac.json. */
+	public transient boolean policyInvalid;
 	public Ladder.Params ladderParams() {
 		Ladder.Params raw = new Ladder.Params(halfLifeSeconds != null ? halfLifeSeconds : 8, holdAtD(), removeAtD(), requireClusters != null ? requireClusters : 3, requireClustersTierA != null ? requireClustersTierA : 2, 3, 150);
 		String probs = Ladder.Params.problems(raw);
-		if (!probs.isEmpty()) Meshac.LOG.warn("[meshac] invalid ladder config ({}) replaced with the reviewed defaults (fail closed)", probs);
-		return raw.sanitized();
+		if (!probs.isEmpty()) {
+			policyInvalid = true;
+			Meshac.LOG.warn("[meshac] invalid ladder config ({}): keeping the last valid values and pausing enforcement (log-only) until a valid reload", probs);
+			return lastValidLadder != null ? lastValidLadder : Ladder.Params.defaults();
+		}
+		if (!policyInvalid) lastValidLadder = raw; // do not clear a posture set by offenceHalfLifeDays() in the same call pass
+		return raw;
 	}
 	public boolean explicitLadder() { return tempbanMinutes != null && tempbanMinutes.length > 0; }
 	public double tempBase() { return tempbanBaseMinutes != null ? tempbanBaseMinutes : switch (preset.toLowerCase()) { case "lenient" -> 5; case "strict" -> 30; default -> 10; }; }
@@ -89,7 +98,11 @@ public final class Config {
 	public double tempMax() { return tempbanMaxMinutes != null ? tempbanMaxMinutes : 10080; }
 	public double offenceHalfLifeDays() {
 		double hl = offenceHalfLifeDays != null ? offenceHalfLifeDays : memoryDays();
-		if (!(hl > 0) || !Double.isFinite(hl)) { Meshac.LOG.warn("[meshac] invalid offenceHalfLifeDays ({}) replaced with the default (fail closed)", hl); return 14; }
+		if (!(hl > 0) || !Double.isFinite(hl)) {
+			policyInvalid = true;
+			Meshac.LOG.warn("[meshac] invalid offenceHalfLifeDays ({}): keeping 14 d and pausing enforcement (log-only) until a valid reload", hl);
+			return 14;
+		}
 		return hl;
 	}
 	public boolean permanentNeedsTierA() { return permanentNeedsTierA == null || permanentNeedsTierA; }

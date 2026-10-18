@@ -67,8 +67,10 @@ depend on the re-queue behavior; only detection liveness does.
 
 ### B. Vanilla/Fabric call-chain ASSUMPTION routes (NOT code-guarded; named explicitly)
 
-- ServerPlayerGameModeMixin.destroyBlock: CODE-GUARDED since 0065a - an early
-  isSameThread return runs BEFORE Meshac.skip / Mining.refuse / any world read. An
+- ServerPlayerGameModeMixin.destroyBlock: CODE-GUARDED since 0065a (scoped SOURCE GO,
+  reviewer 11:06pm) - an early isSameThread return runs BEFORE Meshac.skip / Mining.refuse
+  and any mining/world-content read (the guard's own player.level().getServer() is the
+  same necessary thread query as the attack guard, not a world-content read). An
   off-thread invocation now loses detection (fail-safe direction) instead of reaching
   Verdict. Deliberately NO server.execute: a delayed refusal would change the synchronous
   return/cancel semantics of destroyBlock and could act after the block is mined

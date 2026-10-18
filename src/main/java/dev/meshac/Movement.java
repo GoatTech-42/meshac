@@ -37,7 +37,7 @@ public final class Movement {
 	/** Monitor mode: the three pending-action fields are cleared together, never one of them. */
 	private static void monitorClear(S s) { if (Config.get().monitor()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } }
 	/** Drops every action that outlives its signal (hold replay, delayed NoFall damage). Called on monitor on and before a config reload. */
-	public static void clearPendingActions() { for (S s : STATE.values()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; } }
+	public static void clearPendingActions() { for (S s : STATE.values()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } }
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
 	public static void arrive(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		if (!p.hasPosition()) return;

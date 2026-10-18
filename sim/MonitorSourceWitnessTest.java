@@ -26,7 +26,7 @@ public final class MonitorSourceWitnessTest {
 		int c = t.indexOf("public static double[] check("), tk = t.indexOf("public static void tick(");
 		check(c > 0 && t.indexOf("monitorClear(s);", c) > 0 && t.indexOf("monitorClear(s);", c) < c + 700, "check() clears pending actions at entry");
 		check(tk > 0 && t.indexOf("monitorClear(s);", tk) > 0 && t.indexOf("monitorClear(s);", tk) < tk + 700, "tick() clears pending actions at entry");
-		check(t.contains("clearPendingActions() { for (S s : STATE.values()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; } }"), "clearPendingActions clears all three");
+		check(t.contains("clearPendingActions() { for (S s : STATE.values()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } }"), "clearPendingActions clears all pending nofall state (incl. the P3-strong shadow: a stale shadow arm would emit a spurious WOULD-fire and K2 reads any legit WOULD-fire as a kill)");
   String cfg = Files.readString(Paths.get("src/main/java/dev/meshac/Config.java"));
   int parse = cfg.indexOf("public static AdminLog.ReloadResult load()"), commit = cfg.indexOf("cur = next;", parse), persist = cfg.indexOf("Files.writeString(p, output)", parse);
   check(parse >= 0 && commit > parse && persist > commit, "reload separates config application from persistence");

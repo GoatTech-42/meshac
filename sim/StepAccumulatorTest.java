@@ -53,6 +53,23 @@ public final class StepAccumulatorTest {
 		}
 		// disabled mode flags nothing but still returns null rather than throwing
 		check(run(stairs(0.3, 1, 60), false) == 0, "disabled accumulator flagged");
+		// MA-M9HG regression pin (case kick 2026-10-11, "step rose 1.06 on the ground", pardoned):
+		// a window that totals 1.06 WITH a vanilla 0.5 step in it must not flag - the step resets
+		// the window, leaving 0.56 under the 0.65 limit. The case cannot recur while vanilla
+		// steps reset. The same 1.06 total with NO vanilla-step packet MUST flag: the rule still
+		// catches a real 1.06 rise in a 4-packet window.
+		{
+			double[] m9hg = {0.5, 0.2, 0.2, 0.16}; // totals 1.06, vanilla step first
+			check(run(m9hg, true) == 0, "MA-M9HG shape (1.06 total with a vanilla step) flagged");
+			double[] hack = {0.3, 0.3, 0.3, 0.16}; // same 1.06 total, no vanilla step
+			check(run(hack, true) > 0, "1.06 total with no vanilla step missed (rule went soft)");
+			// jump boost variant of the case: the band widens reset and limit together
+			StepAccumulator acc = new StepAccumulator();
+			String hit = null;
+			for (double dy : new double[] {0.8, 0.2, 0.06}) // 0.8 = 0.5 + 0.3 boost band, totals 1.06
+				hit = acc.packet(true, dy, true, true);
+			check(hit == null, "MA-M9HG shape under jump boost flagged");
+		}
 		System.out.println(fails == 0 ? "StepAccumulatorTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

@@ -16,6 +16,8 @@ derived - stated honestly, this is a logic fixture, not a physics sim). Scope la
 This fixture does NOT discharge any pending fixes owed on 0099 - the monitor-invariant fixture keeps its own queue.
 S5 geometry: feet 0.125 above the scripted partial top (inside tolerance) and 0.14 above it (outside the candidate strip); the tolerated() GAP_EPS boundary is pinned by DIRECT helper checks in run() because the packet path cannot reach it; world answers stay
 SCRIPTED per phase - scripted logic, not physics.
+Flag assertions match REAL verdict lines only ("[meshac] SIGNAL ...", flagged()); [trace]/log-only draft lines (e.g. the
+ungated strong-arm line at Movement.java:330) never satisfy them. since() remains for asserting log-only lines' presence.
 Prereqs are HARD: missing javac or Gson jar FAILS the test. Toolchain identity + fixture manifest hash printed on
 every run; subprocesses timeout-bound, output-capped (RLIMIT_FSIZE, per-file, covers .class outputs too), bounded
 seek-based log tails only; preexec_fn is POSIX-only. Dry control-flow run with declared tool doubles lives in
@@ -227,6 +229,9 @@ public final class MovementHarness {
    System.out.println("[diag] " + label + " gndEv.unsupported=" + unsup + " grace=" + grf.getInt(s) + " WINDOW=" + wf.getInt(null) + " FLAG_AT=" + tf.getInt(null));
   } catch (Exception e) { System.out.println("[diag] " + label + " reflection failed: " + e); } }
  static boolean since(String sub, int m) { return Meshac.LOG.containsSince(sub, m); }
+ static boolean flagged(int m, String... subs) { // 0124: REAL verdict lines only ("[meshac] SIGNAL ...") - [trace] and log-only draft lines never match (the 0122-run matcher bug)
+  for (int i = m; i < Meshac.LOG.all.size(); i++) { String l = Meshac.LOG.all.get(i); if (!l.contains("[meshac] SIGNAL")) continue;
+   boolean ok = true; for (String s : subs) ok &= l.contains(s); if (ok) return true; } return false; }
  static ServerPlayer fresh(double y) { ServerPlayer p = new ServerPlayer("test"); p.setPos(0, y, 0); return p; }
  static double[] send(ServerPlayer p, double x, double y, double z, boolean g) {
   adv(50); double[] r = Movement.check(p, ServerboundMovePlayerPacket.pos(x, y, z, g));
@@ -252,14 +257,14 @@ public final class MovementHarness {
   // S1 microhop (U7): two unsupported dy~0.1 ground claims inside the hop clock flag; one does not.
   net.minecraft.world.level.Level.reset(); ServerPlayer p1 = fresh(70); warmup(p1, 70);
   net.minecraft.world.level.Level.support = false; int m1 = mark();
-  send(p1, 0, 70.1, 0, true); ck(!since("microhop", m1), "S1: one hop must be forgiven");
-  send(p1, 0, 70.2, 0, true); ck(since("microhop", m1), "S1: two unsupported hops inside 30 packets must flag microhop");
+  send(p1, 0, 70.1, 0, true); ck(!flagged(m1, "microhop"), "S1: one hop must be forgiven");
+  send(p1, 0, 70.2, 0, true); ck(flagged(m1, "microhop"), "S1: two unsupported hops inside 30 packets must flag microhop");
 
   // S1b low ceiling: same hops under a ceiling are the sprint-jump-under-2-block legit case - never flagged.
   net.minecraft.world.level.Level.reset(); ServerPlayer p1b = fresh(70); warmup(p1b, 70);
   net.minecraft.world.level.Level.support = false; net.minecraft.world.level.Level.ceiling = true; int m1b = mark();
   send(p1b, 0, 70.1, 0, true); send(p1b, 0, 70.2, 0, true); send(p1b, 0, 70.3, 0, true);
-  ck(!since("microhop", m1b), "S1b: low-ceiling hops must NOT flag microhop (the nofall signal these claims earn is separate and expected)");
+  ck(!flagged(m1b, "microhop"), "S1b: low-ceiling hops must NOT flag microhop (the nofall signal these claims earn is separate and expected)");
 
   // S2 antiknockback (U7): melee hurt + no movement 450+ ms later, three times in a row, via the real tick() path.
   net.minecraft.world.level.Level.reset(); ServerPlayer p2 = fresh(70); warmup(p2, 70); int m2 = mark();
@@ -268,7 +273,7 @@ public final class MovementHarness {
    Movement.tick(p2); // arms kbAt
    adv(500); p2.hurtTime = 0; Movement.tick(p2); // evaluates: open space, no movement
   }
-  ck(since("antiknockback", m2), "S2: three no-push rounds must signal antiknockback");
+  ck(flagged(m2, "antiknockback"), "S2: three no-push rounds must signal antiknockback");
 
   // S3 nofall window (U1): 3-of-5 unsupported ground claims flag; 2-of-5 do not.
   net.minecraft.world.level.Level.reset(); ServerPlayer p3 = fresh(70); warmup(p3, 70);
@@ -276,8 +281,9 @@ public final class MovementHarness {
   diag(p3, "S3a post-warmup");
   send(p3, 0, 70, 0, true); diag(p3, "S3a after send 1"); drain("S3a-1", m3);
   send(p3, 0, 70, 0, true); diag(p3, "S3a after send 2"); drain("S3a-2", m3);
-  ck(!since("nofall", m3), "S3a: 2 unsupported claims must not flag");
-  send(p3, 0, 70, 0, true); ck(since("nofall", m3), "S3a: 3-of-5 unsupported claims must flag nofall");
+  ck(!flagged(m3, "nofall"), "S3a: 2 unsupported claims must not flag");
+  ck(since("[trace] nofall strong-arm", m3), "S3a: the strong-arm trace line DOES appear at count=2 (STRONG_ARM_AT=2, Movement.java:20/:330) - paired with the no-flag assertion above this positively pins it as LOG-ONLY");
+  send(p3, 0, 70, 0, true); ck(flagged(m3, "nofall", "ground spoof"), "S3a: 3-of-5 unsupported claims must flag nofall");
   net.minecraft.world.level.Level.reset(); ServerPlayer p3b = fresh(70); warmup(p3b, 70);
   net.minecraft.world.level.Level.support = false; int m3b = mark();
   diag(p3b, "S3b post-warmup");
@@ -285,17 +291,17 @@ public final class MovementHarness {
   send(p3b, 0, 70, 0, true); diag(p3b, "S3b after send 2"); drain("S3b", m3b);
   net.minecraft.world.level.Level.support = true;
   send(p3b, 0, 70, 0, true); send(p3b, 0, 70, 0, true); send(p3b, 0, 70, 0, true);
-  ck(!since("nofall", m3b), "S3b: 2-of-5 unsupported claims must NOT flag nofall");
+  ck(!flagged(m3b, "nofall"), "S3b: 2-of-5 unsupported claims must NOT flag nofall");
 
   // S4 powder band (U2): struggle dy 0.63 near powder is silent (vanilla auto-step + powder band);
   // dy 0.75 near powder is outside every exemption and flags (step).
   net.minecraft.world.level.Level.reset(); ServerPlayer p4 = fresh(70); warmup(p4, 70);
   net.minecraft.world.level.Level.powderFeet = true; net.minecraft.world.level.Level.scriptPowderBody = true; int m4 = mark();
-  send(p4, 0, 70.63, 0, true); ck(!since("SIGNAL", m4), "S4a: powder struggle dy 0.63 must produce NO signal");
+  send(p4, 0, 70.63, 0, true); ck(!since("[meshac] SIGNAL", m4), "S4a: powder struggle dy 0.63 must produce NO signal");
   net.minecraft.world.level.Level.reset(); ServerPlayer p4b = fresh(70); warmup(p4b, 70);
   net.minecraft.world.level.Level.powderFeet = true; int m4b = mark();
   send(p4b, 0, 70.75, 0, true); drain("S4b", m4b);
-  ck(since("step dy 0.750", m4b), "S4b: dy 0.75 near powder must flag (step dy 0.750 onGround)");
+  ck(flagged(m4b, "step", "rose 0.75 on the ground", "hold"), "S4b: dy 0.75 near powder must signal step - detail rose 0.75 on the ground (StepAccumulator.java:30), severity 3 (Movement.java:343), heat 3 >= holdAt=1 so the verdict is HOLD by ladder design (Verdict.java:13/:50, VALID_LOW)");
 
   // S5 classify (U4): entry gate + eviction resistance. Both modes run the same packet streams.
   net.minecraft.world.level.Level.reset(); ServerPlayer p5 = fresh(70.625); warmup(p5, 70.625); // feet 0.125 above the scripted partial top (70.5): inside the 0.13+0.005 tolerance gap, nonzero so the gap arithmetic is real
@@ -303,9 +309,9 @@ public final class MovementHarness {
   for (int i = 0; i < 5; i++) send(p5, 0, 70.625, 0, true);
   if (classify) {
    ck(since("[groundtol] tolerated", m5), "S5a(classify): tolerated partial-shape claims must emit the [groundtol] tolerated line");
-   ck(!since("nofall", m5), "S5a(classify): 5 tolerated claims must NOT enter the nofall window");
+   ck(!flagged(m5, "nofall"), "S5a(classify): 5 tolerated claims must NOT enter the nofall window");
   } else {
-   ck(since("nofall", m5), "S5a(plain): without classify the same partial-shape claims are plain unsupported and MUST flag (the U4 status quo)");
+   ck(flagged(m5, "nofall", "ground spoof"), "S5a(plain): without classify the same partial-shape claims are plain unsupported and MUST flag (the U4 status quo)");
   }
   if (classify) {
    net.minecraft.world.level.Level.reset(); ServerPlayer p5b = fresh(70.625); warmup(p5b, 70.625);
@@ -315,10 +321,10 @@ public final class MovementHarness {
    send(p5b, 0, 70.625, 0, true); diag(p5b, "S5b after send 2"); drain("S5b", m5b); // 2 real unsupported claims
    net.minecraft.world.level.Level.partialBelow = true;
    send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); send(p5b, 0, 70.625, 0, true); // 4 tolerated (gap 0.125)
-   ck(!since("nofall", m5b), "S5b(classify): tolerated claims must not top up the window to 3");
+   ck(!flagged(m5b, "nofall"), "S5b(classify): tolerated claims must not top up the window to 3");
    net.minecraft.world.level.Level.partialBelow = false;
    send(p5b, 0, 70.625, 0, true); // 3rd real unsupported: tolerated claims must NOT have evicted the first two
-   ck(since("nofall", m5b), "S5b(classify): the 3rd unsupported claim after tolerated claims MUST flag (eviction resistance)");
+   ck(flagged(m5b, "nofall", "ground spoof"), "S5b(classify): the 3rd unsupported claim after tolerated claims MUST flag (eviction resistance)");
    // S5c: feet 0.14 above the partial top - OUTSIDE THE CANDIDATE STRIP: supportHit's 0.13 reach never finds a top 0.14 below
    // the feet, so this exits before GroundTolerance.tolerated() is consulted. It is the candidate-strip negative, NOT the
    // tolerated() gap boundary: ANY top more than 0.13 below the feet is unreachable through the packet path, so the GAP_EPS
@@ -328,9 +334,9 @@ public final class MovementHarness {
    diag(p5c, "S5c post-warmup");
    send(p5c, 0, 70.64, 0, true); diag(p5c, "S5c after send 1");
    send(p5c, 0, 70.64, 0, true); diag(p5c, "S5c after send 2"); drain("S5c", m5c);
-   ck(!since("nofall", m5c), "S5c(classify): 2 out-of-gap claims must not flag yet");
+   ck(!flagged(m5c, "nofall"), "S5c(classify): 2 out-of-gap claims must not flag yet");
    send(p5c, 0, 70.64, 0, true);
-   ck(since("nofall", m5c), "S5c(classify): outside the candidate strip the claim is plain unsupported - the 3rd claim flags");
+   ck(flagged(m5c, "nofall", "ground spoof"), "S5c(classify): outside the candidate strip the claim is plain unsupported - the 3rd claim flags");
   }
   System.out.println("MovementHarness RESULT mode=" + (classify ? "classify" : "plain") + " (" + checks + " checks, " + fails + " failed)");
   if (fails > 0) { System.out.println("MovementHarness FAIL mode=" + (classify ? "classify" : "plain")); return; }

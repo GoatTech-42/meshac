@@ -146,3 +146,32 @@ counts within the window and never reopens the budget.
   pass per version build). The static pins are line-level assertions only - they do not
   prove the indirect call graph or any vanilla/Fabric API contract (reviewer 0064 note).
 - Box compile x4 + FP 100/300 remain Box's gates.
+
+## 0091 addendum: policy commit vs decision/effect atomicity
+
+A reload (or the /mesh monitor-on toggle) is a policy COMMIT: wipe all ladder evidence, then publish.
+0090 guarded the transition with an epoch token plus a check-then-act re-read; review found the classic
+races in that shape (read-old-cfg-then-reload-then-same-token; reload between the check and the removal;
+computeIfAbsent landing between the wipe and the publish). 0091 replaces the token with structure:
+
+- Policy and epoch publish as ONE immutable Config.Snapshot (volatile), read ONCE per decision. Two
+  independent volatile values could tear; one final-field bundle cannot.
+- Config.POLICY_LOCK serializes every commit against every Verdict decision AND its effects
+  (signal/signalLogOnly/note hold it for their whole body; the reload commit and the monitor-on toggle
+  hold it for wipe+publish). An action computed under policy P cannot dispatch after policy P+1 commits,
+  and the wipe cannot interleave with a decision's HEAT access. The 0090 epoch re-check is removed:
+  mutual exclusion, not detection.
+- Lock order: POLICY_LOCK -> per-player heat lock -> Cases monitor. No path acquires them in reverse.
+- Cost, stated honestly: decisions across all players serialize on one lock. The section contains heat
+  maths, log lines, watcher chat, async Discord posts (HttpClient.sendAsync - non-blocking) and, on a
+  removal, one Cases.save file write plus the disconnect. Reloads and monitor toggles are operator-rare,
+  but a signal burst during a removal's file write stalls other signals for that write's duration.
+- Residuals, stated honestly: tickFlush/forget/clearPendingActions' flushSuppressed stay per-player
+  synchronized only (policy-free bookkeeping: suppression counters and disconnect flushes, never ladder
+  inputs). Unsynchronized monitorOnly reads in the check-level enforce() gates can observe a toggle late
+  (Boolean reference write: atomic, no tearing); that affects only the raw-refusal gate, never the Verdict
+  decision, which reads the snapshot under the lock. Signals still arrive off-server-thread; the claim is
+  mutual exclusion, not server-thread confinement. Evidence loss on a commit remains fail-closed.
+- Owed (Box, MC-side/harness): a threaded signal+reload stress test asserting no post-commit dispatch of
+  a pre-commit REMOVE and no cross-commit heat survival. Not writable as a pure unit test (Verdict needs
+  ServerPlayer).

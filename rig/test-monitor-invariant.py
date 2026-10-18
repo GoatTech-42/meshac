@@ -16,9 +16,9 @@ class MonitorInvariant(unittest.TestCase):
  def test_combatlog_disconnect(self):
   subprocess.run(["python3",str(R/"rig/test-combatlog-monitor.py")],check=True)
  def test_source_guards(self):
-  c=(S/'Config.java').read_text();self.assertIn('return !monitor();',method(c,'public boolean enforce('))
+  c=(S/'Config.java').read_text();self.assertIn('return !monitor() && !policyInvalid();',method(c,'public boolean enforce(')) # 0088: invalid policy pauses enforcement (log-only); pin refreshed 0091 - the old '!monitor();' pin was stale since 0088
   v=(S/'Verdict.java').read_text();self.assertIn('if (cfg.monitor())',v);self.assertNotIn('cfg.monitor() &&',v)
-  rem=method(v,'private static void remove(');self.assertLess(rem.index('if (!Config.get().enforce('),rem.index('Cases.add('))
+  rem=method(v,'private static void remove(');self.assertLess(rem.index('if (!cf.enforce('),rem.index('Cases.add('))
   f=(S/'Fingerprints.java').read_text();self.assertLess(f.index('if(cf.monitor())'),f.index('if(!REMOVED.add'))
   self.assertIn('LOG_AT.remove(id)',f)
   for src in ['attack1211','attack26']:
@@ -44,6 +44,10 @@ class MonitorInvariant(unittest.TestCase):
    put('dev/meshac/Config.java','''package dev.meshac; import java.util.*; import net.minecraft.server.level.ServerPlayer;
 public class Config {
  static Config cur=new Config(); public static Config get(){return cur;}
+ public static final Object POLICY_LOCK=new Object();
+ public static final class Snapshot{public final Config cfg;public final long epoch;public Snapshot(Config c,long e){cfg=c;epoch=e;}}
+ public static Snapshot current(){return new Snapshot(cur,0);}
+ public boolean policyInvalid(){return false;}
  public Boolean monitorOnly; public boolean clientFingerprintEnabled=true;
  public List<String> egregiousChecks=new ArrayList<>(),clientFingerprintBrands=new ArrayList<>(),clientFingerprintChannels=new ArrayList<>();
  public boolean skips(ServerPlayer p,String c){return false;} public boolean disabled(String c){return false;}
@@ -168,7 +172,7 @@ public class MonitorHarness {
    case "CONFIG_EGREGIOUS": for(String check:CheckNames.ALL)ck(!cf.enforce(check),"monitor enforces "+check);break;
    case "VERDICT_ORDINARY": cf.egregiousChecks.clear();for(int i=0;i<20;i++)ck(Verdict.signal(p,"combat","reach 9",999)==Verdict.Step.LOG,"ordinary not LOG");ck(p.connection.disconnects==0&&Cases.of("test").isEmpty(),"ordinary action");break;
    case "VERDICT_EGREGIOUS": for(int i=0;i<20;i++)ck(Verdict.signal(p,"combat","reach 9",999)==Verdict.Step.LOG,"egregious not LOG");ck(p.connection.disconnects==0&&Cases.of("test").isEmpty(),"egregious action");break;
-   case "REMOVE_KICK": case "REMOVE_TEMPBAN": case "REMOVE_PERMANENT": cf.kickLimit=row.equals("REMOVE_KICK")?3:0;cf.permanent=row.equals("REMOVE_PERMANENT");Method remove=Verdict.class.getDeclaredMethod("remove",ServerPlayer.class,String.class,List.class);remove.setAccessible(true);remove.invoke(null,p,"combat reach 9",List.of("qualified"));ck(p.connection.disconnects==0&&Cases.of("test").isEmpty(),"remove action");if(row.equals("REMOVE_PERMANENT"))for(int i=0;i<4;i++)Cases.add("test",p.id,"kick","prior","meshac",0,List.of());cf.monitorOnly=false;remove.invoke(null,p,"combat reach 9",List.of("qualified"));ck(p.connection.disconnects==1&&!Cases.of("test").isEmpty(),"remove positive missing");String want=row.equals("REMOVE_KICK")?"kick":row.equals("REMOVE_TEMPBAN")?"tempban":"ban";ck(Cases.of("test").stream().anyMatch(c->c.action.equals(want)),"wrong removal positive rung");break;
+   case "REMOVE_KICK": case "REMOVE_TEMPBAN": case "REMOVE_PERMANENT": cf.kickLimit=row.equals("REMOVE_KICK")?3:0;cf.permanent=row.equals("REMOVE_PERMANENT");Method remove=Verdict.class.getDeclaredMethod("remove",ServerPlayer.class,String.class,List.class,Config.class);remove.setAccessible(true);remove.invoke(null,p,"combat reach 9",List.of("qualified"),Config.get());ck(p.connection.disconnects==0&&Cases.of("test").isEmpty(),"remove action");if(row.equals("REMOVE_PERMANENT"))for(int i=0;i<4;i++)Cases.add("test",p.id,"kick","prior","meshac",0,List.of());cf.monitorOnly=false;remove.invoke(null,p,"combat reach 9",List.of("qualified"),Config.get());ck(p.connection.disconnects==1&&!Cases.of("test").isEmpty(),"remove positive missing");String want=row.equals("REMOVE_KICK")?"kick":row.equals("REMOVE_TEMPBAN")?"tempban":"ban";ck(Cases.of("test").stream().anyMatch(c->c.action.equals(want)),"wrong removal positive rung");break;
    case "CASES_AUTO_BAN": Cases.add("test",p.id,"ban","auto","meshac",0,List.of());ck(Cases.activeBan(p.id)==null,"auto ban applies");cf.monitorOnly=false;ck(Cases.activeBan(p.id)!=null,"auto positive missing");break;
    case "CASES_STAFF_SCAN": Cases.Case staff=Cases.add("test",p.id,"ban","staff","operator",0,List.of());Cases.add("test",p.id,"ban","auto","meshac-fingerprint",0,List.of());ck(Cases.activeBan(p.id)==staff,"staff scan hidden by auto");break;
    case "FINGERPRINT_BRAND": case "FINGERPRINT_CHANNEL": cf.clientFingerprintBrands.add("test:bad");cf.clientFingerprintChannels.add("test:bad");if(row.endsWith("BRAND"))Fingerprints.brand(p.id,"test:bad");else Fingerprints.channels(p.id,Set.of("test:bad"));for(int i=0;i<20;i++)Fingerprints.check(p);ck(Meshac.LOG.fpLogs==1&&p.connection.disconnects==0&&Cases.of("test").isEmpty(),"fingerprint action/log");cf.monitorOnly=false;Fingerprints.check(p);ck(p.connection.disconnects==1,"fingerprint positive missing");break;
@@ -184,7 +188,7 @@ public class MonitorHarness {
   for(List<String> names:Arrays.asList(null,List.<String>of(),List.of("combat","COMBAT","fly","FLY"))){cf.egregiousChecks=names;for(String c:CheckNames.ALL)ck(!cf.enforce(c),"monitor enforces "+c);ck(!cf.enforce("unknown-sentinel"),"monitor enforces unknown");}cf.egregiousChecks=new ArrayList<>(List.of("combat","fly"));
   for(int i=0;i<20;i++)ck(Verdict.signal(p,"combat","reach 9",999)==Verdict.Step.LOG,"monitor verdict not LOG");
   ck(p.connection.disconnects==0 && Cases.of("test").isEmpty(),"monitor signal caused removal/case");
-  Method remove=Verdict.class.getDeclaredMethod("remove",ServerPlayer.class,String.class,List.class);remove.setAccessible(true);remove.invoke(null,p,"combat reach 9",List.of());
+  Method remove=Verdict.class.getDeclaredMethod("remove",ServerPlayer.class,String.class,List.class,Config.class);remove.setAccessible(true);remove.invoke(null,p,"combat reach 9",List.of(),Config.get());
   ck(p.connection.disconnects==0 && Cases.of("test").isEmpty(),"final remove guard failed");
   cf.clientFingerprintBrands.add("test:bad");Fingerprints.brand(p.id,"test:bad");for(int i=0;i<100;i++)Fingerprints.check(p);
   ck(p.connection.disconnects==0 && Cases.of("test").isEmpty(),"fingerprint monitor took action");ck(Meshac.LOG.fpLogs==1,"fingerprint log unbounded");TestClock.ms+=4999;Fingerprints.check(p);ck(Meshac.LOG.fpLogs==1,"fingerprint logged before5s");TestClock.ms++;Fingerprints.check(p);ck(Meshac.LOG.fpLogs==2,"fingerprint did not log at5s");

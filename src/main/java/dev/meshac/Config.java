@@ -127,11 +127,26 @@ public final class Config {
 		help.addProperty("appearance", "accent and warn are #RRGGBB colors. serverName and appeal appear on removal screens.");
 		root.add("_help", help); return g.toJson(root) + "\n";
 	}
-	private static volatile Config cur = new Config(); // volatile publication; the only writer is the reload path (brigadier runs /mesh reload on the server thread), readers are the server and network threads
-	private static volatile long reloadEpoch; // bumped on every applied load: Verdict drops any ACTION computed across a policy transition (evidence loss on a reload is fail-closed)
-	public static long reloadEpoch() { return reloadEpoch; }
-	static { cur.validatePolicy(); } // first-boot instance is validated before any enforce() call can read it
-	public static Config get() { return cur; }
+	/** One immutable policy publication: the config instance and the epoch it was published under. A decision reads the
+	 *  Snapshot ONCE, so policy and epoch can never tear the way two independent volatile values could. A new Snapshot
+	 *  is published only inside POLICY_LOCK, after all ladder evidence has been wiped. Published Config instances are
+	 *  never mutated, with ONE sanctioned exception: the /mesh monitor operator toggle, which writes monitorOnly under
+	 *  POLICY_LOCK (a Boolean reference write, atomic) before wiping evidence. */
+	public static final class Snapshot {
+		public final Config cfg; public final long epoch;
+		private Snapshot(Config cfg, long epoch) { this.cfg = cfg; this.epoch = epoch; }
+	}
+	/** Serializes a policy COMMIT (reload or monitor-on: evidence wipe + publication) against every decision AND its
+	 *  effects (Verdict.signal/signalLogOnly/note hold it for their whole body). An action computed under one policy
+	 *  cannot dispatch after another policy has committed, and the commit's HEAT wipe cannot interleave with a
+	 *  decision's HEAT access. Lock order: POLICY_LOCK -> per-player heat lock -> Cases monitor; nothing acquires them
+	 *  in reverse. Cost: decisions across all players serialize; the section holds no blocking I/O (Discord posts are
+	 *  sendAsync; the only file write is Cases.save on a removal). */
+	public static final Object POLICY_LOCK = new Object();
+	private static volatile Snapshot cur = new Snapshot(new Config(), 0); // single writer: the reload commit inside POLICY_LOCK; readers are the server and network threads
+	static { cur.cfg.validatePolicy(); } // first-boot instance is validated before any enforce() call can read it
+	public static Config get() { return cur.cfg; }
+	public static Snapshot current() { return cur; }
 
 	public static void applyVeil() { dev.meshac.veil.Veil.xrayOn = get().veilEnabled() && get().veilXray != null && get().veilXray; dev.meshac.veil.Veil.espOn = get().veilEnabled() && get().veilEsp != null && get().veilEsp; dev.meshac.veil.Veil.bedrockOn = get().veilBedrock != null && get().veilBedrock; dev.meshac.veil.Veil.clear(); dev.meshac.veil.Veil.startupCheck(); Meshac.LOG.info("[meshac] {}", new dev.meshac.veil.VeilSettings(get().veilEnabled, get().veilXray, get().veilEsp, get().veilBedrock).describe()); }
 	/** Parse failures keep prior settings. Persistence failures keep the successfully applied settings and report that the file was not saved. */
@@ -153,7 +168,10 @@ public final class Config {
    } else output = documented(g, cur);
   } catch (Exception e) { Meshac.LOG.warn("[meshac] config read/parse failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
   try { next.validatePolicy(); } catch (RuntimeException e) { Meshac.LOG.warn("[meshac] config validation failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
-  Movement.clearPendingActions(); Verdict.clearPendingActions(); reloadEpoch++; cur = next; // order matters: validate, wipe ALL ladder evidence (Verdict.clearPendingActions clears HEAT), bump the epoch, THEN publish. A signal computed before this point acts on the old epoch and is dropped by Verdict's epoch guard; residual ordinary concurrent-signal behaviour is per-player synchronization as before - this does NOT claim all races closed
+  synchronized (POLICY_LOCK) { // atomic commit: a decision holding the lock acts entirely before or entirely after the new policy - none can straddle the wipe and the publish
+   Movement.clearPendingActions(); Verdict.clearPendingActions(); // wipe ALL ladder evidence first (Verdict.clearPendingActions clears HEAT); evidence loss on a reload is fail-closed
+   cur = new Snapshot(next, cur.epoch + 1); // volatile publish of the immutable bundle AFTER the wipe, still inside the lock
+  }
   try { Files.writeString(p, output); }
   catch (Exception e) { Meshac.LOG.warn("[meshac] config settings applied but file could not be saved: {}", e.toString()); return AdminLog.ReloadResult.APPLIED_NOT_SAVED; }
   return existed ? AdminLog.ReloadResult.APPLIED : AdminLog.ReloadResult.DEFAULTS_CREATED;

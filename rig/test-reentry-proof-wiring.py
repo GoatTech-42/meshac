@@ -71,7 +71,7 @@ class ReentryPins(unittest.TestCase):
     def test_lock_coverage_boundaries(self):
         v = stripped(Path('src/main/java/dev/meshac/Verdict.java'))
         slo = body(v, 'public static Step signalLogOnly(')
-        self.assertLess(slo.index('h.name = pl.getGameProfile().name();'), slo.index('synchronized (h)'))  # name write OUTSIDE the lock (visibility via monitor-edge happens-before)
+        self.assertLess(slo.index('h.name = pl.getGameProfile().name();'), slo.index('synchronized (h)'))  # name write OUTSIDE the per-player lock (inside POLICY_LOCK since 0091: every signal path holds it)
         self.assertEqual(slo.count('h.name = '), 1)
         fgt = body(v, 'public static void forget(')
         self.assertLess(fgt.index('HEAT.remove(id)'), fgt.index('flushSuppressed(id, h, "disconnect flush")'))  # remove-then-flush, documented

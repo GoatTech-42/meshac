@@ -26,6 +26,12 @@ def run_leg(leg, module_key, dry=False):
         _x(['keydown', leg[1]], dry); _x(['keydown', leg[2]], dry)
         time.sleep(0 if dry else leg[3])
         _x(['keyup', leg[1]], dry); _x(['keyup', leg[2]], dry); return
+    if v == 'hold3':
+        btn = leg[3]
+        assert btn in BUTTONS, 'unknown mouse button ' + btn
+        _x(['keydown', leg[1]], dry); _x(['keydown', leg[2]], dry); _x(['mousedown', btn], dry)
+        time.sleep(0 if dry else leg[4])
+        _x(['keyup', leg[1]], dry); _x(['keyup', leg[2]], dry); _x(['mouseup', btn], dry); return
     if v == 'module': _x(['key', module_key], dry); return
     if v == 'click':
         btn = leg[1]

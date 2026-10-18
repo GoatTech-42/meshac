@@ -40,7 +40,7 @@ for k in ('nb-gc05-jb-powder', 'nb-boatfly-cheat', 'nb-glide-legit', 'nb-glide-c
         if f in S[k]:
             check(isinstance(S[k][f], list) and S[k][f] and all(isinstance(c, str) and c.startswith('/') for c in S[k][f]),
                   k + '.' + f + ' is a non-empty list of RCON commands')
-for k in ('nb-boatfly-cheat', 'nb-ghosthand-cheat', 'nb-glide-cheat', 'nb-totem-cheat', 'nb-kb-cheat'):
+for k in ('nb-boatfly-cheat', 'nb-ghosthand-cheat', 'nb-glide-cheat', 'nb-totem-cheat', 'nb-kb-cheat', 'nb-scaffold-cheat'):
     check('effect_check' in S[k], k + ' binds a server-confirmed effect_check')
 gh = S['nb-ghosthand-cheat']
 check('packets observed' not in gh['row'] and 'server-confirmed' in gh['effect_check'], 'GhostHand: packets alone are not effect proof - server-confirmed target change required')
@@ -55,9 +55,9 @@ check(mh == ['nb-microhop-legit'] and S['nb-microhop-legit']['expect'] == 'zero'
 check('ceiling' in S['nb-microhop-legit']['row'] and 'lowCeiling' in S['nb-microhop-legit']['row'], 'microhop legit row exercises the lowCeiling guard')
 # receipt-backed DRAFT labels on the rows whose setup/effect the reviewer flagged
 for k in ('nb-boatfly-cheat', 'nb-ghosthand-cheat', 'nb-glide-legit', 'nb-glide-cheat',
-          'nb-totem-legit', 'nb-totem-cheat', 'nb-kb-legit', 'nb-kb-cheat'):
+          'nb-totem-legit', 'nb-totem-cheat', 'nb-kb-legit', 'nb-kb-cheat', 'nb-scaffold-legit', 'nb-scaffold-cheat'):
     check('DRAFT until' in S[k]['row'], k + ' stays a DRAFT until receipts')
-for k in ('nb-ghosthand-cheat', 'nb-boatfly-cheat', 'nb-totem-cheat', 'nb-kb-cheat'):
+for k in ('nb-ghosthand-cheat', 'nb-boatfly-cheat', 'nb-totem-cheat', 'nb-kb-cheat', 'nb-scaffold-cheat'):
     check('INCONCLUSIVE' in S[k]['row'], k + ': no attack-effect proof = INCONCLUSIVE, never EVADE')
 check('/summon minecraft:zombie 158.5 70 160' in S['nb-kb-legit']['setup_rcon'] and '/summon minecraft:zombie 158.5 70 160' in S['nb-kb-cheat']['setup_rcon'], 'kb rows make the zombie-hitter precondition executable')
 # kb cheat row must NOT require self-movement (the point of the attack is standing still)
@@ -66,7 +66,7 @@ check(S['nb-kb-cheat']['expectMove'] is False, 'kb cheat row is stationary by de
 for fam, cheat in (('fly', 'fly'), ('speed', 'speed'), ('combat', 'combat'), ('mine', 'mining'),
                    ('interact', 'interact'), ('inv', 'inventory'), ('boatfly', 'boatfly'),
                    ('high', 'high'), ('timer', 'timer'), ('glide', 'glide'), ('totem', 'inventory'),
-                   ('kb', 'antiknockback')):
+                   ('kb', 'antiknockback'), ('scaffold', 'interact')):
     rows = [k for k in S if k.startswith('nb-' + fam + '-')]
     check(len(rows) == 2, fam + ' has a legit and a cheat row')
     z = [k for k in rows if S[k]['expect'] == 'zero']; p = [k for k in rows if S[k]['expect'] == 'signal']
@@ -85,3 +85,12 @@ check(pb_grade.grade(r2, [r2])['verdict'] == 'INVALID', 'off-target signal INVAL
 
 if failed: raise SystemExit('%d failures' % failed)
 print('test-newbounds_controls ok')
+
+# scaffold rows: swap-use binding and the held-block BY-DESIGN hole named, not hidden
+sc = S['nb-scaffold-cheat']
+check(sc['setup_rcon'] == ['/item replace entity @p weapon.mainhand with minecraft:stick',
+                           '/give @p minecraft:stone 64'], 'scaffold cheat setup forces a non-block held slot + hotbar blocks')
+check('40ms' in sc['row'] and 'BY-DESIGN quiet' in sc['row'], 'scaffold cheat row binds the swap-use window and names the uncovered held-block variant')
+check('ROTATION-SNAP-AT-PLACE-PROPOSAL' in sc['row'], 'scaffold cheat row names the proposal that would close the quiet variant')
+check('span' in S['nb-scaffold-legit']['row'] and 'DRAFT' in S['nb-scaffold-legit']['row'], 'scaffold legit row stays DRAFT until the span geometry is pinned')
+check(('hold3', 'Shift_L', 's', '3', 8) in S['nb-scaffold-legit']['legs'], 'scaffold legit leg holds sneak+back+use (the hold3 verb)')

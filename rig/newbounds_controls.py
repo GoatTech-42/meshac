@@ -2,7 +2,7 @@
 """Capture-row SPEC for the newly-bound checks (fly/speed/combat/mining/interact/inventory).
 Same shape as pb-controls.py S/G so Box can fold it into the driver at rig time; rows and world
 geometry per rig/RIG-CAPTURE-REQUEST-NEWBOUNDS.md. Leg verbs: pb-controls' wait/hold/hold2/tap/module
-plus the two NEWBOUNDS extensions ('click',button,n) and ('holdmouse',button,seconds).
+plus the NEWBOUNDS extensions ('click',button,n), ('holdmouse',button,seconds) and ('hold3',key1,key2,button,seconds).
 This file is a spec, not a wired driver - test-newbounds_controls.py machine-checks it."""
 import signal_checks
 
@@ -152,6 +152,22 @@ S = {
    'effect_check': 'flat glide without firework/fall-start: y holds or rises over the hold, read from the capture',
    'row': 'POSITIVE CONTROL: ElytraFly must SIGNAL glide ("restarted gliding..." / "flying at ..."). setup_rcon equips the elytra before the legs. Attack effect = effect_check; without it INCONCLUSIVE, never EVADE. DRAFT until receipts',
    'falsifies': 'the glide re-arm and no-air-drag checks vs a firework-free flat-glide module'},
+ # scaffold (red-team review 10-17, rig/MEADOW-SCAFFOLD-REDTEAM-REVIEW.md): swap-use binding.
+ # SPAN PRECONDITION for both rows: a 1-wide 16-long open-air bridge span (placements under feet
+ # need open air; place_floor is a full floor). Box builds the span off the lane and pins the
+ # coords in G before the run - the rows stay DRAFT until that geometry is pinned and receipted.
+ 'nb-scaffold-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
+   'legs': [('hold3', 'Shift_L', 's', '3', 8), ('wait', 1)],
+   'row': 'vanilla sneak-bridge the span: sneak + back + use held 8s (~2-3 bps, under the 4.0 bridging line, no slot changes): zero interact SIGNAL. DRAFT until the span geometry is pinned and the first driver receipt lands',
+   'falsifies': 'sneak-edge timing must not trip interact; a legit sub-line bridge must not count toward the 10-step chain verdict; the GhostHand outline ray must pass a real support-face click'},
+ 'nb-scaffold-cheat': {'tp': G['lane_start'], 'needs': 'cheat', 'expect': 'signal',
+   'module': 'Scaffold (human=1, airplace=0)', 'checks': ('interact',), 'yaw': -90,
+   'setup_rcon': ['/item replace entity @p weapon.mainhand with minecraft:stick',
+                  '/give @p minecraft:stone 64'],
+   'effect_check': 'server-confirmed new blocks on the span: /execute if block succeeds at the 3rd and 6th span cell under the walked path',
+   'legs': [('module', None), ('hold', 's', 8), ('module', None)],
+   'row': 'POSITIVE CONTROL: held slot is a stick (setup_rcon) with stone in the hotbar, so every placement is an in-tick swap+use (meadow Lease.with, ~0ms) -> the swap-use check (use <40ms after slot change, 4+ in 10s, Interact.java:59-71) must SIGNAL interact within the 8s leg. The BY-DESIGN quiet variant (held slot already a block: no swaps, view turned, capped under the chain line) is named here as uncovered surface - closing it needs the rotation-snap-at-place proposal (rig/ROTATION-SNAP-AT-PLACE-PROPOSAL.md), not this row. Attack effect = effect_check; without server-confirmed placements INCONCLUSIVE, never EVADE. DRAFT until receipts',
+   'falsifies': 'the swap-use 40ms window and 4-per-10s counter vs an auto-swapping scaffold module'},
  # auto-totem (matrix totem rows): executable setup below; the pop is /damage mid-row
  'nb-totem-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90, 'expectMove': False,
    'legs': [('wait', 10)],
@@ -187,7 +203,7 @@ S = {
    'falsifies': 'the three-strike no-push counter vs a zero-knockback module'},
 }
 
-LEG_VERBS = {'wait': 2, 'hold': 3, 'hold2': 4, 'tap': 2, 'module': 2, 'click': 3, 'holdmouse': 3}
+LEG_VERBS = {'wait': 2, 'hold': 3, 'hold2': 4, 'hold3': 5, 'tap': 2, 'module': 2, 'click': 3, 'holdmouse': 3}
 
 for _k, _v in S.items():
     _v.setdefault('expectMove', _v['expect'] == 'zero' or _k not in ('nb-combat-cheat', 'nb-inv-cheat'))

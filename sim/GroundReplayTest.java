@@ -39,6 +39,35 @@ public final class GroundReplayTest {
 		check(k4[2] == 3 && k4[3] > 0 && k4[4] > 0, "K4 agreement: maxCount=3, flag presence + first-arm presence both PRESENT");
 		long[] k4z = GroundReplay.score(List.of(GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false)), 5, 3, 2);
 		check(k4z[2] == 0 && k4z[3] == 0 && k4z[4] == 0, "K4 agreement: a clean stream has maxCount 0 and both presences absent");
+		// === D-ROW FIXTURES (grace-boundary persistence, patch 6; the battery D-row evidence set) ===
+		// D1 grace-farm cheat stream: spoof, spoof, grace-clear, spoof, spoof.
+		List<GroundReplay.Ev> d1 = List.of(
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(),
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true));
+		long[] d1Live = GroundReplay.score(d1, 5, 3, 2), d1Decay = GroundReplay.score(d1, 5, 3, 2, true);
+		// DIVERGENCE IS THE EVIDENCE: live policy misses (maxCount 2, flag absent), decay flags (count reaches 3)
+		eq(d1Live, 4, 4, 2, 0, 2, "D1 live: grace-farming beats the full clear (the known hole)");
+		eq(d1Decay, 4, 4, 3, 1, 2, "D1 decay: the same stream FLAGS - grace-boundary persistence catches the farmer");
+		check(d1Live[3] == 0 && d1Decay[3] > 0, "D1: the live-vs-decay divergence on one stream is the D-row evidence");
+		// D2 legit knockback landing: all supported claims around a grace clear - both policies spotless
+		List<GroundReplay.Ev> d2 = List.of(
+			GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false), GroundReplay.Ev.clear(),
+			GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false));
+		eq(GroundReplay.score(d2, 5, 3, 2), 4, 0, 0, 0, 0, "D2 live: legit knockback landing is clean");
+		eq(GroundReplay.score(d2, 5, 3, 2, true), 4, 0, 0, 0, 0, "D2 decay: legit knockback landing stays clean");
+		// D3 legit medium dip with borderline claims around the exit: decay must NOT invent an FP -
+		// maxCount stays 2 under both policies (flagAt=3), flag/arm presence absent on both
+		List<GroundReplay.Ev> d3 = List.of(
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(),
+			GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false));
+		long[] d3Live = GroundReplay.score(d3, 5, 3, 2), d3Decay = GroundReplay.score(d3, 5, 3, 2, true);
+		eq(d3Live, 5, 2, 2, 0, 1, "D3 live: borderline claims die at the clear");
+		eq(d3Decay, 5, 2, 2, 0, 1, "D3 decay: forgiveness keeps the same sub-flag ceiling - no invented FP");
+		// D4 double grace-farm (consecutive boundaries): decay forgives one claim per boundary, not the window
+		List<GroundReplay.Ev> d4 = List.of(
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true),
+			GroundReplay.Ev.clear(), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true));
+		eq(GroundReplay.score(d4, 5, 3, 2, true), 4, 4, 3, 1, 2, "D4 decay: two boundaries forgive exactly two claims");
 		System.out.println(fails == 0 ? "GroundReplayTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

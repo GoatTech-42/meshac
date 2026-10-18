@@ -35,7 +35,7 @@ public final class Meshac implements ModInitializer {
 			Cases.Case c = Cases.activeBan(handler.player.getUUID());
 			if (c != null) handler.disconnect(Screens.ban(c)); else Fingerprints.check(handler.player);
 		});
-		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : new java.util.ArrayList<>(server.getPlayerList().getPlayers())) { if (!bedrockUnproven(pl)) Movement.tick(pl); if (skip(pl)) continue; Combat.tick(pl, server.getTickCount()); Fingerprints.check(pl); } dev.meshac.veil.Veil.tick(server); });
+		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(server -> { for (var pl : new java.util.ArrayList<>(server.getPlayerList().getPlayers())) { if (!bedrockUnproven(pl)) Movement.tick(pl); Verdict.tickFlush(pl); /* 0059: idle-connected suppression receipts flush on tick, not just on the next signal */ if (skip(pl)) continue; Combat.tick(pl, server.getTickCount()); Fingerprints.check(pl); } dev.meshac.veil.Veil.tick(server); });
 		// A respawned player is a new entity with a new id: drop the old one's pairs. The no-cull window for the new id and for dimension changes starts in Veil.tick (ViewerEpoch), because the level-change event has a different name in 1.21.11 and 26.x. AFTER_RESPAWN(ServerPlayer, ServerPlayer, boolean) is the same in every version (checked in the cached jars).
 		net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldP, newP, alive) -> { dev.meshac.veil.Veil.forgetPlayer(oldP); });
 		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(Fish::tick);

@@ -5,8 +5,10 @@ report-after): shape B shipped - Verdict.signalLogOnly (mon bucket + budgeted SI
 alert, always LOG) and both AttackMixins call it, never cancel, not cancellable. Pre-GO 1
 shipped as COMBAT-ONLY after the 0055 review (0057): 30 lines per 60 s per player for combat only
 (other check families keep the unthrottled monitor contract), monotonic-clock windows that a
-rollback cannot reopen, and durable suppressed-count receipts (window-close + disconnect-flush
-SIGNAL-SUPPRESSED lines) so capped positives always reach the log. Pre-GO 2 (server-thread reentry proof) and 3 (Box compile + rig FP replay)
+rollback cannot reopen, and durable suppressed-count receipts (0059: one receipt shape with name+uuid+check+count+reason;
+window close on the next signal AND a server-tick pump for idle-connected players AND
+flush-before-clear on the monitor toggle AND disconnect flush) so capped positives always
+reach the log. Pre-GO 2 (server-thread reentry proof) and 3 (Box compile + rig FP replay)
 remain outstanding - Box compile is the standing gate. Original commissioning note: Commissioned
 by the Instinct re-scope (10-17 10:14pm, report-after, not a Luke quote): "draft (2) as a
 separate, small, reviewable proposal only: AttackMixin never cancels/punishes combat

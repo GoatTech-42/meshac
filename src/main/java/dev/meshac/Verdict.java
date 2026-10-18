@@ -15,7 +15,7 @@ import net.minecraft.server.level.ServerPlayer;
  */
 public final class Verdict {
 	public enum Step { SETBACK, HOLD, REMOVE, LOG }
-	private static final class H { final Ladder.Heat lh = new Ladder.Heat(), mon = new Ladder.Heat(); /* mon: heat of log-only signals, never feeds a removal */ int heat; long at; final ArrayDeque<String> trace = new ArrayDeque<>(); final java.util.LinkedHashMap<String, Integer> weight = new java.util.LinkedHashMap<>(); final Map<String, String> detail = new java.util.HashMap<>(); final Map<String, long[]> sigLog = new java.util.HashMap<>(); /* combat-only log/alert budget windows {windowStartNanos, used, suppressed} (0057); keys bounded by the fixed check vocabulary */ }
+	private static final class H { final Ladder.Heat lh = new Ladder.Heat(), mon = new Ladder.Heat(); /* mon: heat of log-only signals, never feeds a removal */ int heat; long at; final ArrayDeque<String> trace = new ArrayDeque<>(); final java.util.LinkedHashMap<String, Integer> weight = new java.util.LinkedHashMap<>(); final Map<String, String> detail = new java.util.HashMap<>(); final Map<String, long[]> sigLog = new java.util.HashMap<>(); /* combat-only log/alert budget windows {windowStartNanos, used, suppressed} (0057); keys bounded by the fixed check vocabulary */ String name; /* 0059: stable grader identity on every suppression receipt */ }
 	private static final Map<UUID, H> HEAT = new ConcurrentHashMap<>();
 
 	/** Cheap per-event note kept in a ring so a case can carry the lead-up. */
@@ -58,6 +58,21 @@ public final class Verdict {
 		return step;
 	}
 
+	/** 0059: ONE shape for every suppression receipt - name + uuid + check + count + reason, stable for graders. */
+	private static final String SUPPRESSED_FMT = "[meshac] SIGNAL-SUPPRESSED {} {} {} count={} ({})";
+	/** Durable receipt for counts the budget held back: flushes every pending bucket for one player. Never budgeted itself; cadence-bounded by its callers (window roll, tick, clear, disconnect). */
+	private static void flushSuppressed(UUID id, H h, String why) {
+		synchronized (h) {
+			for (var e : h.sigLog.entrySet()) if (e.getValue()[2] > 0) { Meshac.LOG.warn(SUPPRESSED_FMT, h.name, id, e.getKey(), e.getValue()[2], why); e.getValue()[2] = 0; }
+		}
+	}
+	/** Server-tick pump (0059): an idle-but-connected player never emits a combat signal, so window close cannot live only inside signalLogOnly. Bounded: at most one summary per expired window per player per tick. */
+	public static void tickFlush(ServerPlayer pl) {
+		H h = HEAT.get(pl.getUUID()); if (h == null) return;
+		long now = System.nanoTime(); boolean expired = false;
+		synchronized (h) { for (long[] b : h.sigLog.values()) if (b[2] > 0 && now - b[0] >= 60_000_000_000L) { expired = true; b[0] = now; b[1] = 0; } }
+		if (expired) flushSuppressed(pl.getUUID(), h, "window closed (idle, tick flush)");
+	}
 	/** Log-only signals: monitor-mode behaviour for a caller that must never enforce in ANY config.
 	 * 0055 (parent decision 10-17, Luke standing autonomy): combat calls this BY CONSTRUCTION until the
 	 * 100/300 ms FP replay + reviewer GO. Only the mon bucket moves (real mon heat for the rig); the removal
@@ -66,8 +81,9 @@ public final class Verdict {
 		Config cfg = Config.get();
 		if (cfg.skips(pl, check)) return Step.LOG; // same exemptions as signal()
 		H h = HEAT.computeIfAbsent(pl.getUUID(), k -> new H());
+		h.name = pl.getGameProfile().name(); // 0059: stable identity for suppression receipts
 		long ms = System.currentTimeMillis();
-		int mh; long sup = 0; long winClose = 0; boolean emit = true;
+		int mh; long sup = 0; boolean winClose = false; boolean emit = true;
 		synchronized (h) {
 			h.mon.add(check, weight, ms, cfg.ladderParams()); mh = (int) Math.round(h.mon.heat);
 			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + mh + " (log-only)"); if (h.trace.size() > 40) h.trace.poll();
@@ -78,14 +94,14 @@ public final class Verdict {
 				long now = System.nanoTime(); // monotonic: a wall-clock rollback must never reopen the budget
 				long[] b = h.sigLog.computeIfAbsent(check, k -> new long[3]);
 				if (b[0] == 0 || now - b[0] >= 60_000_000_000L) { // forward roll only: now < b[0] counts within the window, never reopens
-					if (b[2] > 0) winClose = b[2]; // durable window-close summary: suppressed positives always reach the log
-					b[0] = now; b[1] = 0; b[2] = 0;
+					winClose = b[2] > 0; // durable window-close summary via flushSuppressed below: suppressed positives always reach the log
+					b[0] = now; b[1] = 0;
 				}
 				if (b[1] >= 30) { b[2]++; emit = false; }
 				else { b[1]++; sup = b[2]; b[2] = 0; }
 			}
 		}
-		if (winClose > 0) Meshac.LOG.warn("[meshac] SIGNAL-SUPPRESSED {} {} count={} (window closed)", pl.getGameProfile().name(), check, winClose);
+		if (winClose) flushSuppressed(pl.getUUID(), h, "window closed");
 		if (!emit) return Step.LOG;
 		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> log{}", pl.getGameProfile().name(), check, detail, mh, sup > 0 ? " (suppressed " + sup + ")" : "");
 		alert(pl, check + " " + detail + " heat " + mh + " log");
@@ -131,14 +147,13 @@ public final class Verdict {
 		Discord.post(c);
 	}
 
-	public static void clearPendingActions() { HEAT.clear(); }
+	public static void clearPendingActions() { // 0059: monitor on/off used to silently drop pending suppressed counts - flush first
+		for (var e : HEAT.entrySet()) flushSuppressed(e.getKey(), e.getValue(), "pending-actions cleared (monitor toggle)");
+		HEAT.clear();
+	}
 
 	public static void forget(UUID id) {
 		H h = HEAT.remove(id);
-		if (h != null) { // 0057: suppressed log-only positives must reach a durable log even when the player disconnects
-			synchronized (h) {
-				for (var e : h.sigLog.entrySet()) if (e.getValue()[2] > 0) Meshac.LOG.warn("[meshac] SIGNAL-SUPPRESSED {} {} count={} (disconnect flush)", id, e.getKey(), e.getValue()[2]);
-			}
-		}
+		if (h != null) flushSuppressed(id, h, "disconnect flush"); // 0057: suppressed positives reach the log even when the player disconnects
 	}
 }

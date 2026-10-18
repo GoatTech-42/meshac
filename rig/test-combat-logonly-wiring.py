@@ -34,9 +34,19 @@ class LogOnly(unittest.TestCase):
   self.assertIn('System.nanoTime()',body)       # 0057: monotonic clock, wall rollback cannot reopen
   self.assertIn('now - b[0] >= 60_000_000_000L',body)
   self.assertNotIn('ms < b[0]',body)            # no reopen-on-rollback branch
-  self.assertIn('SIGNAL-SUPPRESSED',v)          # 0057: durable window-close summary
+  self.assertIn('SUPPRESSED_FMT = "[meshac] SIGNAL-SUPPRESSED {} {} {} count={} ({})";',v)  # 0059: ONE receipt shape, name+uuid stable identity
+  self.assertIn('String name;',v)               # 0059: H carries the player name
   fgt=v.split('public static void forget(',1)[1].split('\n\t}',1)[0]
-  self.assertIn('SIGNAL-SUPPRESSED',fgt) and self.assertIn('disconnect flush',fgt)  # 0057: disconnect flush
+  self.assertIn('flushSuppressed(id, h, "disconnect flush")',fgt)  # 0057/0059: disconnect flush via the shared receipt
+  cpa=v.split('public static void clearPendingActions(',1)[1].split('\n\t}',1)[0]
+  self.assertIn('flushSuppressed',cpa) and cpa.index('flushSuppressed')<cpa.index('HEAT.clear()')  # 0059: flush-before-clear (monitor toggle)
+  self.assertIn('public static void tickFlush(',v)  # 0059: idle-connected pump
+  tf=v.split('public static void tickFlush(',1)[1].split('\n\t}',1)[0]
+  self.assertIn('System.nanoTime()',tf) and self.assertIn('flushSuppressed(pl.getUUID(), h, "window closed (idle, tick flush)")',tf)
+  wc=v.split('public static Step signalLogOnly(',1)[1].split('\n\t}',1)[0]
+  self.assertIn('flushSuppressed(pl.getUUID(), h, "window closed")',wc)  # signal-driven close uses the same receipt
+  mg=(ROOT/'src/main/java/dev/meshac/Meshac.java').read_text()
+  self.assertIn('Verdict.tickFlush(pl);',mg)   # 0059: wired into END_SERVER_TICK
   self.assertIn('if (cfg.monitor()) return signalLogOnly(pl, check, detail, weight);',v)  # one implementation
  def test_other_raw_denials_are_gated(self):
   for name,check in [('Interact','interact'),('Mining','mining')]:

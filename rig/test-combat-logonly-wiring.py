@@ -42,12 +42,13 @@ class LogOnly(unittest.TestCase):
   self.assertIn('flushSuppressed',cpa) and cpa.index('flushSuppressed')<cpa.index('HEAT.clear()')  # 0059: flush-before-clear (monitor toggle)
   self.assertIn('public static void tickFlush(',v)  # 0059: idle-connected pump
   tf=v.split('public static void tickFlush(',1)[1].split('\n\t}',1)[0]
-  self.assertIn('System.nanoTime()',tf) and self.assertIn('flushSuppressed(pl.getUUID(), h, "window closed (idle, tick flush)")',tf)
+  self.assertIn('System.nanoTime()',tf) and self.assertIn('SUPPRESSED_FMT',tf) and self.assertIn('"window closed (idle, tick flush)")',tf)  # 0063: atomic in-lock roll+receipt
   wc=v.split('public static Step signalLogOnly(',1)[1].split('\n\t}',1)[0]
-  self.assertIn('flushSuppressed(pl.getUUID(), h, "window closed")',wc)  # signal-driven close uses the same receipt
+  self.assertIn('Meshac.LOG.warn(SUPPRESSED_FMT, h.name, pl.getUUID(), check, b[2], "window closed")',wc)  # 0063: one-shape receipt INSIDE the lock
   self.assertNotIn('(suppressed',wc)    # 0061: counts NEVER leak into a SIGNAL suffix (one-shape contract)
-  self.assertNotIn('b[2] = 0;',wc)      # 0061: the roll branch must not reset the pending count before the flush
-  self.assertLess(wc.index('flushSuppressed(pl.getUUID(), h, "window closed")'),wc.index('Meshac.LOG.warn("[meshac] SIGNAL'))  # receipt before the new signal line
+  self.assertNotIn('winClose',wc)       # 0063: no cross-lock flag remains
+  self.assertLess(wc.index('Meshac.LOG.warn(SUPPRESSED_FMT'),wc.index('b[2] = 0;'))  # 0063: receipt atomically before the reset
+  self.assertLess(wc.index('"window closed"'),wc.index('Meshac.LOG.warn("[meshac] SIGNAL'))  # receipt before the new signal line
   mg=(ROOT/'src/main/java/dev/meshac/Meshac.java').read_text()
   self.assertIn('Verdict.tickFlush(pl);',mg)   # 0059: wired into END_SERVER_TICK
   self.assertIn('if (cfg.monitor()) return signalLogOnly(pl, check, detail, weight);',v)  # one implementation

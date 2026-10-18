@@ -8,8 +8,10 @@ shipped as COMBAT-ONLY after the 0055 review (0057): 30 lines per 60 s per playe
 rollback cannot reopen, and durable suppressed-count receipts (0059: one receipt shape with name+uuid+check+count+reason;
 window close on the next signal AND a server-tick pump for idle-connected players AND
 flush-before-clear on the monitor toggle AND disconnect flush) so capped positives always
-reach the log. Pre-GO 2 (server-thread reentry proof) and 3 (Box compile + rig FP replay)
-remain outstanding - Box compile is the standing gate. Original commissioning note: Commissioned
+reach the log. Pre-GO 2 (server-thread reentry proof) is now
+paper-complete in rig/SERVER-THREAD-REENTRY-PROOF.md (0063, includes the atomic-drain
+rework; empirical thread-assertion run proposed, not done). Pre-GO 3 (Box compile + rig FP
+replay) remains outstanding - Box compile is the standing gate. Original commissioning note: Commissioned
 by the Instinct re-scope (10-17 10:14pm, report-after, not a Luke quote): "draft (2) as a
 separate, small, reviewable proposal only: AttackMixin never cancels/punishes combat
 regardless of config, so W2 holds by construction."

@@ -69,9 +69,8 @@ public final class Verdict {
 	/** Server-tick pump (0059): an idle-but-connected player never emits a combat signal, so window close cannot live only inside signalLogOnly. Bounded: at most one summary per expired window per player per tick. */
 	public static void tickFlush(ServerPlayer pl) {
 		H h = HEAT.get(pl.getUUID()); if (h == null) return;
-		long now = System.nanoTime(); boolean expired = false;
-		synchronized (h) { for (long[] b : h.sigLog.values()) if (b[2] > 0 && now - b[0] >= 60_000_000_000L) { expired = true; b[0] = now; b[1] = 0; } }
-		if (expired) flushSuppressed(pl.getUUID(), h, "window closed (idle, tick flush)");
+		long now = System.nanoTime();
+		synchronized (h) { for (var e : h.sigLog.entrySet()) { long[] b = e.getValue(); if (b[2] > 0 && now - b[0] >= 60_000_000_000L) { Meshac.LOG.warn(SUPPRESSED_FMT, h.name, pl.getUUID(), e.getKey(), b[2], "window closed (idle, tick flush)"); b[2] = 0; b[0] = now; b[1] = 0; } } } // 0063: roll + receipt atomic per bucket, inside the lock
 	}
 	/** Log-only signals: monitor-mode behaviour for a caller that must never enforce in ANY config.
 	 * 0055 (parent decision 10-17, Luke standing autonomy): combat calls this BY CONSTRUCTION until the
@@ -83,7 +82,7 @@ public final class Verdict {
 		H h = HEAT.computeIfAbsent(pl.getUUID(), k -> new H());
 		h.name = pl.getGameProfile().name(); // 0059: stable identity for suppression receipts
 		long ms = System.currentTimeMillis();
-		int mh; boolean winClose = false; boolean emit = true;
+		int mh; boolean emit = true;
 		synchronized (h) {
 			h.mon.add(check, weight, ms, cfg.ladderParams()); mh = (int) Math.round(h.mon.heat);
 			h.trace.add(ms % 1_000_000 + " SIGNAL " + check + " " + detail + " heat=" + mh + " (log-only)"); if (h.trace.size() > 40) h.trace.poll();
@@ -94,14 +93,13 @@ public final class Verdict {
 				long now = System.nanoTime(); // monotonic: a wall-clock rollback must never reopen the budget
 				long[] b = h.sigLog.computeIfAbsent(check, k -> new long[3]);
 				if (b[0] == 0 || now - b[0] >= 60_000_000_000L) { // forward roll only: now < b[0] counts within the window, never reopens
-					winClose = b[2] > 0; // 0061: b[2] is left INTACT here - the shared flush below emits the one-shape receipt and clears it; it must never leak into a SIGNAL suffix
-					b[0] = now; b[1] = 0;
+					if (b[2] > 0) Meshac.LOG.warn(SUPPRESSED_FMT, h.name, pl.getUUID(), check, b[2], "window closed"); // 0063: emitted INSIDE the lock, atomic with the roll - the 0059/0061 lock-release gap is closed
+					b[0] = now; b[1] = 0; b[2] = 0;
 				}
 				if (b[1] >= 30) { b[2]++; emit = false; } // a post-roll window is at used=0, so a rolled signal always emits
 				else { b[1]++; }
 			}
 		}
-		if (winClose) flushSuppressed(pl.getUUID(), h, "window closed"); // emits + clears the pending count BEFORE the new signal line
 		if (!emit) return Step.LOG;
 		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> log", pl.getGameProfile().name(), check, detail, mh);
 		alert(pl, check + " " + detail + " heat " + mh + " log");

@@ -27,6 +27,8 @@ public final class GroundReplayTest {
 		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(false), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true)), 5, 3, 2, true), 2, 1, 1, 0, 0, "decay on a zero window is a no-op");
 		// decay drops the flag latch only when the surviving count falls below the level: flag re-fires, arm does not
 		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true)), 5, 3, 2, true), 4, 4, 3, 2, 1, "decay re-flags without re-arming while the arm level holds");
+		// consecutive grace boundaries (double self-damage): two decays, arm drops only after the second, re-arms on the next claim
+		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true)), 5, 3, 2, true), 4, 4, 3, 1, 2, "two consecutive decays forgive two oldest claims");
 		System.out.println(fails == 0 ? "GroundReplayTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

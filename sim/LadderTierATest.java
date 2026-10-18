@@ -85,7 +85,7 @@ public final class LadderTierATest {
 		Ladder.Heat probe = replay(new Ladder.Params(8, 3, 99, 3, 2, 3, 150), 3, 3);
 		check(probe.confirmedTierA(new Ladder.Params(8, 3, 99, 3, 2, 3, 150)), "setup: two tier-A bursts confirm tier A");
 		probe.add("speed", 1, T0 + 40000, new Ladder.Params(8, 3, 99, 3, 2, 3, 150));
-		check(!probe.confirmedTierA(new Ladder.Params(8, 3, 99, 3, 2, 3, 150)), "KNOWN (design question, pending owner decision): 'tier A confirmed', the evidence Verdict uses for the rung skip and the permanent ban, is wiped by the 0.25 cold reset, so it only survives while the heat stays above 0.25");
+		check(!probe.confirmedTierA(new Ladder.Params(8, 3, 99, 3, 2, 3, 150)), "INTENTIONAL (decision relayed via parent 10-18, option a: keep the heat coupling while enforcement is log-only; revisit a longer tier-A evidence lifetime before any enforcement-ON proposal): 'tier A confirmed', the evidence Verdict uses for the rung skip and the permanent ban, is wiped by the 0.25 cold reset, so it only survives while the heat stays above 0.25");
 
 		// offence arithmetic
 		check(Ladder.effectiveOffences(new double[]{0}, 14) == 1.0, "a fresh offence is worth exactly 1");

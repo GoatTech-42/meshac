@@ -15,6 +15,10 @@ public final class Ladder {
 		public double now(long t, Params p) { return heat * Math.pow(0.5, Math.max(0, t - at) / 1000.0 / p.halfLifeSec()); }
 		public Step add(String check, int weight, long t, Params p) {
 			double h = now(t, p);
+			// Intentional (decision relayed via parent 10-18, option a of the lane-A design question): tier-A evidence decays WITH the heat.
+			// Below the 0.25 floor (~25-28 s after the last flag at the default 8 s half-life) the next flag wipes tierAClusters too, so
+			// 'tier A confirmed' only survives inside one active build-up. Strictest option, chosen while enforcement is log-only;
+			// revisit a separate, longer tier-A evidence lifetime (option b) before any enforcement-ON proposal.
 			if (h < 0.25) { h = 0; clusters = 0; tierAClusters = 0; clusterMax = 0; clusterAt = 0; }
 			if (clusterAt == 0 || t - clusterAt > p.clusterMs()) { clusterAt = t; clusters++; clusterMax = 0; if (weight >= p.tierAWeight()) tierAClusters++; }
 			else if (weight >= p.tierAWeight() && clusterMax < p.tierAWeight()) tierAClusters++;

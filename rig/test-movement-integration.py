@@ -226,8 +226,12 @@ public final class MovementHarness {
 
   // Direct helper boundary checks (reviewer ask): the GAP_EPS boundary of GroundTolerance.tolerated() cannot be reached
   // through the packet path (supportHit's 0.13 candidate strip never finds a top farther below the feet), so pin it directly.
-  ck(dev.meshac.GroundTolerance.tolerated(true, true, 70.5, 70.635), "tolerated(): gap exactly 0.13+0.005 IS tolerated (boundary inclusive)");
-  ck(!dev.meshac.GroundTolerance.tolerated(true, true, 70.5, 70.6351), "tolerated(): a hair past 0.135 is NOT tolerated");
+  double gapB = dev.meshac.GroundTolerance.CANDIDATE + dev.meshac.GroundTolerance.GAP_EPS; // the exact double the helper compares against
+  double feetAt = 70.5 + gapB; // decimal 70.635 is NOT the binary64 boundary: 70.635-70.5 = 0.13500000000000512 > gap (reviewer catch)
+  double feetIn = Math.nextDown(feetAt);  // one ulp under the real boundary: feetIn-70.5 <= gap exactly (Sterbenz: subtraction of nearby doubles is exact)
+  double feetOut = (feetAt - 70.5 > gapB) ? feetAt : Math.nextUp(feetAt); // one ulp over: feetOut-70.5 > gap
+  ck(dev.meshac.GroundTolerance.tolerated(true, true, 70.5, feetIn), "tolerated(): one ulp under the CANDIDATE+GAP_EPS boundary IS tolerated");
+  ck(!dev.meshac.GroundTolerance.tolerated(true, true, 70.5, feetOut), "tolerated(): one ulp over the boundary is NOT tolerated");
   ck(!dev.meshac.GroundTolerance.tolerated(true, false, 70.5, 70.625), "tolerated(): hit13=false (outside the candidate strip) never tolerates");
   ck(!dev.meshac.GroundTolerance.tolerated(false, true, 70.5, 70.625), "tolerated(): strip10Air=false never tolerates");
   // S1 microhop (U7): two unsupported dy~0.1 ground claims inside the hop clock flag; one does not.

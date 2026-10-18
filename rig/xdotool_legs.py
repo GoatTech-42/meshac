@@ -29,11 +29,16 @@ def run_leg(leg, module_key, dry=False):
     if v == 'hold3':
         btn = leg[3]
         assert btn in BUTTONS, 'unknown mouse button ' + btn
-        _x(['keydown', leg[1]], dry); _x(['keydown', leg[2]], dry); _x(['mousedown', btn], dry)
+        held = []
         try:
+            _x(['keydown', leg[1]], dry); held.append(['keyup', leg[1]])
+            _x(['keydown', leg[2]], dry); held.append(['keyup', leg[2]])
+            _x(['mousedown', btn], dry); held.append(['mouseup', btn])
             time.sleep(0 if dry else leg[4])
         finally:
-            _x(['keyup', leg[1]], dry); _x(['keyup', leg[2]], dry); _x(['mouseup', btn], dry)
+            for rel in held:
+                try: _x(rel, dry)
+                except Exception: pass  # attempt every release even if one fails
         return
     if v == 'module': _x(['key', module_key], dry); return
     if v == 'click':

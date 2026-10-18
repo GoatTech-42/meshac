@@ -101,18 +101,16 @@ check(sl['setup_rcon'] == ['/clear @p', '/item replace entity @p weapon.mainhand
 check('effect_check' in sl and 'effect_check' in sc, 'both scaffold rows bind a server-confirmed placement receipt')
 check(('hold3', 'Shift_L', 's', '3', 8) in sl['legs'], 'scaffold legit leg holds sneak+back+use (the hold3 verb)')
 
+check(sl.get('selected_slot') == 0 and sc.get('selected_slot') == 0,
+      'scaffold rows pin selected_slot 0 so weapon.mainhand and container.1 never collide')
+
 def finish():
     if failed: raise SystemExit('%d failures' % failed)
     print('test-newbounds_controls ok')
 
-# negative control: prove the failure path really exits nonzero (reviewer 10-17, 0035)
-_failed_saved = failed
-check(False, 'negative control: this FAIL line is EXPECTED and must be counted')
-check(failed == _failed_saved + 1, 'check() must count the failure above')
-try:
-    finish()
-    check(False, 'finish() must raise SystemExit when failures exist')
-except SystemExit as e:
-    check(isinstance(e.code, str) and e.code.endswith('failures'), 'finish() exit carries the failure count (rc1)')
-failed = _failed_saved  # restore: the negative control must not fail the suite itself
+# negative control: an isolated, deliberately broken fixture suite MUST exit rc1 (reviewer 10-17, 0036)
+import subprocess
+_fx = pathlib.Path(__file__).parent / 'test-newbounds-negative-fixture.py'
+_rc = subprocess.run([sys.executable, str(_fx)], capture_output=True).returncode
+check(_rc == 1, 'broken fixture suite must exit rc1 (got %s)' % _rc)
 finish()

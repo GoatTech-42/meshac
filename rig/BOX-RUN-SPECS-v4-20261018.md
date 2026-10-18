@@ -1,4 +1,4 @@
-# Box run specs v4 (10-18) - reviewer v3 round folded. Supersedes rig/BOX-RUN-SPECS-v3-20261018.md.
+# Box run specs v4 (10-18) - SUPERSEDED by rig/BOX-RUN-SPECS-v5-20261018.md (reviewer v4 round: scope-unit property support must be probed on the actual systemd before use; systemctl owns stop; honest 1995 s worst case + INCOMPLETE on unkillable cleanup; read-only Gradle cache replaced by a verified-copy-then-offline flow and build-all.sh forwards no args (verified) so offline mode needs a gated script change or direct gradlew; filesystem policy is a runtime-closure audit, not a path list; receipts need IPv6 routes, per-child netns evidence, and real capability dropping; everything is PROPOSAL until a runner is implemented and verified on a non-game workload). Kept for history; do not run from this file.
 
 SCOPE LINE (corrected): no spec ever touches an EXISTING service: ilhsmc, emberstead,
 dl-share, backups, docker volumes, PID 633625, or any process, port, or file of an existing

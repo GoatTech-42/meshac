@@ -21,7 +21,18 @@ public final class GroundTolerance {
 		return strip10Air && hit13 && partialTop(supportTopY);
 	}
 
+	/** Classify-mode tolerance: the candidate rule plus a bound on the feet-to-support gap (a claim floating above a partial block is not tolerance, it is a spoof). */
+	public static final double GAP_EPS = 0.005;
+	public static boolean tolerated(boolean strip10Air, boolean hit13, double supportTopY, double feetY) {
+		return wouldPass(strip10Air, hit13, supportTopY) && feetY - supportTopY <= CANDIDATE + GAP_EPS;
+	}
+
 	public static String line(String player, String support, double supportTopY, double feetY, int buf) {
 		return String.format(java.util.Locale.ROOT, "[groundtol] would-have-passed %s support=%s top=%.4f feetY=%.4f gap=%.4f buf=%d", player, support, supportTopY, feetY, feetY - supportTopY, buf);
+	}
+
+	/** Classify-mode tolerated line: its own shape, never the compare-mode marker, so log scrapers can tell a verdict-relevant tolerance from a would-have-passed observation. */
+	public static String toleratedLine(String player, String support, double supportTopY, double feetY, int buf) {
+		return String.format(java.util.Locale.ROOT, "[groundtol] tolerated %s support=%s top=%.4f feetY=%.4f gap=%.4f buf=%d", player, support, supportTopY, feetY, feetY - supportTopY, buf);
 	}
 }

@@ -21,7 +21,7 @@ public final class Movement {
 	private static final class S { final ContextLogBudget.Caller ctxBudget = new ContextLogBudget.Caller(); int ownerEntity; Object ownerDimension; volatile boolean blinkHit; volatile long burstMark; final BlinkOrigin bo = new BlinkOrigin(); long iceAt; double prevDtS; long flyMedAt, gtLogAt; final CompareLogBudget.Caller spShadowLog = new CompareLogBudget.Caller(); double spShadow; boolean wasExempt; long lastPosAt, burstStart; int burstN; double burstGap; boolean lastMoving; double ax = Double.NaN, az; long tickEnds, teAtLastPos;  final BlinkClock clock = new BlinkClock(); final BounceTracker bounce = new BounceTracker(); final MediumExit exit = new MediumExit(); final StepAccumulator stepAcc = new StepAccumulator(); double lastH, lastFallH; int slipN;
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
 		boolean ground, cground, init, ownTp;
-		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks; final GroundEvidence gndEv = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT);
+		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks; final GroundEvidence gndEv = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); boolean graceSoft; final GroundEvidence gndShadow = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); long softLogAt;
 	}
 
  private static S state(ServerPlayer pl) {
@@ -79,7 +79,7 @@ public final class Movement {
 				if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly) {
 					Verdict.Step bst = Verdict.signal(pl, "blink", "held its movement packets back and released them in one burst", 1);
 					if (bst != Verdict.Step.LOG && acts("blink") && act == BlinkOrigin.Act.ORIGIN && p.hasPosition()) { // the flushed packets already moved the player: put them back where the burst began (soft mode never gets here)
-						s.ownTp = true; s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
+						s.ownTp = true; s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 						s.goodX = s.bo.x; s.goodY = s.bo.y; s.goodZ = s.bo.z;
 						s.px = s.cx = s.bo.x; s.py = s.cy = s.bo.y; s.pz = s.cz = s.bo.z;
 						if (bst == Verdict.Step.HOLD) { s.freezeUntil = System.currentTimeMillis() + 1500; s.freezeCheck = "blink"; }
@@ -89,7 +89,7 @@ public final class Movement {
 			}
 		}
 		if (!p.hasPosition()) return statusOnly(pl, p, s);
-		if (s.grace > 0 && System.currentTimeMillis() - s.graceAt > 1100) s.grace = 0; // grace is 20 ticks of real time; a player standing still sends few packets
+		if (s.grace > 0 && System.currentTimeMillis() - s.graceAt > 1100) { s.grace = 0; if (s.graceSoft) { s.graceSoft = false; if (TRACE && s.gndShadow.unsupported() > 0) Meshac.LOG.info("[trace] nofall shadow-evidence end {} count={}", pl.getGameProfile().name(), s.gndShadow.unsupported()); s.gndShadow.clear(); } } // grace is 20 ticks of real time; a player standing still sends few packets
 		double x = p.getX(pl.getX()), y = p.getY(pl.getY()), z = p.getZ(pl.getZ());
 		boolean ground = p.isOnGround();
 		// Our own record of the fall: the highest point since the player last stood on something real. A NoFall hack keeps resetting the server's count, so a flag hands it back.
@@ -116,7 +116,7 @@ public final class Movement {
 		// A real teleport moves the player a long way. Hacks that send several tiny fake positions in one tick (Criticals, MaceDMG) must not be able to open the grace window.
 		double offBy = Math.min(Math.sqrt((sx - s.px) * (sx - s.px) + (sy - s.py) * (sy - s.py) + (sz - s.pz) * (sz - s.pz)), Math.sqrt((sx - s.cx) * (sx - s.cx) + (sy - s.cy) * (sy - s.cy) + (sz - s.cz) * (sz - s.cz)));
 		if (TeleportDetect.serverMoved(s.init, atStart, atClaim, offBy)) {
-			s.init = true; s.graceAt = System.currentTimeMillis(); s.grace = s.ownTp ? 3 : SKIP_TICKS; s.ownTp = false; // our own setback needs only a short grace
+			s.init = true; s.graceAt = System.currentTimeMillis(); s.grace = s.ownTp ? 3 : SKIP_TICKS; s.ownTp = false; s.graceSoft = false; s.gndShadow.clear(); // our own setback needs only a short grace
 			s.dy = 0; s.ground = ground; s.bufSpeed = s.bufFly = s.bufJump = 0; s.spBal = 0; s.spShadow = 0;
 			s.goodX = sx; s.goodY = sy; s.goodZ = sz;
 			s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
@@ -169,7 +169,7 @@ public final class Movement {
 		var hs = pl.getLastDamageSource();
 		boolean pushed = pl.hurtTime > 0 && hs != null && (hs.getDirectEntity() != null || hs.getEntity() != null || hs.getMsgId().contains("explosion") || hs.getMsgId().contains("badRespawnPoint") || hs.getMsgId().contains("intentionalGameDesign") || hs.getMsgId().contains("fall") || hs.getMsgId().contains("flyIntoWall") || hs.getMsgId().contains("anvil") || hs.getMsgId().contains("fallingBlock"));
 		boolean exempt = baseExempt || pushed || s.boosted;
-		if (pushed) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); }
+		if (pushed) { s.grace = SKIP_TICKS; s.graceAt = System.currentTimeMillis(); s.graceSoft = hs.getMsgId().contains("fall") || hs.getMsgId().contains("flyIntoWall") || hs.getMsgId().contains("anvil"); } // fall/flyIntoWall/anvil/fallingBlock cannot throw the player (fall matches fallingBlock): soft grace, O3 shadow evidence stays live
 		if (TRACE) Meshac.LOG.info("[trace] {} dx={} dy={} dz={} g={} sg={} grace={} exempt={} hurt={} bounce={}", pl.getGameProfile().name(), r(dx), r(dy), r(dz), ground, s.ground, s.grace, exempt, pl.hurtTime, s.bounce.armed());
 		String hit = null;
 		// Levitation (NoLevitation): the effect lifts the player every tick. Not rising for a while, with open air above, means the client ignores it.
@@ -184,13 +184,26 @@ public final class Movement {
 		} else s.bufClimb = 0;
 		// Ground-claim probe, shared by the air-chain reset gate and the nofall check: a ground claim
 		// with only air 0.1 below the moved box is unsupported (spoof evidence, not a landing).
-		boolean claimAir = false;
-		if (ground && !exempt && s.grace <= 0) {
+		// O3: while grace came from a non-displacing damage source the probe still runs, log-only
+		// (shadow evidence; never flags, never clears the live window). MESHAC_GROUND_TOL=classify
+		// widens the strip to 0.13 for a partial collision top within the gap (tolerated claim).
+		boolean softGrace = s.grace > 0 && s.graceSoft && !baseExempt && !s.boosted;
+		boolean claimAir = false, claimTol = false;
+		if (ground && ((!exempt && s.grace <= 0) || softGrace)) {
 			AABB gb = pl.getBoundingBox().move(dx, dy, dz);
-			claimAir = pl.level().noCollision(pl, new AABB(gb.minX, gb.minY - 0.1, gb.minZ, gb.maxX, gb.minY, gb.maxZ));
+			boolean air = pl.level().noCollision(pl, new AABB(gb.minX, gb.minY - 0.1, gb.minZ, gb.maxX, gb.minY, gb.maxZ));
+			if (air && GROUND_TOL_CLASSIFY) {
+				SupportHit sup = supportHit(pl.level(), new AABB(gb.minX, gb.minY - GroundTolerance.CANDIDATE, gb.minZ, gb.maxX, gb.minY, gb.maxZ));
+				if (sup != null) {
+					claimTol = GroundTolerance.tolerated(true, true, sup.top, gb.minY);
+					if (claimTol && nowMs - s.gtLogAt > 1000) { s.gtLogAt = nowMs; Meshac.LOG.info(GroundTolerance.toleratedLine(pl.getGameProfile().name(), sup.id, sup.top, gb.minY, s.bufGround)); }
+				}
+			}
+			claimAir = air && !claimTol;
 		}
 		if (s.grace > 0 || exempt) {
 			if (s.grace > 0) s.grace--;
+			if (s.grace == 0 && s.graceSoft) { s.graceSoft = false; if (TRACE && s.gndShadow.unsupported() > 0) Meshac.LOG.info("[trace] nofall shadow-evidence end {} count={}", pl.getGameProfile().name(), s.gndShadow.unsupported()); s.gndShadow.clear(); }
 			s.airY0 = y; s.sinceJump = 99; s.exemptAt = System.currentTimeMillis();
 			if (FpGuards.bendsGravity(pl.isInWater(), pl.isInLava(), pl.onClimbable(), pl.hasEffect(MobEffects.LEVITATION), pl.hasEffect(MobEffects.SLOW_FALLING))) s.exit.onMedium(nowMs); // the next non-exempt packet is the medium's exit step
 			if (exempt) { s.spBal = SustainBudget.onExempt(s.spBal, s.wasExempt); s.spShadow = SustainBudget.onExempt(s.spShadow, s.wasExempt); } s.wasExempt = exempt; // a boosted or pushed stretch must not leave balance behind to flag the first normal step
@@ -305,20 +318,27 @@ public final class Movement {
 		// (rig round 2: an interleaved spoof slipped the old 3-consecutive buffer; honest air packets
 		// between spoofed claims no longer erase the evidence).
 		if (ground && !exempt && s.grace <= 0) {
-			s.gndEv.add(claimAir);
-			s.bufGround = s.gndEv.unsupported();
-			if (GROUND_TOL_COMPARE && claimAir) groundTolCompare(pl, s, pl.getBoundingBox().move(dx, dy, dz));
-			if (TRACE && (claimAir || s.bufGround > 0)) groundCtx(pl, s, s.gndEv.flagged() && hit == null, claimAir, ground, dy, s.prevDtS, exempt);
-			if (s.gndEv.flagged() && hit == null) hit = "nofall ground spoof";
+			if (!claimTol) { // a tolerated claim is a landing on a partial shape: it neither enters nor evicts the evidence window
+				s.gndEv.add(claimAir);
+				s.bufGround = s.gndEv.unsupported();
+				if (GROUND_TOL_COMPARE && claimAir) groundTolCompare(pl, s, pl.getBoundingBox().move(dx, dy, dz));
+				if (TRACE && (claimAir || s.bufGround > 0)) groundCtx(pl, s, s.gndEv.flagged() && hit == null, claimAir, ground, dy, s.prevDtS, exempt);
+				if (s.gndEv.flagged() && hit == null) hit = "nofall ground spoof";
+			}
+		} else if (ground && softGrace) { // O3, log-only: shadow window during non-displacing damage grace - never flags, never clears the live window
+			if (!claimTol) {
+				s.gndShadow.add(claimAir);
+				if (TRACE && s.gndShadow.flagged() && nowMs - s.softLogAt > 1000) { s.softLogAt = nowMs; Meshac.LOG.info("[trace] nofall shadow-evidence {} count={} (damage grace, log-only)", pl.getGameProfile().name(), s.gndShadow.unsupported()); }
+			}
 		} else if (ground) { s.gndEv.clear(); s.bufGround = 0; } // exempt/grace ground claim: fresh start, as before; air packets leave the window alone
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
 			if (ch[0].equals("speed") || ch[0].equals("fly") || ch[0].equals("air") || ch[0].equals("high") || ch[0].equals("microhop")) ctxLog(pl, s, dx, dy, dz); // log only: what the player was doing when the speed check fired
 			if (ch[0].equals("nofall")) { if (MonitorGate.armNoFall(acts("nofall"))) s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("fly") ? 3 : ch[0].equals("microhop") ? 2 : 1); // a block climbed in a few ticks is never an accident
-			if (step == Verdict.Step.LOG || !acts(ch[0])) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.balMs = 0; s.spBal = 0; s.spShadow = 0; return null; } // soft mode: record, never correct
+			if (step == Verdict.Step.LOG || !acts(ch[0])) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; return null; } // soft mode: record, never correct
 			s.ownTp = true;
-			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			if (step == Verdict.Step.HOLD) { s.freezeUntil = System.currentTimeMillis() + 1500; s.freezeCheck = ch[0]; }
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
@@ -405,8 +425,37 @@ public final class Movement {
 		return sh.isEmpty() ? 0 : sh.max(net.minecraft.core.Direction.Axis.Y);
 	}
 
+	/** The block whose collision shape tops the 0.13 strip: highest colliding shape top plus its block id. */
+	static final class SupportHit { final double top; final String id; SupportHit(double top, String id) { this.top = top; this.id = id; } }
+
+	/** Derives the support from the blocks whose collision shapes actually reach the strip, not from a point sample:
+	 * a center-X/Z sample floors into the wrong block for snow layers (thin top near a block edge) and misses fences/walls/closed
+	 * gates entirely (their collision reaches 1.5 above the block that owns it, one block below the strip floor), so every column
+	 * under the strip is scanned one block below the strip floor and up. Shape BOUNDING boxes, not voxel-exact: a stair whose
+	 * bounding box clips the strip can read as support where the voxel shape would not collide. Runs only on unsupported claims. */
+	static SupportHit supportHit(net.minecraft.world.level.Level level, AABB strip) {
+		double best = Double.NEGATIVE_INFINITY; String bestId = null;
+		int x0 = (int) Math.floor(strip.minX), x1 = (int) Math.floor(strip.maxX - 1e-9), z0 = (int) Math.floor(strip.minZ), z1 = (int) Math.floor(strip.maxZ - 1e-9);
+		int yLo = (int) Math.floor(strip.minY) - 1, yHi = (int) Math.floor(strip.maxY);
+		net.minecraft.core.BlockPos.MutableBlockPos mp = new net.minecraft.core.BlockPos.MutableBlockPos();
+		for (int yy = yLo; yy <= yHi; yy++) for (int xx = x0; xx <= x1; xx++) for (int zz = z0; zz <= z1; zz++) {
+			mp.set(xx, yy, zz);
+			net.minecraft.world.level.block.state.BlockState st = level.getBlockState(mp);
+			if (st.isAir()) continue;
+			net.minecraft.world.phys.shapes.VoxelShape sh = st.getCollisionShape(level, mp);
+			if (sh.isEmpty()) continue;
+			double sy0 = sh.min(net.minecraft.core.Direction.Axis.Y) + yy, sy1 = sh.max(net.minecraft.core.Direction.Axis.Y) + yy;
+			double sx0 = sh.min(net.minecraft.core.Direction.Axis.X) + xx, sx1 = sh.max(net.minecraft.core.Direction.Axis.X) + xx;
+			double sz0 = sh.min(net.minecraft.core.Direction.Axis.Z) + zz, sz1 = sh.max(net.minecraft.core.Direction.Axis.Z) + zz;
+			if (sx1 <= strip.minX || sx0 >= strip.maxX || sz1 <= strip.minZ || sz0 >= strip.maxZ || sy1 <= strip.minY || sy0 >= strip.maxY) continue; // shape bounds miss the strip
+			if (sy1 > best) { best = sy1; bestId = id(st); }
+		}
+		return bestId == null ? null : new SupportHit(best, bestId);
+	}
+
 	/** Compare mode for the candidate ground tolerance: MESHAC_GROUND_TOL=compare. Default off. Logs only, never changes a verdict. */
 	private static final boolean GROUND_TOL_COMPARE = "compare".equals(System.getenv("MESHAC_GROUND_TOL"));
+	private static final boolean GROUND_TOL_CLASSIFY = "classify".equals(System.getenv("MESHAC_GROUND_TOL")); // classify: tolerated partial-shape claims leave the evidence window; log-only tolerated lines
 	private static void groundTolCompare(ServerPlayer pl, S s, AABB b) {
 		long now = System.currentTimeMillis();
 		if (now - s.gtLogAt < 1000) return; // one line a second per player

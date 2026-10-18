@@ -71,7 +71,7 @@ public final class FpGuardsTest {
 		check(gb == 0, "standing on the pit floor in snow built buffer " + gb);
 				// powderJumpBand: only the ~0.63 struggle band near powder is exempt
 		check(FpGuards.powderJumpBand(0.63, true), "0.63 near powder not in band");
-		check(FpGuards.powderJumpBand(0.60, true) && FpGuards.powderJumpBand(0.70, true), "band edges excluded");
+		check(FpGuards.powderJumpBand(0.60, true) && FpGuards.powderJumpBand(0.70, true), "band edges 0.60/0.70 must be included");
 		check(!FpGuards.powderJumpBand(0.59, true), "0.59 near powder in band");
 		check(!FpGuards.powderJumpBand(0.71, true), "0.71 near powder in band");
 		check(!FpGuards.powderJumpBand(1.10, true), "big jump near powder in band");

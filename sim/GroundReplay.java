@@ -24,7 +24,10 @@ import java.util.regex.Pattern;
  * rows that retains more evidence than the real policy would, i.e. conservative for FP reading.
  *
  * Usage: java -cp <suite-out> GroundReplay <trace-log>...
- * Columns: window flagAt armAt | claims unsupported maxCount flags strongArms | players with >=1 strong-arm. */
+ * Columns: window flagAt armAt | claims unsupported maxCount flags strongArms | players with >=1 strong-arm.
+ * The final section prints the K4 agreement metrics (reviewer FIX 2): the jar latches arm/flag, so agreement with
+ * jar-captured state is per-player maxCount equality + flag presence/absence + first-arm presence - edge counts
+ * are tuning signal only, never the agreement metric. */
 public final class GroundReplay {
 	/** One event: claim (unsupported?) or clear. */
 	public static final class Ev { final boolean claim, air; Ev(boolean claim, boolean air) { this.claim = claim; this.air = air; }
@@ -75,6 +78,15 @@ public final class GroundReplay {
 		System.out.println();
 		System.out.println("policy=decay-on-clear (grace-boundary persistence candidate, P3-FOLLOWUPS; measurement only - the live jar still full-clears):");
 		printTable(per, true);
+		System.out.println();
+		System.out.println("K4 agreement metrics at the live jar config (window=5 flagAt=3 armAt=2 = Movement.java GROUND_WINDOW/GROUND_FLAG_AT/STRONG_ARM_AT):");
+		System.out.println("the jar LATCHES (nfAt/nfStrongAt stay set until a reset), so harness-vs-jar agreement is per-player maxCount equality + flag");
+		System.out.println("presence/absence + first-arm presence. The flag/arm edge counts in the tables above are window-tuning signal only (reviewer FIX 2).");
+		System.out.println("player | claims unsupported maxCount | flag first-arm");
+		for (var e : per.entrySet()) {
+			long[] r = score(e.getValue(), 5, 3, 2);
+			System.out.printf("%s | %d %d %d | %s %s%n", e.getKey(), r[0], r[1], r[2], r[3] > 0 ? "PRESENT" : "absent", r[4] > 0 ? "PRESENT" : "absent");
+		}
 	}
 
 	private static void printTable(TreeMap<String, List<Ev>> per, boolean decayOnClear) {

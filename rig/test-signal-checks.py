@@ -32,5 +32,12 @@ src = (pathlib.Path(__file__).parent.parent / 'src/main/java/dev/meshac/CheckNam
 names = set(re.findall(r'"([a-z0-9-]+)"', src.split('Set.of(')[1]))
 check(names == set(signal_checks.CHECKS), 'CheckNames.ALL drift: jar=%s grader=%s' % (sorted(names - signal_checks.CHECKS), sorted(signal_checks.CHECKS - names)))
 
+# probe mirror (reviewer verify item, relayed via parent 10-17 7:42pm): the P3-strong shadow watcher's
+# support probe must be textually the same probe as the real nfAt watcher's (same box, same 0.1 slab)
+mv = (pathlib.Path(__file__).parent.parent / 'src/main/java/dev/meshac/Movement.java').read_text()
+probes = re.findall(r'!pl\.level\(\)\.noCollision\(pl, new AABB\((\w+)\.minX, \1\.minY - 0\.1, \1\.minZ, \1\.maxX, \1\.minY, \1\.maxZ\)\)', mv)
+check('tb' in probes, 'real nfAt watcher probe present (tb box, minY-0.1 slab)')
+check('sb' in probes, 'P3-strong shadow watcher probe mirrors it (sb box, same expression)')
+
 if failed: raise SystemExit('%d failures' % failed)
 print('test-signal-checks ok')

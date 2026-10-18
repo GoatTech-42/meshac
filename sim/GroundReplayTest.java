@@ -29,6 +29,16 @@ public final class GroundReplayTest {
 		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true)), 5, 3, 2, true), 4, 4, 3, 2, 1, "decay re-flags without re-arming while the arm level holds");
 		// consecutive grace boundaries (double self-damage): two decays, arm drops only after the second, re-arms on the next claim
 		eq(GroundReplay.score(List.of(GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(), GroundReplay.Ev.clear(), GroundReplay.Ev.claim(true)), 5, 3, 2, true), 4, 4, 3, 1, 2, "two consecutive decays forgive two oldest claims");
+		// K4 (reviewer FIX 2): the jar latches arm/flag, so agreement uses maxCount + presence, not edge counts.
+		// The drained-window stream has TWO flag edges and TWO arm edges but ONE latched presence each.
+		long[] k4 = GroundReplay.score(List.of(
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(true),
+			GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false),
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true)), 5, 3, 2);
+		check(k4[3] == 2 && k4[4] == 2, "K4: edge counts stay available for tuning");
+		check(k4[2] == 3 && k4[3] > 0 && k4[4] > 0, "K4 agreement: maxCount=3, flag presence + first-arm presence both PRESENT");
+		long[] k4z = GroundReplay.score(List.of(GroundReplay.Ev.claim(false), GroundReplay.Ev.claim(false)), 5, 3, 2);
+		check(k4z[2] == 0 && k4z[3] == 0 && k4z[4] == 0, "K4 agreement: a clean stream has maxCount 0 and both presences absent");
 		System.out.println(fails == 0 ? "GroundReplayTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

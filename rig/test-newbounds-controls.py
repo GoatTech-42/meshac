@@ -120,6 +120,8 @@ if not os.environ.get('MESHAC_TEST_MUTATE'):
     _env = dict(os.environ); _env['MESHAC_TEST_MUTATE'] = 'gc01'
     _p2 = subprocess.run([sys.executable, str(pathlib.Path(__file__))], capture_output=True, text=True, env=_env)
     check(_p2.returncode == 1, 'mutated production pin (GC01 total) must exit rc1 (got %s)' % _p2.returncode)
-    check('GC01 legs total 300s' in _p2.stdout, 'mutated run fails ON the GC01 pin (an unrelated rc1 does not count)')
+    check('FAIL GC01 legs total 300s (the pre-committed bound, not 16s)' in _p2.stdout,
+          'mutated run emits the exact expected FAIL line (a PASS line sharing text does not count)')
+    check(_p2.stderr.strip() == '1 failures', 'mutated run fails with exactly one failure, got stderr: ' + _p2.stderr.strip()[:200])
     check('Traceback' not in _p2.stderr, 'mutated run fails by assertion, not a crash: ' + _p2.stderr[:200])
 finish()

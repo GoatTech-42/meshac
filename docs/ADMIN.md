@@ -24,6 +24,9 @@ Everything here is for server staff. Players never see any of it.
 | `/mesh veil xray <true\|false>` | Anti-xray on or off. |
 | `/mesh veil esp <true\|false>` | Anti-ESP on or off. |
 | `/mesh veil off` | Both off. |
+| `/mesh capture <player> start` | Start a combat capture for that player: 120 seconds or 512 hits, kept in RAM only. Restarting replaces the player's previous capture. Produces descriptive evidence, never a verdict. At most four captures are kept; clear one first. |
+| `/mesh capture <player> clear` | Drop that player's capture. |
+| `/mesh capture <player> dump <page>` | Print one page of a capture to you only (32 pages max). Rate-limited: four pages per caller per minute, console and RCON share a budget. A disconnect clears the capture. |
 | `/mesh reload` | Re-read the config and the case file. |
 
 ## What sticks and what does not
@@ -40,7 +43,7 @@ Every command that changes what meshac enforces writes one line to the server lo
 [meshac-admin] actor=<who> action=<what> detail=<details>
 ```
 
-Actions are `veil.xray`, `veil.esp`, `veil.off`, `monitor`, `check.<name>`, `reload`, `pardon`, `unban`, `ban`, `tempban`, `kick`. Bans and kicks also create a case, so the case id is in the line. Text typed by staff is cleaned before it is logged: no line breaks, no `=`, at most 120 characters per field. To see who changed what, grep the log for `[meshac-admin]`.
+Actions are `veil.xray`, `veil.esp`, `veil.off`, `monitor`, `check.<name>`, `reload`, `pardon`, `unban`, `ban`, `tempban`, `kick`, `capture.start`, `capture.clear`, `capture.dump`. Reads that touch case or player data are logged too: `case.view`, `status.view`. Bans and kicks also create a case, so the case id is in the line. Text typed by staff is cleaned before it is logged: no line breaks, no `=`, at most 120 characters per field. To see who changed what, grep the log for `[meshac-admin]`.
 
 ## Veil settings
 
@@ -82,7 +85,7 @@ If something looks wrong on a live server, use `/mesh veil off`. Hidden entities
 
 ## Veil troubleshooting
 
-Run `/mesh veil` and read the second line (it shows while anti-ESP is on). Counters start at zero on each start, reload and `/mesh veil esp on`.
+Run `/mesh veil` and read the second line (it shows while anti-ESP is on). Counters start at zero on each start, reload and `/mesh veil esp true`.
 
 | What you see | What it means | What to do |
 |---|---|---|

@@ -21,10 +21,17 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Minecraft glue for chunkveil (anti-xray) and the entity cull (anti-ESP). Logic lives in XrayCore and EspCore.
- * UNCOMPILED: written against the 26.1.2 Mojang names the server agent listed. Lines marked VERIFY use a method not on that list.
+ * Compiles on all four version targets (Box-REPORTED 10-17 11:36pm, series through 0066 - HISTORICAL:
+ * changes to this file since are comment-only, but the current-tip binary is NOT verified): the Mojang names
+ * the old UNCOMPILED banner worried about resolve everywhere that build covered. Compile proves names, not
+ * behaviour - runtime evidence is rig-only (docs/veil/RIG-QUICKSTART.md), never proven with a real client yet.
  */
 public final class Veil {
-	// TODO wire to Config.veil (presets). Defaults per Luke: fake ores on, mobs culled.
+	// Config wiring lives in Config.applyVeil (startup and /mesh reload): veilEnabled && veilXray/veilEsp/veilBedrock
+	// (worker-grounded: Config.java:110 + :27-30, not re-derived in this patch's review context).
+	// The field initializers below are pre-config defaults that applyVeil OVERWRITES at startup, so out of the box
+	// the veils are OFF (config keys default unset) until they are proven on a real client. Veil switches are
+	// independent of the punishment presets by design; a preset-driven veil default would be an owner decision.
 	public static volatile boolean bedrockOn = false; // veilBedrock: false = Bedrock viewers are never culled
 	public static volatile boolean xrayOn = true, espOn = true, cullMobs = true;
 	public static volatile double fakeRatio = 0.02;
@@ -39,14 +46,14 @@ public final class Veil {
 		});
 	}
 	/** Transparent for exposure purposes: anything a player could see through or into. Conservative (fails open). */
-	public static boolean transparent(BlockState s) { return !s.canOcclude() || !s.getFluidState().isEmpty(); } // VERIFY canOcclude() exists on BlockState (it did through 1.21)
+	public static boolean transparent(BlockState s) { return !s.canOcclude() || !s.getFluidState().isEmpty(); } // canOcclude() compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 
 	/** View over a chunk plus its loaded neighbours. Unloaded neighbour = transparent (fail open). */
 	public static final class View implements XrayCore.Blocks {
 		final LevelChunk c; final ServerLevel lvl; final BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
 		public View(LevelChunk c) { this.c = c; this.lvl = c.getLevel() instanceof ServerLevel sl ? sl : null; }
 		BlockState at(int x, int y, int z) {
-			if (y < c.getMinY() || y >= c.getMaxY()) return null; // VERIFY getMinY/getMaxY (older: getMinBuildHeight/getMaxBuildHeight)
+			if (y < c.getMinY() || y >= c.getMaxY()) return null; // getMinY/getMaxY compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 			LevelChunk t = c;
 			int cx = x >> 4, cz = z >> 4;
 			if (cx != (c.getPos().getMinBlockX() >> 4) || cz != (c.getPos().getMinBlockZ() >> 4)) {
@@ -140,11 +147,11 @@ public final class Veil {
 	}
 	private static Plan modsCached(LevelChunk c, int secIdx, net.minecraft.world.level.chunk.LevelChunkSection sec) {
 		if (!dev.meshac.Config.get().veilEnabled() || !xrayOn || !(c.getLevel() instanceof ServerLevel lvl) || !onServerThread()) return null;
-		if (sec.hasOnlyAir() || !sec.maybeHas(Veil::hidden)) return null; // VERIFY maybeHas(Predicate<BlockState>)
+		if (sec.hasOnlyAir() || !sec.maybeHas(Veil::hidden)) return null; // maybeHas(Predicate<BlockState>) compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 		if (CACHE.size() > CACHE_MAX) CACHE.clear();
 		return CACHE.computeIfAbsent(new Key(lvl, c.getPos().getMinBlockX() >> 4, c.getPos().getMinBlockZ() >> 4, secIdx), k -> {
 			View v = new View(c);
-			int baseY = (c.getMinSectionY() + secIdx) << 4, bx = c.getPos().getMinBlockX(), bz = c.getPos().getMinBlockZ(); // VERIFY getMinSectionY
+			int baseY = (c.getMinSectionY() + secIdx) << 4, bx = c.getPos().getMinBlockX(), bz = c.getPos().getMinBlockZ(); // getMinSectionY compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 			long salt = salt(lvl);
 			List<Mod> out = new ArrayList<>();
 			for (int ly = 0; ly < 16; ly++) for (int lz = 0; lz < 16; lz++) for (int lx = 0; lx < 16; lx++) {
@@ -169,7 +176,7 @@ public final class Veil {
 			return new Plan(mods, maskOf(lvl, c), borderIdx, borderBits);
 		});
 	}
-	private static long salt(ServerLevel lvl) { return lvl.getSeed() * 0x2545F4914F6CDD1DL; } // VERIFY getSeed on ServerLevel
+	private static long salt(ServerLevel lvl) { return lvl.getSeed() * 0x2545F4914F6CDD1DL; } // getSeed on ServerLevel compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 	private static boolean isStone(BlockState s) { return s.is(Blocks.STONE) || s.is(Blocks.DEEPSLATE) || s.is(Blocks.NETHERRACK) || s.is(Blocks.END_STONE); }
 
 
@@ -217,7 +224,7 @@ public final class Veil {
 			BlockState s = l.getBlockState(n);
 			if (!XrayCore.resendOnReveal(hidden(s), isStone(s), salt(l), n.getX(), n.getY(), n.getZ(), fakeRatio)) continue;
 			var pk = new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(n, s);
-			for (ServerPlayer p : l.getChunkSource().chunkMap.getPlayers(new ChunkPos(n.getX() >> 4, n.getZ() >> 4), false)) p.connection.send(pk); // VERIFY chunkMap public + getPlayers(ChunkPos,boolean)
+			for (ServerPlayer p : l.getChunkSource().chunkMap.getPlayers(new ChunkPos(n.getX() >> 4, n.getZ() >> 4), false)) p.connection.send(pk); // chunkMap field + getPlayers(ChunkPos,boolean) compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 			// chest/spawner block entity data: let vanilla send the BE update packet
 			var be = l.getBlockEntity(n);
 			if (be != null) { var bp = be.getUpdatePacket(); if (bp != null) for (ServerPlayer p : l.getChunkSource().chunkMap.getPlayers(new ChunkPos(n.getX() >> 4, n.getZ() >> 4), false)) p.connection.send(bp); }
@@ -236,12 +243,12 @@ public final class Veil {
 	private static boolean exempt(ServerPlayer v, Entity e, long tick) {
 		ExemptRule.F f = new ExemptRule.F();
 		f.self = e == v;
-		f.mountedTogether = e.getVehicle() == v || v.getVehicle() == e || e.hasPassenger(v) || v.hasPassenger(e); // VERIFY hasPassenger(Entity)
+		f.mountedTogether = e.getVehicle() == v || v.getVehicle() == e || e.hasPassenger(v) || v.hasPassenger(e); // hasPassenger(Entity) compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 		f.sharesVehicle = e.getVehicle() != null && e.getVehicle() == v.getVehicle(); // two riders of one boat or horse
 		f.boss = e instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon || e instanceof net.minecraft.world.entity.boss.wither.WitherBoss;
-		f.glowing = e.isCurrentlyGlowing(); // VERIFY isCurrentlyGlowing
+		f.glowing = e.isCurrentlyGlowing(); // isCurrentlyGlowing compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 		f.projectile = e instanceof net.minecraft.world.entity.projectile.Projectile;
-		f.leashedToViewer = e instanceof net.minecraft.world.entity.Leashable l && l.getLeashHolder() == v; // VERIFY Leashable (1.21.2+; absent in older, 1.21.11 has it)
+		f.leashedToViewer = e instanceof net.minecraft.world.entity.Leashable l && l.getLeashHolder() == v; // Leashable compile-verified on all 4 targets (Box-reported 10-17 11:36pm, through 0066; comment-only changes since)
 		f.viewerSpectatorOrCreative = v.isSpectator() || v.isCreative();
 		f.bedrockShowAll = ViewerPolicy.showAll(dev.meshac.BedrockIds.DEFAULT.isBedrock(v.getUUID()), bedrockOn); // zero-high UUID, or Floodgate says so (linked accounts)
 		f.sameTeam = v.getTeam() != null && v.getTeam() == e.getTeam();

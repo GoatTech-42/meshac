@@ -73,14 +73,17 @@ public final class MeshCommands {
 		}
 		if (action.equals("start")) {
 			boolean ok = Combat.RECORDER.start(target.getUUID(), now);
+			audit(source, "capture.start", target.getGameProfile().name() + " " + (ok ? "started" : "refused (four already retained)")); // a start REPLACES any previous capture: destructive, so even a refusal is logged
 			source.sendSuccess(() -> Component.literal(ok ? "Combat capture started: 120 seconds, 512 hits, RAM only. Restart replaces this player's previous capture. No verdicts." : "Four captures already retained. Clear one first."), false);
 			return ok ? 1 : 0;
 		}
 		if (action.equals("clear")) {
 			Combat.RECORDER.clear(target.getUUID());
+			audit(source, "capture.clear", target.getGameProfile().name());
 			source.sendSuccess(() -> Component.literal("Combat capture cleared."), false); return 1;
 		}
 		CombatRecorder.Page result = Combat.RECORDER.page(target.getUUID(), page, now);
+		audit(source, "capture.dump", target.getGameProfile().name() + " page " + (page + 1)); // a dump DISCLOSES retained combat evidence to the caller: log who read it. A budget-refused dump changes and discloses nothing, so it is not audited.
 		source.sendSuccess(() -> Component.literal("Combat capture exists=" + result.exists() + " expired=" + result.expired() + " total=" + result.total() + " overwritten=" + result.overwritten() + " retained=" + result.retained() + " page=" + (page + 1) + "/" + result.pages() + ". Descriptive evidence, not a verdict. Disconnect clears it."), false);
 		for (CombatRecorder.Hit hit : result.hits()) source.sendSuccess(() -> Component.literal(hit.toString()), false);
 		return result.hits().size();

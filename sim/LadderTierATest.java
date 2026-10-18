@@ -100,6 +100,26 @@ public final class LadderTierATest {
 		check(Ladder.tempMinutes(6, 1, 10, 6, 10080) == 10080, "the geometric ladder is capped at tempMax");
 		check(Ladder.tempMinutes(1, 1, 10, 6, 10080) == 10, "KNOWN: the kick rung still returns a tempban length, because the index is clamped at 0 - Verdict only reaches it when rung > kicks");
 
+		// invalid inputs fail closed (0079v2): no increased punishment, caller logs the diagnostic
+		check(Ladder.Params.problems(Ladder.Params.defaults()).isEmpty(), "the reviewed defaults pass validation");
+		Ladder.Params bad = new Ladder.Params(Double.NaN, 0, -1, 0, 0, 0, 0);
+		check(Ladder.Params.problems(bad).equals("halfLifeSeconds,holdAt,removeAt,requireClusters,requireClustersTierA,tierAWeight,clusterMs"), "every invalid knob is named for the diagnostic: " + Ladder.Params.problems(bad));
+		check(bad.sanitized().equals(Ladder.Params.defaults()), "every invalid knob falls back to the reviewed defaults, nothing stricter or looser");
+		Ladder.Step[] badRun = steps(bad.sanitized(), 3, 3);
+		check(badRun[1] == Ladder.Step.REMOVE, "sanitized-invalid params behave exactly like the defaults (2 tier-A bursts remove)");
+		check(Ladder.effectiveOffences(new double[]{1}, 0) == 0 && Ladder.effectiveOffences(new double[]{1}, Double.NaN) == 0 && Ladder.effectiveOffences(new double[]{1}, -14) == 0, "invalid offence half-life fails closed: no offences counted, no punishment inflation");
+		check(Ladder.effectiveOffences(new double[]{Double.NaN, 5}, 14) == Ladder.effectiveOffences(new double[]{5}, 14), "a NaN age (corrupt case data) is skipped, not counted");
+		check(Ladder.effectiveOffences(new double[]{Double.POSITIVE_INFINITY}, 14) == 0, "an infinitely old offence is fully decayed");
+		check(Ladder.rung(Double.NaN, 1, false) == 1 && Ladder.rung(-3, 1, false) == 1, "non-finite or negative effective offences fail closed to the kick rung");
+
+		// policy epoch: a config change wipes old evidence instead of reclassifying it (fail closed)
+		Ladder.Heat epoch = new Ladder.Heat();
+		epoch.add("glide", 3, T0, def); epoch.add("glide", 3, T0 + 200, def);
+		check(epoch.confirmedTierA(def), "setup: two tier-A bursts confirm under the default params");
+		epoch.add("speed", 1, T0 + 400, lenient); // params change (e.g. /mesh reload)
+		check(!epoch.confirmedTierA(lenient), "a params change resets the heat: old clusters are never reclassified under the new thresholds (the tier-A confirmation is gone)");
+		check(epoch.add("glide", 3, T0 + 600, lenient) != Ladder.Step.REMOVE, "after the reset, one tier-A burst under the new params removes nobody");
+
 		System.out.println(fails == 0 ? "LadderTierATest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

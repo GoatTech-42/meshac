@@ -12,7 +12,9 @@ launched disposable server inside its owned run dir and network namespace.
 ## 0. CONTAINMENT RUNNER - prerequisite phase, PROPOSAL until verified
 Before ANY spec runs, Box implements a small containment runner and verifies it on a
 NON-GAME throwaway workload (e.g. a shell that sleeps, forks, setsids, and tries to open a
-socket). Nothing in this section is asserted to work; the verification receipts are the
+socket). Phase 0 itself is not blanket execution permission: the runner source and the
+probe plan are reviewed and authorized BEFORE the probe runs, and the game specs stay on
+HOLD until the phase-0 receipts are reviewed. Nothing in this section is asserted to work; the verification receipts are the
 deliverable:
 1. Probe first, design second: record the actual systemd version and which properties the
    installed version supports on Scope units vs transient Service units (systemd-run --scope
@@ -71,8 +73,13 @@ Harness exactly `sh sim/run-tests.sh` (now includes LadderTierATest, patch 0079)
    MANIFEST.txt + PATCHES-SHA256.txt; actual HEAD recorded for reference.
 4. Offline build per target via the runner's chosen mechanism (section 0.6) against the
    private writable cache copy. A cache miss = STOP, report the missing coordinates.
-5. `sh sim/run-tests.sh`; test-main count + exit code (85 mains at 0066 on 10-17, plus
-   MeshCommandsDocSmokeTest (0072v2) and LadderTierATest (0079); report any delta by name).
+5. `sh sim/run-tests.sh`; test-main count + exit code. The expected mains are exactly the
+   list wired in the FROZEN TREE's own run-tests.sh - record the list and count from the
+   tree, never from a worker-stated number. The frozen closure (part 1 + part 2) ends at
+   0072v2 / tree 7e794648: LadderTierATest and MeshCommandsDocSmokeTest wiring (0079/0083,
+   reviewer gate pending) are NOT in it and are not claimed here. If those land before the
+   run, they enter as a NEW frozen part-3 tar with its own reviewer-confirmed sha256 and
+   tree hash - the closure and the expectation update together or not at all.
 Pass: every patch clean; tree hash matches; four targets build GREEN offline; harness GREEN.
 Fail: anything else - attach output, STOP, no other spec runs.
 

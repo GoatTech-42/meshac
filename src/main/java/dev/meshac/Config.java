@@ -77,12 +77,21 @@ public final class Config {
 	public int holdAtI() { return (int) Math.round(holdAtD()); }
 	public double holdAtD() { return holdAt != null ? holdAt : 3; }
 	public double removeAtD() { return removeAt != null ? removeAt : switch (preset.toLowerCase()) { case "lenient" -> 8; case "strict" -> 5; default -> 6; }; }
-	public Ladder.Params ladderParams() { return new Ladder.Params(halfLifeSeconds != null ? halfLifeSeconds : 8, holdAtD(), removeAtD(), requireClusters != null ? requireClusters : 3, requireClustersTierA != null ? requireClustersTierA : 2, 3, 150); }
+	public Ladder.Params ladderParams() {
+		Ladder.Params raw = new Ladder.Params(halfLifeSeconds != null ? halfLifeSeconds : 8, holdAtD(), removeAtD(), requireClusters != null ? requireClusters : 3, requireClustersTierA != null ? requireClustersTierA : 2, 3, 150);
+		String probs = Ladder.Params.problems(raw);
+		if (!probs.isEmpty()) Meshac.LOG.warn("[meshac] invalid ladder config ({}) replaced with the reviewed defaults (fail closed)", probs);
+		return raw.sanitized();
+	}
 	public boolean explicitLadder() { return tempbanMinutes != null && tempbanMinutes.length > 0; }
 	public double tempBase() { return tempbanBaseMinutes != null ? tempbanBaseMinutes : switch (preset.toLowerCase()) { case "lenient" -> 5; case "strict" -> 30; default -> 10; }; }
 	public double tempGrowth() { return tempbanGrowth != null ? tempbanGrowth : 6; }
 	public double tempMax() { return tempbanMaxMinutes != null ? tempbanMaxMinutes : 10080; }
-	public double offenceHalfLifeDays() { return offenceHalfLifeDays != null ? offenceHalfLifeDays : memoryDays(); }
+	public double offenceHalfLifeDays() {
+		double hl = offenceHalfLifeDays != null ? offenceHalfLifeDays : memoryDays();
+		if (!(hl > 0) || !Double.isFinite(hl)) { Meshac.LOG.warn("[meshac] invalid offenceHalfLifeDays ({}) replaced with the default (fail closed)", hl); return 14; }
+		return hl;
+	}
 	public boolean permanentNeedsTierA() { return permanentNeedsTierA == null || permanentNeedsTierA; }
 	public boolean skipRungOnTierA() { return skipRungOnTierA == null || skipRungOnTierA; }
 	public int[] tempMinutes() {

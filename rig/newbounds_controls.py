@@ -156,17 +156,22 @@ S = {
  # SPAN PRECONDITION for both rows: a 1-wide 16-long open-air bridge span (placements under feet
  # need open air; place_floor is a full floor). Box builds the span off the lane and pins the
  # coords in G before the run - the rows stay DRAFT until that geometry is pinned and receipted.
- 'nb-scaffold-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90,
+ 'nb-scaffold-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90, 'pitch': 60,
+   'setup_rcon': ['/clear @p', '/item replace entity @p weapon.mainhand with minecraft:stone 64'],
+   'teardown_rcon': ['/clear @p'],
+   'effect_check': 'server-confirmed new blocks on the span: /execute if block succeeds at the 3rd and 6th span cell under the walked path',
    'legs': [('hold3', 'Shift_L', 's', '3', 8), ('wait', 1)],
-   'row': 'vanilla sneak-bridge the span: sneak + back + use held 8s (~2-3 bps, under the 4.0 bridging line, no slot changes): zero interact SIGNAL. DRAFT until the span geometry is pinned and the first driver receipt lands',
+   'row': 'vanilla sneak-bridge the span, stone in hand (setup_rcon), pitch 60 onto the placement face: sneak + back + use held 8s (~2-3 bps, under the 4.0 bridging line, no slot changes). zero interact SIGNAL is a HYPOTHESIS from a static source read, not an observed outcome; the setup/effect/teardown fields are an implementation TARGET - no runner consumes them yet, so nothing here is receipt-backed. DRAFT until the span geometry is pinned and the first driver receipt lands',
    'falsifies': 'sneak-edge timing must not trip interact; a legit sub-line bridge must not count toward the 10-step chain verdict; the GhostHand outline ray must pass a real support-face click'},
  'nb-scaffold-cheat': {'tp': G['lane_start'], 'needs': 'cheat', 'expect': 'signal',
-   'module': 'Scaffold (human=1, airplace=0)', 'checks': ('interact',), 'yaw': -90,
-   'setup_rcon': ['/item replace entity @p weapon.mainhand with minecraft:stick',
-                  '/give @p minecraft:stone 64'],
+   'module': 'Scaffold (human=1, airplace=0)', 'checks': ('interact',), 'yaw': -90, 'pitch': 60,
+   'setup_rcon': ['/clear @p',
+                  '/item replace entity @p weapon.mainhand with minecraft:stick',
+                  '/item replace entity @p container.1 with minecraft:stone 64'],
+   'teardown_rcon': ['/clear @p'],
    'effect_check': 'server-confirmed new blocks on the span: /execute if block succeeds at the 3rd and 6th span cell under the walked path',
    'legs': [('module', None), ('hold', 's', 8), ('module', None)],
-   'row': 'POSITIVE CONTROL: held slot is a stick (setup_rcon) with stone in the hotbar, so every placement is an in-tick swap+use (meadow Lease.with, ~0ms) -> the swap-use check (use <40ms after slot change, 4+ in 10s, Interact.java:59-71) must SIGNAL interact within the 8s leg. The BY-DESIGN quiet variant (held slot already a block: no swaps, view turned, capped under the chain line) is named here as uncovered surface - closing it needs the rotation-snap-at-place proposal (rig/ROTATION-SNAP-AT-PLACE-PROPOSAL.md), not this row. Attack effect = effect_check; without server-confirmed placements INCONCLUSIVE, never EVADE. DRAFT until receipts',
+   'row': 'POSITIVE CONTROL (HYPOTHESIS until receipts - the setup_rcon/teardown_rcon/effect_check fields are an implementation TARGET, no runner consumes them yet): after /clear, the held slot is a stick and container.1 is stone, so every placement is an in-tick swap+use (meadow Lease.with, ~0ms). The swap-use check (use <40ms after slot change, 4+ in 10s, Interact.java:59-71) is PREDICTED to SIGNAL interact within the 8s leg - a static source prediction, not an observed result. The BY-DESIGN quiet variant (held slot already a block: no swaps, view turned, capped under the chain line) is named here as uncovered surface - closing it needs the rotation-snap-at-place proposal (rig/ROTATION-SNAP-AT-PLACE-PROPOSAL.md), not this row. Attack effect = effect_check; without server-confirmed placements INCONCLUSIVE, never EVADE. DRAFT until receipts',
    'falsifies': 'the swap-use 40ms window and 4-per-10s counter vs an auto-swapping scaffold module'},
  # auto-totem (matrix totem rows): executable setup below; the pop is /damage mid-row
  'nb-totem-legit': {'tp': G['lane_start'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': -90, 'expectMove': False,

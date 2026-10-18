@@ -83,14 +83,36 @@ check(pb_grade.grade(r, [r])['verdict'] == 'PASS', 'spec row grades PASS through
 r2 = dict(r); r2['signals'] = ['[meshac] SIGNAL P speed 12.3 heat=1 -> log']
 check(pb_grade.grade(r2, [r2])['verdict'] == 'INVALID', 'off-target signal INVALID through pb_grade')
 
-if failed: raise SystemExit('%d failures' % failed)
-print('test-newbounds_controls ok')
-
 # scaffold rows: swap-use binding and the held-block BY-DESIGN hole named, not hidden
 sc = S['nb-scaffold-cheat']
-check(sc['setup_rcon'] == ['/item replace entity @p weapon.mainhand with minecraft:stick',
-                           '/give @p minecraft:stone 64'], 'scaffold cheat setup forces a non-block held slot + hotbar blocks')
+check(sc['setup_rcon'] == ['/clear @p',
+                           '/item replace entity @p weapon.mainhand with minecraft:stick',
+                           '/item replace entity @p container.1 with minecraft:stone 64'],
+      'scaffold cheat setup clears the inventory, then forces a stick in hand + stone in a KNOWN hotbar slot')
+check(sc['teardown_rcon'] == ['/clear @p'], 'scaffold cheat tears the inventory down')
+check('HYPOTHESIS' in sc['row'] and 'TARGET' in sc['row'], 'scaffold cheat row labels setup/signal claims as hypotheses, fields as TARGET')
 check('40ms' in sc['row'] and 'BY-DESIGN quiet' in sc['row'], 'scaffold cheat row binds the swap-use window and names the uncovered held-block variant')
 check('ROTATION-SNAP-AT-PLACE-PROPOSAL' in sc['row'], 'scaffold cheat row names the proposal that would close the quiet variant')
-check('span' in S['nb-scaffold-legit']['row'] and 'DRAFT' in S['nb-scaffold-legit']['row'], 'scaffold legit row stays DRAFT until the span geometry is pinned')
-check(('hold3', 'Shift_L', 's', '3', 8) in S['nb-scaffold-legit']['legs'], 'scaffold legit leg holds sneak+back+use (the hold3 verb)')
+sl = S['nb-scaffold-legit']
+check('span' in sl['row'] and 'DRAFT' in sl['row'] and 'HYPOTHESIS' in sl['row'], 'scaffold legit row: span DRAFT + hypothesis wording')
+check(sl.get('pitch') == 60 and sc.get('pitch') == 60, 'both scaffold rows pin the pitch onto the placement face')
+check(sl['setup_rcon'] == ['/clear @p', '/item replace entity @p weapon.mainhand with minecraft:stone 64'],
+      'scaffold legit setup holds blocks in hand')
+check('effect_check' in sl and 'effect_check' in sc, 'both scaffold rows bind a server-confirmed placement receipt')
+check(('hold3', 'Shift_L', 's', '3', 8) in sl['legs'], 'scaffold legit leg holds sneak+back+use (the hold3 verb)')
+
+def finish():
+    if failed: raise SystemExit('%d failures' % failed)
+    print('test-newbounds_controls ok')
+
+# negative control: prove the failure path really exits nonzero (reviewer 10-17, 0035)
+_failed_saved = failed
+check(False, 'negative control: this FAIL line is EXPECTED and must be counted')
+check(failed == _failed_saved + 1, 'check() must count the failure above')
+try:
+    finish()
+    check(False, 'finish() must raise SystemExit when failures exist')
+except SystemExit as e:
+    check(isinstance(e.code, str) and e.code.endswith('failures'), 'finish() exit carries the failure count (rc1)')
+failed = _failed_saved  # restore: the negative control must not fail the suite itself
+finish()

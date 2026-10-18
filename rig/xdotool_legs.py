@@ -8,6 +8,10 @@ Human pacing: clicks default to ~4/s (Interact.java allows 16/s; fast bridging i
 vanilla rows must read as a fast-but-human hand, and the cheat rows let the module do the work."""
 import subprocess, sys, time
 
+class ReleaseError(RuntimeError):
+    """An input release failed after every release was attempted. Mark the row INCONCLUSIVE;
+    the user may need an input reset."""
+
 CLICK_DELAY_S = 0.25  # ~4 clicks a second, human pace (see module docstring)
 BUTTONS = {'1', '2', '3'}  # left, middle, right
 
@@ -29,8 +33,10 @@ def run_leg(leg, module_key, dry=False):
     if v == 'hold3':
         btn = leg[3]
         assert btn in BUTTONS, 'unknown mouse button ' + btn
-        # releases predeclared BEFORE any acquire: keyup/mouseup are idempotent, so an
-        # ambiguous mid-send error (sent? not sent?) can never leave a key or button down
+        # releases predeclared BEFORE any acquire: keyup/mouseup are idempotent. The guarantee
+        # is that ALL cleanup is attempted, even on an ambiguous mid-send error - a release can
+        # itself fail, and that failure is surfaced as ReleaseError (row INCONCLUSIVE), never
+        # swallowed
         releases = [['keyup', leg[1]], ['keyup', leg[2]], ['mouseup', btn]]
         try:
             _x(['keydown', leg[1]], dry)
@@ -38,9 +44,13 @@ def run_leg(leg, module_key, dry=False):
             _x(['mousedown', btn], dry)
             time.sleep(0 if dry else leg[4])
         finally:
+            missed = []
             for rel in releases:
                 try: _x(rel, dry)
-                except Exception: pass  # attempt every release even if one fails
+                except Exception as e: missed.append(' '.join(rel) + ' (%s)' % e)
+            if missed:
+                raise ReleaseError('input release failed after all were attempted: ' + '; '.join(missed)
+                                   + ' - mark the row INCONCLUSIVE, the user may need an input reset')
         return
     if v == 'module': _x(['key', module_key], dry); return
     if v == 'click':
@@ -65,8 +75,24 @@ def selftest():
     import signal_checks, newbounds_controls
     # every verb in the vocabulary runs (dry) and releases cleanly; every spec leg validates
     for leg in [('wait', 0.01), ('tap', 'space'), ('hold', 'w', 0.01), ('hold2', 'w', 'Shift_L', 0.01),
-                ('module', None), ('click', '1', 2), ('holdmouse', '3', 0.01)]:
+                ('module', None), ('click', '1', 2), ('holdmouse', '3', 0.01), ('hold3', 'w', 'Shift_L', '3', 0.01)]:
         run_leg(leg, 'r', dry=True)
+    # hold3: a failed release is surfaced as ReleaseError and EVERY release is still attempted
+    calls = []
+    orig_x = _x
+    def boom(args, dry):
+        calls.append(args)
+        if args == ['keyup', 'w']: raise RuntimeError('X gone mid-release')
+    globals()['_x'] = boom
+    try:
+        try:
+            run_leg(('hold3', 'w', 'Shift_L', '3', 0.01), 'r')
+            raise AssertionError('hold3 must raise ReleaseError when a release fails')
+        except ReleaseError as e:
+            assert 'INCONCLUSIVE' in str(e) and 'input reset' in str(e), 'ReleaseError names the row consequence'
+    finally:
+        globals()['_x'] = orig_x
+    assert ['keyup', 'w'] in calls and ['keyup', 'Shift_L'] in calls and ['mouseup', '3'] in calls, 'every release attempted even after one fails'
     for sc in list(newbounds_controls.S.values()):
         for leg in sc['legs']:
             assert leg[0] in newbounds_controls.LEG_VERBS, 'spec leg outside the vocabulary: ' + str(leg)

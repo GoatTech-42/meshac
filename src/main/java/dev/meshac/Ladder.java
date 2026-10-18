@@ -20,18 +20,21 @@ public final class Ladder {
 			else if (weight >= p.tierAWeight() && clusterMax < p.tierAWeight()) tierAClusters++;
 			if (weight > clusterMax) { h += weight - clusterMax; clusterMax = weight; }
 			heat = h; at = t;
+			// Shortcut reachability: two tier-A bursts add 2 * tierAWeight heat, so the removeAt - 1 floor is only clearable when removeAt <= 2 * tierAWeight + 1.
+			// Live on default (6 <= 7) and strict (5 <= 7); subsumed on the shipped lenient preset (removeAt 8 > 7): two weight-3 bursts cap at 5.95 < 7 and the
+			// third burst trips the generic gate in the same add() call, so the branch never fires first there. Documented behavior, unchanged (Box lane A, 10-18).
 			if (tierAClusters >= p.minClustersTierA() && h >= p.removeAt() - 1) return Step.REMOVE; // two separate tier A bursts: no need to wait for full heat
 			if (h >= p.removeAt() && clusters >= p.minClusters()) return Step.REMOVE;
 			if (h >= p.holdAt()) return Step.HOLD;
 			return Step.SETBACK;
 		}
 		public void reset() { heat = 0; clusters = 0; tierAClusters = 0; clusterMax = 0; clusterAt = 0; }
-		public boolean confirmedTierA() { return tierAClusters >= 2; }
+		public boolean confirmedTierA(Params p) { return tierAClusters >= p.minClustersTierA(); } // honors the configured bar (requireClustersTierA), not a hardcoded 2
 	}
 
 	/** Offences forgive themselves: each one counts 0.5^(age / halfLifeDays). */
 	public static double effectiveOffences(double[] agesDays, double halfLifeDays) {
-		double n = 0; for (double a : agesDays) n += Math.pow(0.5, a / halfLifeDays); return n;
+		double n = 0; for (double a : agesDays) n += Math.pow(0.5, Math.max(0, a) / halfLifeDays); return n; // a future-dated case (clock skew, hand-edited cases.json) counts as fresh, never as more than 1 offence
 	}
 
 	/** A fresh offence counts 0.99995 after a minute, not 1, because it already started to decay. Without this tolerance floor() put a repeat offence minutes later back on the kick rung. */

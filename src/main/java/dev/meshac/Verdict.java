@@ -125,7 +125,7 @@ public final class Verdict {
   if (!Config.get().enforce(why.split(" ")[0])) { Meshac.LOG.warn("[meshac] MONITOR {} would be removed: {}", pl.getGameProfile().name(), why); return; }
 		String reason = "Unusual " + why.split(" ")[0] + " (" + why + ")";
 		Config cf = Config.get();
-		H hh = HEAT.get(pl.getUUID()); boolean tierA = hh != null && hh.lh.confirmedTierA();
+		H hh = HEAT.get(pl.getUUID()); boolean tierA = hh != null && hh.lh.confirmedTierA(cf.ladderParams());
 		double eff = Cases.offences(pl.getUUID());
 		int rung = Ladder.rung(eff, cf.kicks(), tierA && cf.skipRungOnTierA());
 		String name = pl.getGameProfile().name();

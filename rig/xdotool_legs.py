@@ -29,14 +29,16 @@ def run_leg(leg, module_key, dry=False):
     if v == 'hold3':
         btn = leg[3]
         assert btn in BUTTONS, 'unknown mouse button ' + btn
-        held = []
+        # releases predeclared BEFORE any acquire: keyup/mouseup are idempotent, so an
+        # ambiguous mid-send error (sent? not sent?) can never leave a key or button down
+        releases = [['keyup', leg[1]], ['keyup', leg[2]], ['mouseup', btn]]
         try:
-            _x(['keydown', leg[1]], dry); held.append(['keyup', leg[1]])
-            _x(['keydown', leg[2]], dry); held.append(['keyup', leg[2]])
-            _x(['mousedown', btn], dry); held.append(['mouseup', btn])
+            _x(['keydown', leg[1]], dry)
+            _x(['keydown', leg[2]], dry)
+            _x(['mousedown', btn], dry)
             time.sleep(0 if dry else leg[4])
         finally:
-            for rel in held:
+            for rel in releases:
                 try: _x(rel, dry)
                 except Exception: pass  # attempt every release even if one fails
         return

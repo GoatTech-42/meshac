@@ -1,4 +1,4 @@
-# Box run specs v3 (10-18) - reviewer v2 round folded. Supersedes rig/BOX-RUN-SPECS-v2-20261018.md.
+# Box run specs v3 (10-18) - SUPERSEDED by rig/BOX-RUN-SPECS-v4-20261018.md (reviewer v3 round: disposable-rig vs protected-services scope line; ONE monotonic deadline with reserved cleanup + honest outer bound; cgroup-scope supervision instead of pidfd/PGID arithmetic; netns end-state evidence + launch hygiene; hermetic OFFLINE build with prepopulated cache replacing observed egress; exact filesystem leases; spec S needs execution + kick approvals, shot 1 labeled manual staff action, never detection proof; frozen-series qualification narrowed to reviewer-confirmed part-2 tar only). Kept for history; do not run from this file.
 
 NEVER ilhsmc, emberstead, dl-share, backups, docker volumes, PID 633625, or any game-server
 process. No live deploy. No run starts without the reviewer's GO on this spec. Identities

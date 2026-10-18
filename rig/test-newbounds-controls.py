@@ -121,8 +121,8 @@ for k in cbt:
           k + ': no retracted dead-path wording (0048)')
     for f in ('setup_rcon', 'teardown_rcon'):
         for c in S[k].get(f, []):
-            check(c.startswith('/execute in minecraft:overworld run '),
-                  k + '.' + f + ': every command runs /execute in minecraft:overworld (world is real, not prose)')
+            check(c.startswith('/execute in minecraft:overworld run ') or c.startswith('/execute in minecraft:overworld unless blocks '),
+                  k + '.' + f + ': every command is overworld-pinned (/execute ... run, or the unless-blocks guard)')
             check('@p' not in c, k + '.' + f + ': no @p (RCON @p can hit the wrong nearest player)')
 for k in ('nb-cbt-reach-cheat', 'nb-cbt-los-cheat', 'nb-cbt-aim-cheat', 'nb-cbt-multi-cheat'):
     check(S[k]['expect'] == 'signal' and S[k]['checks'] == ('combat',) and 'module' in S[k], k + ' is a bound combat cheat row')
@@ -162,6 +162,28 @@ check('no runtime GO' in S['nb-cbt-lag100-legit']['row'] and 'no runtime GO' in 
 check('never emit' in S['nb-cbt-flick-legit']['row'], 'flick row pins low-confidence patterns as evidence-only')
 check('dead path' not in S['nb-combat-cheat']['row'] and 'monitor mode' in S['nb-combat-cheat']['row'],
       'nb-combat-cheat positive control targets the live monitor-mode path (0048 retraction)')
+
+# 0052 (reviewer 10:31pm): LOS backup destination guarded + reserved, success-gated rollback, forceload before-state
+los_setup = S['nb-cbt-los-cheat']['setup_rcon']
+qi = next(i for i, c in enumerate(los_setup) if 'forceload query' in c)
+ai = next(i for i, c in enumerate(los_setup) if 'forceload add' in c)
+check(qi < ai, 'los setup captures the forceload BEFORE-STATE (query) before adding')
+check(any('unless blocks 157 80 158 157 83 162 158 80 158 all' in c for c in los_setup),
+      'los setup guards the backup destination against the reserved-empty neighbor before any mutation')
+check('RESERVED' in S['nb-cbt-los-cheat']['row'] and 'GUARDS' in S['nb-cbt-los-cheat']['row'],
+      'los row: backup destination + neighbor are reserved scratch volumes, guarded pre-mutation')
+check('success-gated' in S['nb-cbt-los-cheat']['row'] and 'newly forced' in S['nb-cbt-los-cheat']['row'],
+      'los row: rollback is command-success gated; forceload remove only chunks newly forced by this run')
+check('IMMEDIATELY BEFORE AND AFTER' in S['nb-cbt-reach-cheat']['effect_check'],
+      'a15 preflight requires bracketing receipts (interval coverage), not a single prior trace')
+check('NOT independent packet-arrival proof' in S['nb-cbt-reach-cheat']['effect_check'],
+      'client swing labeled corroboration only, not packet-arrival proof')
+check('DISPOSABLE' in S['nb-cbt-crowd-legit']['row'] and 'snapshot' in S['nb-cbt-crowd-legit']['row'],
+      'crowd row: dedicated disposable bot, else snapshot + restore before /clear')
+import pathlib as _pl
+_src = _pl.Path(__file__).with_name('newbounds_controls.py').read_text()
+check('try/finally teardown' in _src and 'placeholder substitution VALIDATED' in _src and 'success receipts' in _src,
+      'executor contract pinned in the controls STATUS footer: try/finally, validated substitution, success receipts')
 
 # negative controls (skipped inside a mutated run - no recursion)
 if not os.environ.get('MESHAC_TEST_MUTATE'):

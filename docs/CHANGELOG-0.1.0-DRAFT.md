@@ -18,6 +18,10 @@ first public release. meshac is a server-side fabric anticheat: players install 
 - bedrock players (geyser/floodgate): movement checks only, with extra room. everything else skips them
 - optional anti-xray and anti-esp, off by default
 - admin switches for testing: `MESHAC_TRACE`, `MESHAC_GROUND_TOL=compare` (log only, off by default)
+- no-fall check watches a small window of ground claims instead of needing three odd claims in a row. a no-fall cheat that mixes its fake claims with honest packets no longer slips through (unrun)
+- fake ground claims no longer reset the jump and flight chains (unrun)
+- normal powder-snow struggle hops no longer risk a jump flag (unrun)
+- log-only shadow measurements for a future no-fall fall-damage handback and for partial-block tolerance. off by default, no gameplay change (unrun)
 
 versions: only claim a version here after it has been built and run. as of this draft the final branch has not been compiled on any of 1.21.11, 26.1, 26.2 or 26.3.
 

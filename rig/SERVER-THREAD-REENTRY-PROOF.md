@@ -175,3 +175,23 @@ computeIfAbsent landing between the wipe and the publish). 0091 replaces the tok
 - Owed (Box, MC-side/harness): a threaded signal+reload stress test asserting no post-commit dispatch of
   a pre-commit REMOVE and no cross-commit heat survival. Not writable as a pure unit test (Verdict needs
   ServerPlayer).
+
+## 0092 addendum: claim narrowed to inside-Verdict effects; mutation discipline
+
+Reviewer round on 0091, three corrections folded:
+- COMPILE: Config.load still used cur as a Config in two places (cur is the Snapshot since 0091) - fixed to
+  cur.cfg. The python wiring tests regex-match structure; they do not typecheck. Box runs javac FIRST on any
+  new tip before harness or mutation work.
+- NARROW CLAIM: 0091 wording said "decision AND effects" are atomic against a commit. That holds only for
+  effects dispatched INSIDE Verdict (heat, case store, disconnect, Discord, watcher alerts, log lines). The
+  Step a signal RETURNS is consumed by the check caller - cancel/setback/refusal in Movement, Interact,
+  Mining, Glide, Inventory, Vehicle, Totem, Fish and the packet-listener mixin - AFTER POLICY_LOCK is
+  released. A commit can land between the return and that caller action; outer actions are explicitly NOT
+  covered. Bounding a stale outer action: it is one in-flight event's cancel/setback/refusal computed under
+  the previous policy; it never touches heat, cases, or bans (those all stayed inside the lock).
+- MUTATION DISCIPLINE: the Snapshot guarantees identity, not deep immutability. Exactly two post-publication
+  mutations are sanctioned, both under POLICY_LOCK: monitorOnly (in-place Boolean write) and disabledChecks
+  (copy-on-write swap - /mesh check on|off now builds a new list and swaps the reference, so unsynchronized
+  readers iterating disabled() can never see a half-mutated list or a ConcurrentModificationException; the
+  in-place removeIf/add it replaces carried that risk since the command was added). Every other Config write
+  is pre-publication (Gson parse, validatePolicy).

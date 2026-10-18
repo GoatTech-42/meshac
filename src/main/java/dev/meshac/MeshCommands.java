@@ -95,10 +95,15 @@ public final class MeshCommands {
 	/** Runtime switch for one sub-check (same list as config disabledChecks). Not written to disk; /mesh reload restores the config's list. */
 	private static int setCheck(CommandSourceStack s, String name, boolean on) {
 		if (!Config.knownCheck(name)) { s.sendFailure(Component.literal("No check called " + name + ". Known: " + String.join(", ", new java.util.TreeSet<>(Config.KNOWN_CHECKS)))); return 0; }
-		var l = Config.get().disabledChecks; if (l == null) { l = new java.util.ArrayList<>(); Config.get().disabledChecks = l; }
-		final boolean wasOn = l.stream().noneMatch(d -> d != null && d.equalsIgnoreCase(name));
-		l.removeIf(d -> d != null && d.equalsIgnoreCase(name));
-		if (!on) l.add(name);
+		final boolean wasOn;
+		synchronized (Config.POLICY_LOCK) { // live policy mutation: serialized against decisions like any policy commit (0091). Copy-on-write swap (0092): readers iterate disabled() without the lock, so the list must never be mutated in place
+			var l = Config.get().disabledChecks;
+			var next = new java.util.ArrayList<String>(); if (l != null) next.addAll(l);
+			wasOn = next.stream().noneMatch(d -> d != null && d.equalsIgnoreCase(name));
+			next.removeIf(d -> d != null && d.equalsIgnoreCase(name));
+			if (!on) next.add(name);
+			Config.get().disabledChecks = next; // atomic reference write; unsynchronized readers see before-or-after
+		}
 		audit(s, "check." + name, AdminLog.change(wasOn ? "enabled" : "disabled", on ? "enabled" : "disabled"));
 		s.sendSuccess(() -> Component.literal("Check " + name + (on ? " enabled." : " disabled until reload or restart: no flags, no heat, no setbacks or refusals from it for anyone.") + ""), true); return 1;
 	}

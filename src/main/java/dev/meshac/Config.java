@@ -129,19 +129,24 @@ public final class Config {
 	}
 	/** One immutable policy publication: the config instance and the epoch it was published under. A decision reads the
 	 *  Snapshot ONCE, so policy and epoch can never tear the way two independent volatile values could. A new Snapshot
-	 *  is published only inside POLICY_LOCK, after all ladder evidence has been wiped. Published Config instances are
-	 *  never mutated, with ONE sanctioned exception: the /mesh monitor operator toggle, which writes monitorOnly under
-	 *  POLICY_LOCK (a Boolean reference write, atomic) before wiping evidence. */
+	 *  is published only inside POLICY_LOCK, after all ladder evidence has been wiped. The Snapshot guarantees IDENTITY
+	 *  (one cfg+epoch pair, read once), not deep immutability: exactly two post-publication mutations are sanctioned,
+	 *  both under POLICY_LOCK - monitorOnly (in-place Boolean write, atomic) and disabledChecks (copy-on-write list
+	 *  swap, so unsynchronized readers iterating in disabled() can never hit a ConcurrentModificationException). Every
+	 *  other write to a Config instance happens pre-publication (Gson parse, validatePolicy). */
 	public static final class Snapshot {
 		public final Config cfg; public final long epoch;
 		private Snapshot(Config cfg, long epoch) { this.cfg = cfg; this.epoch = epoch; }
 	}
-	/** Serializes a policy COMMIT (reload or monitor-on: evidence wipe + publication) against every decision AND its
-	 *  effects (Verdict.signal/signalLogOnly/note hold it for their whole body). An action computed under one policy
-	 *  cannot dispatch after another policy has committed, and the commit's HEAT wipe cannot interleave with a
-	 *  decision's HEAT access. Lock order: POLICY_LOCK -> per-player heat lock -> Cases monitor; nothing acquires them
-	 *  in reverse. Cost: decisions across all players serialize; the section holds no blocking I/O (Discord posts are
-	 *  sendAsync; the only file write is Cases.save on a removal). */
+	/** Serializes a policy COMMIT (reload or monitor-on: evidence wipe + publication) against every decision AND every
+	 *  effect dispatched INSIDE Verdict (Verdict.signal/signalLogOnly/note hold it for their whole body: heat, case
+	 *  store, disconnect, Discord, watcher alerts, log lines). NARROW CLAIM (0092, reviewer-directed): the Step a signal
+	 *  RETURNS is consumed by the check caller (cancel/setback/refusal in Movement, Interact, Mining, Glide, Inventory,
+	 *  Vehicle, Totem, Fish and the packet-listener mixin) AFTER the lock is released - a commit can land between the
+	 *  return and that caller action, so outer actions are NOT covered by this atomicity. Lock order: POLICY_LOCK ->
+	 *  per-player heat lock -> Cases monitor; nothing acquires them in reverse. Cost: decisions across all players
+	 *  serialize; the section holds no blocking I/O (Discord posts are sendAsync; the only file write is Cases.save on
+	 *  a removal). */
 	public static final Object POLICY_LOCK = new Object();
 	private static volatile Snapshot cur = new Snapshot(new Config(), 0); // single writer: the reload commit inside POLICY_LOCK; readers are the server and network threads
 	static { cur.cfg.validatePolicy(); } // first-boot instance is validated before any enforce() call can read it
@@ -153,7 +158,7 @@ public final class Config {
  public static AdminLog.ReloadResult load() {
   Path p = FabricLoader.getInstance().getConfigDir().resolve("meshac.json");
   Gson g = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-  Config next = cur; String output; boolean existed = Files.exists(p);
+  Config next = cur.cfg; String output; boolean existed = Files.exists(p); // 0092: cur is the Snapshot; the config being replaced is cur.cfg
   try {
    if (existed) {
     var root = com.google.gson.JsonParser.parseString(Files.readString(p)).getAsJsonObject();
@@ -165,7 +170,7 @@ public final class Config {
     var defaults = com.google.gson.JsonParser.parseString(documented(g, new Config())).getAsJsonObject();
     for (var entry : defaults.entrySet()) if (!root.has(entry.getKey())) root.add(entry.getKey(), entry.getValue());
     output = g.toJson(root) + "\n";
-   } else output = documented(g, cur);
+   } else output = documented(g, cur.cfg);
   } catch (Exception e) { Meshac.LOG.warn("[meshac] config read/parse failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
   try { next.validatePolicy(); } catch (RuntimeException e) { Meshac.LOG.warn("[meshac] config validation failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
   synchronized (POLICY_LOCK) { // atomic commit: a decision holding the lock acts entirely before or entirely after the new policy - none can straddle the wipe and the publish

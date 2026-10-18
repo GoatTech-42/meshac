@@ -56,6 +56,22 @@ class PolicyLockWiring(unittest.TestCase):
   off = [l for l in mc.splitlines() if '"off"' in l and 'monitorOnly = false' in l]
   self.assertEqual(len(off), 1)
   self.assertIn('synchronized (Config.POLICY_LOCK)', off[0])
+ def test_load_uses_snapshot_types(self):
+  # 0091 shipped two compile errors my regex tests could not see (cur used as Config). Guard the exact shapes.
+  c = strip((S/'Config.java').read_text())
+  load = body(c, 'public static AdminLog.ReloadResult load(')
+  self.assertIn('Config next = cur.cfg;', load)
+  self.assertIn('documented(g, cur.cfg)', load)
+  self.assertNotIn('= cur;', load)           # cur is a Snapshot, never a Config
+  self.assertNotIn('(g, cur)', load)
+ def test_setcheck_copy_on_write_locked(self):
+  mc = strip((S/'MeshCommands.java').read_text())
+  sc = body(mc, 'private static int setCheck(')
+  self.assertIn('synchronized (Config.POLICY_LOCK)', sc)
+  self.assertIn('new java.util.ArrayList<String>()', sc)  # copy-on-write: never mutate the published list in place
+  self.assertIn('Config.get().disabledChecks = next;', sc)
+  lock = sc[sc.index('synchronized (Config.POLICY_LOCK)'):sc.index('Config.get().disabledChecks = next;')]
+  self.assertNotIn('l.removeIf', lock)  # no in-place mutation of the published list inside the lock
  def test_every_policylock_reference_is_an_acquisition(self):
   for f in ['Verdict.java','Config.java','MeshCommands.java']:
    t = strip((S/f).read_text())

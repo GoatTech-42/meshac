@@ -30,7 +30,7 @@ public final class Verdict {
 	public static Step signal(ServerPlayer pl, String check, String detail) { return signal(pl, check, detail, 1); }
 	/** Weight 2 is for hits: a landed attack is worth more heat than one odd move packet. */
 	public static Step signal(ServerPlayer pl, String check, String detail, int weight) {
-		synchronized (Config.POLICY_LOCK) { return signalLocked(pl, check, detail, weight); } // decision AND effects atomic against a policy commit: no cross-policy dispatch, no HEAT access split by the commit's wipe (0091)
+		synchronized (Config.POLICY_LOCK) { return signalLocked(pl, check, detail, weight); } // the decision and every effect dispatched INSIDE Verdict are atomic against a policy commit (0091). NARROW CLAIM (0092): the RETURNED step is acted on by the caller after the lock is released - outer cancel/setback/refusal actions are NOT covered
 	}
 	private static Step signalLocked(ServerPlayer pl, String check, String detail, int weight) {
 		Config cfg = Config.current().cfg; // the published policy snapshot, read ONCE; it cannot change while the lock is held

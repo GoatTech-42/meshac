@@ -118,6 +118,8 @@ if not os.environ.get('MESHAC_TEST_MUTATE'):
     check(_rc == 1, 'broken fixture suite must exit rc1 (got %s)' % _rc)
     # (b) mutation of a REAL production pin (GC01 total -> 301) MUST exit rc1 (0039)
     _env = dict(os.environ); _env['MESHAC_TEST_MUTATE'] = 'gc01'
-    _rc2 = subprocess.run([sys.executable, str(pathlib.Path(__file__))], capture_output=True, env=_env).returncode
-    check(_rc2 == 1, 'mutated production pin (GC01 total) must exit rc1 (got %s)' % _rc2)
+    _p2 = subprocess.run([sys.executable, str(pathlib.Path(__file__))], capture_output=True, text=True, env=_env)
+    check(_p2.returncode == 1, 'mutated production pin (GC01 total) must exit rc1 (got %s)' % _p2.returncode)
+    check('GC01 legs total 300s' in _p2.stdout, 'mutated run fails ON the GC01 pin (an unrelated rc1 does not count)')
+    check('Traceback' not in _p2.stderr, 'mutated run fails by assertion, not a crash: ' + _p2.stderr[:200])
 finish()

@@ -114,8 +114,15 @@ public final class LadderTierATest {
 		check(Ladder.rung(1e300, 1, false) == Integer.MAX_VALUE - 1 && Ladder.rung(1e300, 1, true) == Integer.MAX_VALUE, "a huge offence history saturates instead of wrapping the int cast negative");
 		Ladder.Params rawInvalid = new Ladder.Params(Double.NaN, 0, -1, 0, 0, 0, 0);
 		Ladder.Heat rawBad = new Ladder.Heat();
-		rawBad.add("glide", 3, T0, rawInvalid); rawBad.add("glide", 3, T0 + 200, rawInvalid);
-		check(!rawBad.confirmedTierA(rawInvalid), "a caller that skips Config and hands Heat raw invalid params gets no confirmation: the params are sanitized at the door");
+		check(rawBad.add("glide", 3, T0, rawInvalid) == Ladder.Step.SETBACK && rawBad.add("glide", 3, T0 + 200, rawInvalid) == Ladder.Step.SETBACK, "explicit invalid-policy contract: raw invalid params record evidence but every step is capped at SETBACK - removal is impossible even for a caller that skips Config");
+		check(!rawBad.confirmedTierA(rawInvalid) && rawBad.now(T0 + 300, rawInvalid) == 0, "read entry points require bound + valid params: invalid params read as nothing");
+		check(new Ladder.Heat().now(T0, def) == 0 && !new Ladder.Heat().confirmedTierA(def), "a never-fed (unbound) heat reads as zero and confirms nothing, even with valid params");
+		check(Ladder.PolicyDecision.of(def, 14, null, 14).equals(new Ladder.PolicyDecision(def, 14, false)), "policy decision: valid raw config publishes as-is, not invalid");
+		Ladder.PolicyDecision dec = Ladder.PolicyDecision.of(rawInvalid, Double.NaN, null, 14);
+		check(dec.invalid() && dec.params().equals(Ladder.Params.defaults()) && dec.offenceHalfLifeDays() == 14, "policy decision: fully invalid config publishes the reviewed defaults (first boot) and is marked invalid - the caller pauses enforcement");
+		Ladder.PolicyDecision dec2 = Ladder.PolicyDecision.of(rawInvalid, 14, lenient, 14);
+		check(dec2.invalid() && dec2.params().equals(lenient), "policy decision: invalid reload keeps the LAST VALID params, not the broken ones");
+		check(!Ladder.PolicyDecision.of(def, -1, null, 14).invalid() == false, "policy decision: an invalid offence half-life alone marks the policy invalid");
 		Ladder.Heat gate = new Ladder.Heat();
 		gate.add("glide", 3, T0, wantFour); gate.add("glide", 3, T0 + 200, wantFour);
 		check(!gate.confirmedTierA(wantOne), "epoch-gated read: evidence collected under a bar of 4 does not confirm when read with a bar of 1 (no new add needed to lose confirmation)");

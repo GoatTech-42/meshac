@@ -49,7 +49,7 @@ public final class Config {
 	public java.util.List<String> exemptPlayers = new java.util.ArrayList<>(); // names (case-insensitive) skipped by the movement and combat checks
 	public java.util.List<String> egregiousChecks = new java.util.ArrayList<>(); // legacy setting retained for file compatibility; never bypasses monitor mode
 	public boolean isEgregious(String check) { if (egregiousChecks == null) return false; for (String e : egregiousChecks) if (e != null && e.equalsIgnoreCase(check)) return true; return false; } // case-insensitive like the other check lists
-	public boolean enforce(String check) { return !monitor() && !policyInvalid; } // soft mode: raw action refusals (break/click/use) follow the same gate as verdicts; an invalid policy pauses enforcement (log-only) until a valid reload
+	public boolean enforce(String check) { return !monitor() && !policyInvalid(); } // soft mode: raw action refusals (break/click/use) follow the same gate as verdicts; an invalid policy pauses enforcement (log-only) until a valid reload
 	public java.util.Map<String, java.util.List<String>> exemptChecks = new java.util.HashMap<>(); // check name -> player names exempt from that check only
 	public java.util.List<String> disabledChecks = new java.util.ArrayList<>(); // sub-check names switched fully off (Luke "Exempt that check rn" 2026-10-11)
 	public boolean disabled(String check) { if (disabledChecks == null) return false; for (String d : disabledChecks) if (d != null && d.equalsIgnoreCase(check)) return true; return false; }
@@ -79,32 +79,28 @@ public final class Config {
 	public double removeAtD() { return removeAt != null ? removeAt : switch (preset.toLowerCase()) { case "lenient" -> 8; case "strict" -> 5; default -> 6; }; }
 	/** Last ladder params that passed validation; a reload with invalid values keeps these instead of the broken ones. */
 	private static transient Ladder.Params lastValidLadder;
-	/** True while the active config carries an invalid policy value: enforcement pauses (log-only) until a valid reload. Transient: never written to meshac.json. */
-	public transient boolean policyInvalid;
-	public Ladder.Params ladderParams() {
+	/** The policy decision published with THIS instance: computed once, eagerly, at load/reload - never lazily by a getter,
+	 *  so enforce() can never run ahead of discovery. Transient: never written to meshac.json. */
+	private transient Ladder.PolicyDecision policy;
+	/** Eager policy validation. Runs in load() after deserialization and BEFORE the instance is published as Config.get(),
+	 *  and once for the first-boot instance. Diagnostics are logged here (bounded by operator reloads), not per signal. */
+	void validatePolicy() {
 		Ladder.Params raw = new Ladder.Params(halfLifeSeconds != null ? halfLifeSeconds : 8, holdAtD(), removeAtD(), requireClusters != null ? requireClusters : 3, requireClustersTierA != null ? requireClustersTierA : 2, 3, 150);
-		String probs = Ladder.Params.problems(raw);
-		if (!probs.isEmpty()) {
-			policyInvalid = true;
-			Meshac.LOG.warn("[meshac] invalid ladder config ({}): keeping the last valid values and pausing enforcement (log-only) until a valid reload", probs);
-			return lastValidLadder != null ? lastValidLadder : Ladder.Params.defaults();
-		}
-		if (!policyInvalid) lastValidLadder = raw; // do not clear a posture set by offenceHalfLifeDays() in the same call pass
-		return raw;
+		double rawHl = offenceHalfLifeDays != null ? offenceHalfLifeDays : memoryDays();
+		policy = Ladder.PolicyDecision.of(raw, rawHl, lastValidLadder, 14);
+		if (policy.invalid()) {
+			String probs = Ladder.Params.problems(raw);
+			if (!probs.isEmpty()) Meshac.LOG.warn("[meshac] invalid ladder config ({}): keeping the last valid values and pausing enforcement (log-only) until a valid reload", probs);
+			if (policy.offenceHalfLifeDays() != rawHl) Meshac.LOG.warn("[meshac] invalid offenceHalfLifeDays ({}): keeping 14 d and pausing enforcement (log-only) until a valid reload", rawHl);
+		} else lastValidLadder = raw;
 	}
+	private boolean policyInvalid() { return policy == null || policy.invalid(); } // policy==null only before the first validatePolicy(); fail to log-only, never to enforcement
+	public Ladder.Params ladderParams() { return policy != null ? policy.params() : Ladder.Params.defaults(); }
 	public boolean explicitLadder() { return tempbanMinutes != null && tempbanMinutes.length > 0; }
 	public double tempBase() { return tempbanBaseMinutes != null ? tempbanBaseMinutes : switch (preset.toLowerCase()) { case "lenient" -> 5; case "strict" -> 30; default -> 10; }; }
 	public double tempGrowth() { return tempbanGrowth != null ? tempbanGrowth : 6; }
 	public double tempMax() { return tempbanMaxMinutes != null ? tempbanMaxMinutes : 10080; }
-	public double offenceHalfLifeDays() {
-		double hl = offenceHalfLifeDays != null ? offenceHalfLifeDays : memoryDays();
-		if (!(hl > 0) || !Double.isFinite(hl)) {
-			policyInvalid = true;
-			Meshac.LOG.warn("[meshac] invalid offenceHalfLifeDays ({}): keeping 14 d and pausing enforcement (log-only) until a valid reload", hl);
-			return 14;
-		}
-		return hl;
-	}
+	public double offenceHalfLifeDays() { return policy != null ? policy.offenceHalfLifeDays() : 14; }
 	public boolean permanentNeedsTierA() { return permanentNeedsTierA == null || permanentNeedsTierA; }
 	public boolean skipRungOnTierA() { return skipRungOnTierA == null || skipRungOnTierA; }
 	public int[] tempMinutes() {
@@ -127,6 +123,7 @@ public final class Config {
 		root.add("_help", help); return g.toJson(root) + "\n";
 	}
 	private static Config cur = new Config();
+	static { cur.validatePolicy(); } // first-boot instance is validated before any enforce() call can read it
 	public static Config get() { return cur; }
 
 	public static void applyVeil() { dev.meshac.veil.Veil.xrayOn = get().veilEnabled() && get().veilXray != null && get().veilXray; dev.meshac.veil.Veil.espOn = get().veilEnabled() && get().veilEsp != null && get().veilEsp; dev.meshac.veil.Veil.bedrockOn = get().veilBedrock != null && get().veilBedrock; dev.meshac.veil.Veil.clear(); dev.meshac.veil.Veil.startupCheck(); Meshac.LOG.info("[meshac] {}", new dev.meshac.veil.VeilSettings(get().veilEnabled, get().veilXray, get().veilEsp, get().veilBedrock).describe()); }
@@ -148,7 +145,7 @@ public final class Config {
     output = g.toJson(root) + "\n";
    } else output = documented(g, cur);
   } catch (Exception e) { Meshac.LOG.warn("[meshac] config read/parse failed, previous settings kept: {}", e.toString()); return AdminLog.ReloadResult.PARSE_FAILED; }
-  Movement.clearPendingActions(); Verdict.clearPendingActions(); cur = next; // includes file-absent success: no old hold or NoFall debt survives
+  next.validatePolicy(); Movement.clearPendingActions(); Verdict.clearPendingActions(); cur = next; // validated BEFORE publishing: no enforce() call can run ahead of discovery; no old hold or NoFall debt survives
   try { Files.writeString(p, output); }
   catch (Exception e) { Meshac.LOG.warn("[meshac] config settings applied but file could not be saved: {}", e.toString()); return AdminLog.ReloadResult.APPLIED_NOT_SAVED; }
   return existed ? AdminLog.ReloadResult.APPLIED : AdminLog.ReloadResult.DEFAULTS_CREATED;

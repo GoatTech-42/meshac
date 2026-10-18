@@ -17,11 +17,12 @@ public final class Movement {
 	private static final int SKIP_TICKS = 20;  // grace after teleport, damage, effects
 	private static final int GROUND_WINDOW = 5;    // PROPOSAL: sliding window over the last ground claims (legit battery gates)
 	private static final int GROUND_FLAG_AT = 3;   // PROPOSAL: unsupported claims inside the window that fire nofall
+	private static final int STRONG_ARM_AT = 2;    // PROPOSAL (P3-strong draft, log-only): shadow handback arms below the flag threshold; A-row-gated kill criteria in P3-STRONG-DRAFT.md
 
 	private static final class S { final ContextLogBudget.Caller ctxBudget = new ContextLogBudget.Caller(); int ownerEntity; Object ownerDimension; volatile boolean blinkHit; volatile long burstMark; final BlinkOrigin bo = new BlinkOrigin(); long iceAt; double prevDtS; long flyMedAt, gtLogAt; final CompareLogBudget.Caller spShadowLog = new CompareLogBudget.Caller(); double spShadow; boolean wasExempt; long lastPosAt, burstStart; int burstN; double burstGap; boolean lastMoving; double ax = Double.NaN, az; long tickEnds, teAtLastPos;  final BlinkClock clock = new BlinkClock(); final BounceTracker bounce = new BounceTracker(); final MediumExit exit = new MediumExit(); final StepAccumulator stepAcc = new StepAccumulator(); double lastH, lastFallH; int slipN;
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
 		boolean ground, cground, init, ownTp;
-		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks; final GroundEvidence gndEv = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); boolean graceSoft; final GroundEvidence gndShadow = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); long softLogAt;
+		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks; final GroundEvidence gndEv = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); boolean graceSoft; final GroundEvidence gndShadow = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); long softLogAt; long nfStrongAt; double fdStrongMax;
 	}
 
  private static S state(ServerPlayer pl) {
@@ -34,7 +35,7 @@ public final class Movement {
 	/** True when this check may set back, hold or punish. Monitor mode is absolute: false for every check, listed egregious or not. */
 	private static boolean acts(String check) { return MonitorGate.acts(Config.get().monitor(), Config.get().isEgregious(check)); }
 	/** Monitor mode: the three pending-action fields are cleared together, never one of them. */
-	private static void monitorClear(S s) { if (Config.get().monitor()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; } }
+	private static void monitorClear(S s) { if (Config.get().monitor()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } }
 	/** Drops every action that outlives its signal (hold replay, delayed NoFall damage). Called on monitor on and before a config reload. */
 	public static void clearPendingActions() { for (S s : STATE.values()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; } }
 	/** Netty thread: stamp when a position packet really arrived. The main thread only sees it at the next tick. */
@@ -79,7 +80,7 @@ public final class Movement {
 				if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly) {
 					Verdict.Step bst = Verdict.signal(pl, "blink", "held its movement packets back and released them in one burst", 1);
 					if (bst != Verdict.Step.LOG && acts("blink") && act == BlinkOrigin.Act.ORIGIN && p.hasPosition()) { // the flushed packets already moved the player: put them back where the burst began (soft mode never gets here)
-						s.ownTp = true; s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
+						s.ownTp = true; s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 						s.goodX = s.bo.x; s.goodY = s.bo.y; s.goodZ = s.bo.z;
 						s.px = s.cx = s.bo.x; s.py = s.cy = s.bo.y; s.pz = s.cz = s.bo.z;
 						if (bst == Verdict.Step.HOLD) { s.freezeUntil = System.currentTimeMillis() + 1500; s.freezeCheck = "blink"; }
@@ -323,6 +324,8 @@ public final class Movement {
 				s.bufGround = s.gndEv.unsupported();
 				if (GROUND_TOL_COMPARE && claimAir) groundTolCompare(pl, s, pl.getBoundingBox().move(dx, dy, dz));
 				if (TRACE && (claimAir || s.bufGround > 0)) groundCtx(pl, s, s.gndEv.flagged() && hit == null, claimAir, ground, dy, s.prevDtS, exempt);
+				if (TRACE && (claimAir || s.bufGround > 0)) Meshac.LOG.info("[trace] gndclaim {} air={}", pl.getGameProfile().name(), claimAir); // replay-harness capture (sim/GroundReplay): one line per scored claim
+				if (s.nfStrongAt == 0 && s.gndEv.unsupported() >= STRONG_ARM_AT && hit == null) { s.nfStrongAt = nowMs; Meshac.LOG.info("[trace] nofall strong-arm {} count={} (P3-strong draft, log-only)", pl.getGameProfile().name(), s.gndEv.unsupported()); }
 				if (s.gndEv.flagged() && hit == null) hit = "nofall ground spoof";
 			}
 		} else if (ground && softGrace) { // O3, log-only: shadow window during non-displacing damage grace - never flags, never clears the live window
@@ -330,15 +333,15 @@ public final class Movement {
 				s.gndShadow.add(claimAir);
 				if (TRACE && s.gndShadow.flagged() && nowMs - s.softLogAt > 1000) { s.softLogAt = nowMs; Meshac.LOG.info("[trace] nofall shadow-evidence {} count={} (damage grace, log-only)", pl.getGameProfile().name(), s.gndShadow.unsupported()); }
 			}
-		} else if (ground) { s.gndEv.clear(); s.bufGround = 0; } // exempt/grace ground claim: fresh start, as before; air packets leave the window alone
+		} else if (ground) { if (TRACE && s.bufGround > 0) Meshac.LOG.info("[trace] gndclear {}", pl.getGameProfile().name()); s.gndEv.clear(); s.bufGround = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } // exempt/grace ground claim: fresh start, as before; air packets leave the window alone
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
 			if (ch[0].equals("speed") || ch[0].equals("fly") || ch[0].equals("air") || ch[0].equals("high") || ch[0].equals("microhop")) ctxLog(pl, s, dx, dy, dz); // log only: what the player was doing when the speed check fired
-			if (ch[0].equals("nofall")) { if (MonitorGate.armNoFall(acts("nofall"))) s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
+			if (ch[0].equals("nofall")) { if (MonitorGate.armNoFall(acts("nofall"))) s.nfAt = System.currentTimeMillis(); s.nfStrongAt = 0; s.fdStrongMax = 0; if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("fly") ? 3 : ch[0].equals("microhop") ? 2 : 1); // a block climbed in a few ticks is never an accident
-			if (step == Verdict.Step.LOG || !acts(ch[0])) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; return null; } // soft mode: record, never correct
+			if (step == Verdict.Step.LOG || !acts(ch[0])) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; return null; } // soft mode: record, never correct
 			s.ownTp = true;
-			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
+			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; s.gndEv.clear(); s.gndShadow.clear(); s.graceSoft = false; s.balMs = 0; s.spBal = 0; s.spShadow = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
 			s.px = s.cx = s.goodX; s.py = s.cy = s.goodY; s.pz = s.cz = s.goodZ;
 			if (step == Verdict.Step.HOLD) { s.freezeUntil = System.currentTimeMillis() + 1500; s.freezeCheck = ch[0]; }
 			return new double[] {s.goodX, s.goodY, s.goodZ, 0};
@@ -374,6 +377,15 @@ public final class Movement {
 				if (MonitorGate.damage(acts("nofall"), drop, s.fdMax)) pl.causeFallDamage(drop, 1.0f, pl.damageSources().fall());
 				s.nfAt = 0; s.fdMax = 0; s.fallPeak = pl.getY();
 			} else if (nowMs - s.nfAt > 15000 || pl.isInWater() || pl.isInLava() || pl.isFallFlying() || pl.onClimbable()) { s.nfAt = 0; s.fdMax = 0; }
+		}
+		if (s.nfStrongAt != 0) { // P3-strong draft, log-only: shadow of the handback watcher above; never arms MonitorGate, never deals damage
+			AABB sb = pl.getBoundingBox();
+			boolean sSupported = !pl.level().noCollision(pl, new AABB(sb.minX, sb.minY - 0.1, sb.minZ, sb.maxX, sb.minY, sb.maxZ));
+			s.fdStrongMax = Math.max(s.fdStrongMax, pl.fallDistance);
+			if (sSupported && !pl.isCreative() && !pl.isSpectator()) {
+				Meshac.LOG.info("[trace] nofall strong-handback WOULD fire {} peak={} y={} drop={} fdMax={} (P3-strong draft, log-only)", pl.getGameProfile().name(), r(s.fallPeak), r(pl.getY()), r(s.fallPeak - pl.getY()), r(s.fdStrongMax));
+				s.nfStrongAt = 0; s.fdStrongMax = 0;
+			} else if (nowMs - s.nfStrongAt > 15000 || pl.isInWater() || pl.isInLava() || pl.isFallFlying() || pl.onClimbable()) { s.nfStrongAt = 0; s.fdStrongMax = 0; }
 		}
 		net.minecraft.world.damagesource.DamageSource lds = pl.getLastDamageSource(); // only a mob or player swing pushes this way: blasts, falls and wind charges do not count
 		boolean meleeHurt = lds != null && lds.getDirectEntity() instanceof net.minecraft.world.entity.LivingEntity && System.currentTimeMillis() - s.windAt > 5000;

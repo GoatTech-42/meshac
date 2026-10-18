@@ -22,7 +22,7 @@ public final class MonitorSourceWitnessTest {
 		}
 		check(returns >= 5, "expected the setback return sites, found " + returns);
 		String t = String.join("\n", L);
-		check(t.contains("private static void monitorClear(S s) { if (Config.get().monitor()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; } }"), "monitorClear clears all three fields together");
+		check(t.contains("private static void monitorClear(S s) { if (Config.get().monitor()) { s.freezeUntil = 0; s.nfAt = 0; s.fdMax = 0; s.nfStrongAt = 0; s.fdStrongMax = 0; } }"), "monitorClear clears all pending nofall state together (incl. the P3-strong shadow)");
 		int c = t.indexOf("public static double[] check("), tk = t.indexOf("public static void tick(");
 		check(c > 0 && t.indexOf("monitorClear(s);", c) > 0 && t.indexOf("monitorClear(s);", c) < c + 700, "check() clears pending actions at entry");
 		check(tk > 0 && t.indexOf("monitorClear(s);", tk) > 0 && t.indexOf("monitorClear(s);", tk) < tk + 700, "tick() clears pending actions at entry");

@@ -32,8 +32,8 @@ import java.util.regex.Pattern;
  * count= post-add live count; gndclear decayCount= pre-decay shadow count; gndreset both counts),
  * the parse loop ALSO replays every receipt through real GroundEvidence instances and reports per-receipt
  * mismatches - a captured jar-state comparison, not harness-vs-harness. It FAILS CLOSED (exit 1) on any
- * mismatch or a mixed counted/uncounted capture; with zero receipts it says K4 NOT RUN and the run is a
- * presence-semantics reading only, never an agreement gate. */
+ * mismatch or a mixed counted/uncounted capture IN EITHER ORDER; with zero receipts it says K4 NOT RUN
+ * and exits 0 - that rc0 is DIAGNOSTIC, not a K4 pass: consumers must check for the NOT RUN line. */
 public final class GroundReplay {
 	/** One event: claim (unsupported?) or clear. */
 	public static final class Ev { final boolean claim, air, hard; Ev(boolean claim, boolean air, boolean hard) { this.claim = claim; this.air = air; this.hard = hard; }
@@ -70,64 +70,74 @@ public final class GroundReplay {
 	static final Pattern CLEAR = Pattern.compile("\\[trace] gndclear (\\S+)(?: decayCount=(\\d+))?");
 	static final Pattern RESET = Pattern.compile("\\[trace] gndreset (\\S+) cause=(\\S+) count=(\\d+) decayCount=(\\d+)");
 
+	/** K4 receipt tracker: replays capture receipts through REAL GroundEvidence instances (live policy +
+	 *  decay shadow) and fails closed on any mismatch or a mixed counted/uncounted capture in EITHER order.
+	 *  Package-visible for GroundReplayTest. */
+	static final class K4 {
+		final TreeMap<String, GroundEvidence> liveJar = new TreeMap<>(), decayJar = new TreeMap<>();
+		int claimReceipts, claimMismatch, clearReceipts, clearMismatch;
+		boolean receiptsSeen, uncountedSeen;
+		final List<String> lines = new ArrayList<>();
+		void claim(String name, boolean air, String count) {
+			GroundEvidence g = liveJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+			GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+			g.add(air); d.add(air);
+			if (count == null) { uncountedSeen = true; return; } // count = the jar's live window AFTER the add
+			receiptsSeen = true; claimReceipts++;
+			if (g.unsupported() != Integer.parseInt(count)) { claimMismatch++; lines.add("K4 claim mismatch " + name + ": jar=" + count + " harness=" + g.unsupported()); }
+		}
+		void clear(String name, String decayCount) {
+			GroundEvidence g = liveJar.get(name); if (g != null) g.clear();
+			GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+			if (decayCount == null) { uncountedSeen = true; d.decay(); return; } // decayCount = the jar's shadow BEFORE its decay
+			receiptsSeen = true; clearReceipts++;
+			if (d.unsupported() != Integer.parseInt(decayCount)) { clearMismatch++; lines.add("K4 boundary mismatch " + name + ": jarDecay=" + decayCount + " harness=" + d.unsupported()); }
+			d.decay();
+		}
+		void reset(String name, String cause, String count, String decayCount) {
+			receiptsSeen = true; clearReceipts++;
+			GroundEvidence g = liveJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+			GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+			if (g.unsupported() != Integer.parseInt(count)) { claimMismatch++; lines.add("K4 reset mismatch " + name + " (" + cause + "): jar=" + count + " harness=" + g.unsupported()); }
+			if (d.unsupported() != Integer.parseInt(decayCount)) { clearMismatch++; lines.add("K4 reset mismatch " + name + " (" + cause + "): jarDecay=" + decayCount + " harness=" + d.unsupported()); }
+			g.clear(); d.clear();
+		}
+		boolean mixed() { return receiptsSeen && uncountedSeen; } // BOTH categories, either order
+		boolean failed() { return mixed() || claimMismatch + clearMismatch > 0; }
+		boolean notRun() { return !receiptsSeen; }
+	}
+
 	public static void main(String[] args) throws Exception {
 		if (args.length == 0) { System.err.println("usage: GroundReplay <trace-log>..."); System.exit(2); }
 		TreeMap<String, List<Ev>> per = new TreeMap<>();
-		// K4 jar-state comparison: when the capture lines carry the jar's own counts, replay the same
-		// events through REAL GroundEvidence instances (live policy + decay shadow) and compare per
-		// receipt. A mismatch means the capture and the jar disagree - an uncaptured full reset
-		// (teleport/setback/post-flag) or a jar bug; investigate before reading the tables.
-		TreeMap<String, GroundEvidence> liveJar = new TreeMap<>(), decayJar = new TreeMap<>();
-		int claimReceipts = 0, claimMismatch = 0, clearReceipts = 0, clearMismatch = 0;
-		boolean receiptsSeen = false, mixed = false;
-		List<String> k4Lines = new ArrayList<>();
+		K4 k4 = new K4();
 		for (String f : args) for (String ln : Files.readAllLines(Path.of(f))) {
 			Matcher m = CLAIM.matcher(ln);
 			if (m.find()) {
 				String name = m.group(1); boolean air = Boolean.parseBoolean(m.group(2));
 				per.computeIfAbsent(name, k -> new ArrayList<>()).add(Ev.claim(air));
-				boolean counted = m.group(3) != null;
-				if (counted) { // count = the jar's live window AFTER the add
-					receiptsSeen = true;
-					GroundEvidence g = liveJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
-					GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
-					g.add(air); d.add(air); claimReceipts++;
-					if (g.unsupported() != Integer.parseInt(m.group(3))) { claimMismatch++; k4Lines.add("K4 claim mismatch " + name + ": jar=" + m.group(3) + " harness=" + g.unsupported()); }
-				} else if (receiptsSeen) { mixed = true; k4Lines.add("K4 mixed capture: uncounted gndclaim after counted lines: " + ln.trim()); }
+				k4.claim(name, air, m.group(3));
 				continue;
 			}
 			m = CLEAR.matcher(ln);
 			if (m.find()) {
 				String name = m.group(1);
 				per.computeIfAbsent(name, k -> new ArrayList<>()).add(Ev.clear());
-				GroundEvidence g = liveJar.get(name); if (g != null) g.clear();
-				boolean counted = m.group(2) != null;
-				if (counted) { // decayCount = the jar's shadow window BEFORE its decay
-					receiptsSeen = true;
-					GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
-					clearReceipts++;
-					if (d.unsupported() != Integer.parseInt(m.group(2))) { clearMismatch++; k4Lines.add("K4 boundary mismatch " + name + ": jarDecay=" + m.group(2) + " harness=" + d.unsupported()); }
-					d.decay();
-				} else if (receiptsSeen) { mixed = true; k4Lines.add("K4 mixed capture: uncounted gndclear after counted lines: " + ln.trim()); }
+				k4.clear(name, m.group(2));
 				continue;
 			}
 			m = RESET.matcher(ln);
 			if (m.find()) { // a captured full reset: EXACT semantics - both harness windows wipe, like the jar
 				String name = m.group(1);
 				per.computeIfAbsent(name, k -> new ArrayList<>()).add(Ev.reset());
-				receiptsSeen = true; clearReceipts++;
-				GroundEvidence g = liveJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
-				GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
-				if (g.unsupported() != Integer.parseInt(m.group(3))) { claimMismatch++; k4Lines.add("K4 reset mismatch " + name + " (" + m.group(2) + "): jar=" + m.group(3) + " harness=" + g.unsupported()); }
-				if (d.unsupported() != Integer.parseInt(m.group(4))) { clearMismatch++; k4Lines.add("K4 reset mismatch " + name + " (" + m.group(2) + "): jarDecay=" + m.group(4) + " harness=" + d.unsupported()); }
-				g.clear(); d.clear();
+				k4.reset(name, m.group(2), m.group(3), m.group(4));
 			}
 		}
-		System.out.println("K4 jar-state comparison: " + claimReceipts + " claim receipts (" + claimMismatch + " mismatches), " + clearReceipts + " boundary/reset receipts (" + clearMismatch + " mismatches)");
-		for (String l : k4Lines) System.out.println("  " + l);
-		if (mixed) { System.out.println("K4 FAILS CLOSED: mixed counted/uncounted capture (concatenated jars?) - no agreement reading"); System.exit(1); }
-		if (claimMismatch + clearMismatch > 0) { System.out.println("K4 FAILS CLOSED: jar-vs-harness state disagreement - no agreement reading"); System.exit(1); }
-		if (!receiptsSeen) System.out.println("K4 NOT RUN: capture carried no jar counts (pre-0025 jar) - this run is a presence-semantics reading only, NOT an agreement gate");
+		System.out.println("K4 jar-state comparison: " + k4.claimReceipts + " claim receipts (" + k4.claimMismatch + " mismatches), " + k4.clearReceipts + " boundary/reset receipts (" + k4.clearMismatch + " mismatches)");
+		for (String l : k4.lines) System.out.println("  " + l);
+		if (k4.mixed()) { System.out.println("K4 FAILS CLOSED: counted and uncounted capture lines BOTH present (either order - concatenated jars?) - no agreement reading"); System.exit(1); }
+		if (k4.claimMismatch + k4.clearMismatch > 0) { System.out.println("K4 FAILS CLOSED: jar-vs-harness state disagreement - no agreement reading"); System.exit(1); }
+		if (k4.notRun()) System.out.println("K4 NOT RUN: no jar counts in capture - presence-semantics reading only; exit code 0 here is DIAGNOSTIC, NOT a K4 pass - consumers must check for this line, not rc0");
 		if (per.isEmpty()) { System.out.println("no gndclaim lines found (jar older than the P3-strong draft? capture ships with it)"); return; }
 		System.out.println("players: " + per.keySet());
 		printTable(per, false);

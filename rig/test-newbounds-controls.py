@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Machine-checks the NEWBOUNDS capture-row spec (rig/newbounds_controls.py). No rig, no server."""
+"""Machine-checks the NEWBOUNDS capture-row spec (rig/newbounds_controls.py). No rig, no server.
+SOURCE-SHAPE CHECKS ONLY: these pins verify the spec's structure (fields, commands, DRAFT labels,
+pre-committed bounds) - they do NOT prove any runner executes the setup or validates receipts."""
 import pathlib, sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import newbounds_controls

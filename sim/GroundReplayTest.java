@@ -80,6 +80,28 @@ public final class GroundReplayTest {
 		check(mk2.find() && mk2.group(2) == null, "pre-0025 gndclear (no decayCount) still parses");
 		java.util.regex.Matcher mr = GroundReplay.RESET.matcher("[trace] gndreset Bot cause=post-flag count=2 decayCount=4");
 		check(mr.find() && mr.group(1).equals("Bot") && mr.group(2).equals("post-flag") && mr.group(3).equals("2") && mr.group(4).equals("4"), "gndreset with both pre-clear counts parses");
+		// K4 tracker fixtures: mixed capture fails closed in BOTH orders; mismatch fails; clean passes; receiptless = NOT RUN (diagnostic, not a pass)
+		GroundReplay.K4 k1 = new GroundReplay.K4();
+		k1.claim("B", true, null); k1.claim("B", true, "2");
+		check(k1.failed() && k1.mixed(), "K4 fails closed: uncounted-then-counted");
+		GroundReplay.K4 k2 = new GroundReplay.K4();
+		k2.claim("B", true, "1"); k2.claim("B", true, null);
+		check(k2.failed() && k2.mixed(), "K4 fails closed: counted-then-uncounted");
+		GroundReplay.K4 k2b = new GroundReplay.K4();
+		k2b.clear("B", null); k2b.claim("B", true, "1");
+		check(k2b.failed() && k2b.mixed(), "K4 fails closed: uncounted gndclear before counted gndclaim");
+		GroundReplay.K4 k3 = new GroundReplay.K4();
+		k3.claim("B", true, "1"); k3.claim("B", false, "1"); k3.claim("B", true, "2");
+		check(!k3.failed() && !k3.notRun(), "K4 clean counted stream passes");
+		GroundReplay.K4 k4b = new GroundReplay.K4();
+		k4b.claim("B", true, "2");
+		check(k4b.failed() && !k4b.mixed(), "K4 count mismatch fails (not mixed)");
+		GroundReplay.K4 k5 = new GroundReplay.K4();
+		k5.claim("B", true, null);
+		check(!k5.failed() && k5.notRun(), "K4 receiptless = NOT RUN (diagnostic), not a fail");
+		GroundReplay.K4 k6 = new GroundReplay.K4();
+		k6.claim("B", true, "1"); k6.claim("B", true, "2"); k6.reset("B", "post-flag", "2", "2"); k6.claim("B", true, "1");
+		check(!k6.failed(), "K4 reset receipts agree when both counts match");
 		// D5/D6: a HARD reset (gndreset) wipes under BOTH policies; a soft boundary (gndclear) decays only under the candidate
 		List<GroundReplay.Ev> d5 = List.of(
 			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.reset(),

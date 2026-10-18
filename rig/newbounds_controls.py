@@ -79,10 +79,11 @@ S = {
    'falsifies': 'InventoryBurst vs chest stealing'},
  # STATUS: every row in this file is a DRAFT until its driver run + receipts prove the setup,
  # duration and attack effect; the scoreboard only records verdicts from receipt-backed runs.
- # Structured setup: 'setup_rcon'/'mid_rcon'/'teardown_rcon' are RCON command lists the Box runner
- # executes in order (receipts = captured command output); 'effect_check' is the server-confirmed
- # attack-effect verification. Rows whose setup/effect is not yet automated stay DRAFT - the fields
- # are the implementation target, and a run without the receipts is INCONCLUSIVE material only.
+ # Structured setup: 'setup_rcon'/'mid_rcon'/'teardown_rcon' are RCON command lists and
+ # 'effect_check' the server-confirmed attack-effect verification. THESE FIELDS ARE AN
+ # IMPLEMENTATION TARGET, not runner automation: no runner consumes them yet - executable setup is
+ # NOT complete until the Box runner consumes the fields AND validates receipts + effect assertions.
+ # Until then every row stays DRAFT and a run without receipts is INCONCLUSIVE material only.
  # ground-spoof zero-FP battery rows (reviewer GO conditions on patch 1, relayed via parent 10-17 7:44pm)
  'nb-gc01-sneakedge': {'tp': G['sneak_edge'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': 0,
    'legs': [('hold2', 'w', 'Shift_L', 1), ('hold2', 's', 'Shift_L', 1)] * 150,  # 150 x 2s = 300s - the pre-committed 5-minute bound, bound IN the legs

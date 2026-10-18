@@ -43,8 +43,9 @@ semantics (soft = decay under the candidate, hard = wipe under both), so the ear
 uncaptured resets "move counts but not flag presence" is RETIRED - stale retained evidence COULD
 have manufactured a flag, and now no reset goes uncaptured. K4 is a real gate: it FAILS CLOSED
 (exit 1) on any per-receipt mismatch or a mixed counted/uncounted capture; a log with no receipts
-is labeled "K4 NOT RUN" and reads as presence-semantics only. Flag agreement per row is asserted
-under this gate.
+is labeled "K4 NOT RUN" and reads as presence-semantics only - that exit code 0 is DIAGNOSTIC, not
+a K4 pass; consumers must check for the NOT RUN line, never rc0 alone. Flag agreement per row is
+asserted under this gate.
 
 ## Stage-2 gate (unchanged from GRACE-DECAY-PROMOTION-DRAFT.md section 6)
 

@@ -12,29 +12,32 @@ import java.util.regex.Pattern;
  * window reset) through the REAL GroundEvidence for every candidate (window, flagAt, armAt) and prints
  * a score table, so the window/threshold and the P3-strong arm level are chosen from battery traces
  * without re-running the rig. Pre-patch logs cannot be rescored: old groundctx lines only carry the
- * live window's buf=, not the raw claim stream. Setback/flag/teleport clears are not captured (rare);
- * scores those spans as if the window lived on - an over-count, i.e. conservative for FP reading.
+ * live window's buf=, not the raw claim stream. Full resets (teleport/soft-return/post-flag) ARE
+ * captured as gndreset lines with both windows' pre-clear counts, and replay as exact full clears in
+ * BOTH policy tables - a soft gndclear decays under the candidate, a hard gndreset wipes.
  *
  * Two policy tables: the live policy (full clear at every captured gndclear) and the decay-on-clear
  * candidate (P3-FOLLOWUPS "grace-boundary persistence": a grace/exempt reset forgives only the OLDEST
  * unsupported claim instead of clearing, so a spoofer that re-arms grace by self-damage or medium dips
  * keeps most of its evidence). Decay is scored through the real GroundEvidence.decay(); the live jar
- * never calls it - this table is the measurement stage, not a shipped behavior. Captured clears do not
- * say which kind they were (exempt vs grace), so decay is applied at every captured clear; on legit
- * rows that retains more evidence than the real policy would, i.e. conservative for FP reading.
+ * never calls it - this table is the measurement stage, not a shipped behavior. Soft boundaries
+ * (gndclear) decay under the candidate; hard resets (gndreset) wipe under BOTH policies, exactly as
+ * the jar behaves - no uncaptured-clear conservatism remains in captured spans.
  *
  * Usage: java -cp <suite-out> GroundReplay <trace-log>...
  * Columns: window flagAt armAt | claims unsupported maxCount flags strongArms | players with >=1 strong-arm.
  * The final section prints the K4 agreement metrics (reviewer FIX 2): the jar latches arm/flag, so agreement with
  * jar-captured state is per-player maxCount equality + flag presence/absence + first-arm presence - edge counts
  * are tuning signal only, never the agreement metric. When the capture carries the jar's own counts (gndclaim
- * count= post-add live count; gndclear decayCount= pre-decay shadow count), the parse loop ALSO replays every
- * receipt through real GroundEvidence instances and reports per-receipt mismatches - a captured jar-state
- * comparison, not harness-vs-harness. */
+ * count= post-add live count; gndclear decayCount= pre-decay shadow count; gndreset both counts),
+ * the parse loop ALSO replays every receipt through real GroundEvidence instances and reports per-receipt
+ * mismatches - a captured jar-state comparison, not harness-vs-harness. It FAILS CLOSED (exit 1) on any
+ * mismatch or a mixed counted/uncounted capture; with zero receipts it says K4 NOT RUN and the run is a
+ * presence-semantics reading only, never an agreement gate. */
 public final class GroundReplay {
 	/** One event: claim (unsupported?) or clear. */
-	public static final class Ev { final boolean claim, air; Ev(boolean claim, boolean air) { this.claim = claim; this.air = air; }
-		public static Ev claim(boolean air) { return new Ev(true, air); } public static Ev clear() { return new Ev(false, false); } }
+	public static final class Ev { final boolean claim, air, hard; Ev(boolean claim, boolean air, boolean hard) { this.claim = claim; this.air = air; this.hard = hard; }
+		public static Ev claim(boolean air) { return new Ev(true, air, false); } public static Ev clear() { return new Ev(false, false, false); } public static Ev reset() { return new Ev(false, false, true); } }
 
 	/** Replay one event stream under the live clear policy. Returns {claims, unsupported, maxCount, flagRisingEdges, armRisingEdges}. */
 	public static long[] score(List<Ev> events, int window, int flagAt, int armAt) { return score(events, window, flagAt, armAt, false); }
@@ -48,8 +51,8 @@ public final class GroundReplay {
 		boolean wasFlag = false, wasArm = false;
 		for (Ev e : events) {
 			if (!e.claim) {
-				if (decayOnClear) { ev.decay(); wasFlag = ev.flagged(); wasArm = ev.unsupported() >= armAt; }
-				else { ev.clear(); wasFlag = false; wasArm = false; }
+				if (e.hard || !decayOnClear) { ev.clear(); wasFlag = false; wasArm = false; } // gndreset: both policies wipe
+				else { ev.decay(); wasFlag = ev.flagged(); wasArm = ev.unsupported() >= armAt; } // gndclear: the candidate forgives one
 				continue;
 			}
 			ev.add(e.air); claims++; if (e.air) un++;
@@ -63,8 +66,9 @@ public final class GroundReplay {
 		return new long[] {claims, un, max, flags, arms};
 	}
 
-	private static final Pattern CLAIM = Pattern.compile("\\[trace] gndclaim (\\S+) air=(true|false)(?: count=(\\d+))?");
-	private static final Pattern CLEAR = Pattern.compile("\\[trace] gndclear (\\S+)(?: decayCount=(\\d+))?");
+	static final Pattern CLAIM = Pattern.compile("\\[trace] gndclaim (\\S+) air=(true|false)(?: count=(\\d+))?");
+	static final Pattern CLEAR = Pattern.compile("\\[trace] gndclear (\\S+)(?: decayCount=(\\d+))?");
+	static final Pattern RESET = Pattern.compile("\\[trace] gndreset (\\S+) cause=(\\S+) count=(\\d+) decayCount=(\\d+)");
 
 	public static void main(String[] args) throws Exception {
 		if (args.length == 0) { System.err.println("usage: GroundReplay <trace-log>..."); System.exit(2); }
@@ -75,18 +79,21 @@ public final class GroundReplay {
 		// (teleport/setback/post-flag) or a jar bug; investigate before reading the tables.
 		TreeMap<String, GroundEvidence> liveJar = new TreeMap<>(), decayJar = new TreeMap<>();
 		int claimReceipts = 0, claimMismatch = 0, clearReceipts = 0, clearMismatch = 0;
+		boolean receiptsSeen = false, mixed = false;
 		List<String> k4Lines = new ArrayList<>();
 		for (String f : args) for (String ln : Files.readAllLines(Path.of(f))) {
 			Matcher m = CLAIM.matcher(ln);
 			if (m.find()) {
 				String name = m.group(1); boolean air = Boolean.parseBoolean(m.group(2));
 				per.computeIfAbsent(name, k -> new ArrayList<>()).add(Ev.claim(air));
-				if (m.group(3) != null) { // count = the jar's live window AFTER the add
+				boolean counted = m.group(3) != null;
+				if (counted) { // count = the jar's live window AFTER the add
+					receiptsSeen = true;
 					GroundEvidence g = liveJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
 					GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
 					g.add(air); d.add(air); claimReceipts++;
 					if (g.unsupported() != Integer.parseInt(m.group(3))) { claimMismatch++; k4Lines.add("K4 claim mismatch " + name + ": jar=" + m.group(3) + " harness=" + g.unsupported()); }
-				}
+				} else if (receiptsSeen) { mixed = true; k4Lines.add("K4 mixed capture: uncounted gndclaim after counted lines: " + ln.trim()); }
 				continue;
 			}
 			m = CLEAR.matcher(ln);
@@ -94,17 +101,33 @@ public final class GroundReplay {
 				String name = m.group(1);
 				per.computeIfAbsent(name, k -> new ArrayList<>()).add(Ev.clear());
 				GroundEvidence g = liveJar.get(name); if (g != null) g.clear();
-				if (m.group(2) != null) { // decayCount = the jar's shadow window BEFORE its decay
+				boolean counted = m.group(2) != null;
+				if (counted) { // decayCount = the jar's shadow window BEFORE its decay
+					receiptsSeen = true;
 					GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
 					clearReceipts++;
 					if (d.unsupported() != Integer.parseInt(m.group(2))) { clearMismatch++; k4Lines.add("K4 boundary mismatch " + name + ": jarDecay=" + m.group(2) + " harness=" + d.unsupported()); }
 					d.decay();
-				}
+				} else if (receiptsSeen) { mixed = true; k4Lines.add("K4 mixed capture: uncounted gndclear after counted lines: " + ln.trim()); }
+				continue;
+			}
+			m = RESET.matcher(ln);
+			if (m.find()) { // a captured full reset: EXACT semantics - both harness windows wipe, like the jar
+				String name = m.group(1);
+				per.computeIfAbsent(name, k -> new ArrayList<>()).add(Ev.reset());
+				receiptsSeen = true; clearReceipts++;
+				GroundEvidence g = liveJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+				GroundEvidence d = decayJar.computeIfAbsent(name, k -> new GroundEvidence(5, 3));
+				if (g.unsupported() != Integer.parseInt(m.group(3))) { claimMismatch++; k4Lines.add("K4 reset mismatch " + name + " (" + m.group(2) + "): jar=" + m.group(3) + " harness=" + g.unsupported()); }
+				if (d.unsupported() != Integer.parseInt(m.group(4))) { clearMismatch++; k4Lines.add("K4 reset mismatch " + name + " (" + m.group(2) + "): jarDecay=" + m.group(4) + " harness=" + d.unsupported()); }
+				g.clear(); d.clear();
 			}
 		}
-		System.out.println("K4 jar-state comparison: " + claimReceipts + " claim receipts (" + claimMismatch + " mismatches), " + clearReceipts + " boundary receipts (" + clearMismatch + " mismatches)");
+		System.out.println("K4 jar-state comparison: " + claimReceipts + " claim receipts (" + claimMismatch + " mismatches), " + clearReceipts + " boundary/reset receipts (" + clearMismatch + " mismatches)");
 		for (String l : k4Lines) System.out.println("  " + l);
-		if (claimReceipts + clearReceipts == 0) System.out.println("  (capture lines carried no jar counts - pre-0025 jar? agreement then rests on presence semantics only)");
+		if (mixed) { System.out.println("K4 FAILS CLOSED: mixed counted/uncounted capture (concatenated jars?) - no agreement reading"); System.exit(1); }
+		if (claimMismatch + clearMismatch > 0) { System.out.println("K4 FAILS CLOSED: jar-vs-harness state disagreement - no agreement reading"); System.exit(1); }
+		if (!receiptsSeen) System.out.println("K4 NOT RUN: capture carried no jar counts (pre-0025 jar) - this run is a presence-semantics reading only, NOT an agreement gate");
 		if (per.isEmpty()) { System.out.println("no gndclaim lines found (jar older than the P3-strong draft? capture ships with it)"); return; }
 		System.out.println("players: " + per.keySet());
 		printTable(per, false);

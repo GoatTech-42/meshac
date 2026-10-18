@@ -26,9 +26,22 @@ r5 = S['nb-gc05-jb-powder']['row']
 check('Jump Boost' in r5 and '0 nofall flags' in r5, 'GC05 binds Jump Boost + the 0-flag acceptance')
 check('dy' in r5 and 'never widen' in r5, 'GC05 pre-commits dy reporting over silent band widening')
 check('POWDER-EXEMPT-DRAFT' in r5, 'GC05 names the flag-route doc')
-check('/effect give @p jump_boost 60 0' in r5 and '/effect give @p jump_boost 60 1' in r5, 'GC05 sets JB I then JB II executably')
-check('leather_boots' in r5 and 'PHASE 2' in r5 and '/effect clear' in r5, 'GC05 verifies no boots, names both phases, and tears down')
+g5 = S['nb-gc05-jb-powder']
+check(g5['setup_rcon'] == ['/effect give @p minecraft:jump_boost 60 0', '/clear @p minecraft:leather_boots'], 'GC05 setup_rcon sets JB I + verifies no boots')
+check(g5['mid_rcon'] == ['/effect give @p minecraft:jump_boost 60 1', '/clear @p minecraft:leather_boots'], 'GC05 mid_rcon sets JB II + re-verifies')
+check(g5['teardown_rcon'] == ['/effect clear @p minecraft:jump_boost'], 'GC05 tears down')
 check('DRAFT until' in r5, 'GC05 stays a DRAFT until the setup receipts are captured')
+# structured setup/effect fields: driver-executable, not prose
+for k in ('nb-gc05-jb-powder', 'nb-boatfly-cheat', 'nb-glide-legit', 'nb-glide-cheat',
+          'nb-totem-legit', 'nb-totem-cheat', 'nb-kb-legit', 'nb-kb-cheat'):
+    for f in ('setup_rcon', 'mid_rcon', 'teardown_rcon'):
+        if f in S[k]:
+            check(isinstance(S[k][f], list) and S[k][f] and all(isinstance(c, str) and c.startswith('/') for c in S[k][f]),
+                  k + '.' + f + ' is a non-empty list of RCON commands')
+for k in ('nb-boatfly-cheat', 'nb-ghosthand-cheat', 'nb-glide-cheat', 'nb-totem-cheat', 'nb-kb-cheat'):
+    check('effect_check' in S[k], k + ' binds a server-confirmed effect_check')
+gh = S['nb-ghosthand-cheat']
+check('packets observed' not in gh['row'] and 'server-confirmed' in gh['effect_check'], 'GhostHand: packets alone are not effect proof - server-confirmed target change required')
 # single-row positive controls whose legit twins already exist in other families
 for k, chk, twin in (('nb-nuker-cheat', ('mining',), 'nb-mine-legit'), ('nb-ghosthand-cheat', ('interact',), 'nb-interact-legit')):
     check(S[k]['expect'] == 'signal' and S[k]['checks'] == chk and 'module' in S[k], k + ' is a bound cheat row')
@@ -44,7 +57,7 @@ for k in ('nb-boatfly-cheat', 'nb-ghosthand-cheat', 'nb-glide-legit', 'nb-glide-
     check('DRAFT until' in S[k]['row'], k + ' stays a DRAFT until receipts')
 for k in ('nb-ghosthand-cheat', 'nb-boatfly-cheat', 'nb-totem-cheat', 'nb-kb-cheat'):
     check('INCONCLUSIVE' in S[k]['row'], k + ': no attack-effect proof = INCONCLUSIVE, never EVADE')
-check('/summon minecraft:zombie' in S['nb-kb-legit']['row'], 'kb rows make the zombie-hitter precondition executable')
+check('/summon minecraft:zombie 158.5 70 160' in S['nb-kb-legit']['setup_rcon'] and '/summon minecraft:zombie 158.5 70 160' in S['nb-kb-cheat']['setup_rcon'], 'kb rows make the zombie-hitter precondition executable')
 # kb cheat row must NOT require self-movement (the point of the attack is standing still)
 check(S['nb-kb-cheat']['expectMove'] is False, 'kb cheat row is stationary by design')
 # one vanilla + one cheat row per newly-bound check family

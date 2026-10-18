@@ -30,8 +30,10 @@ live+shadow flag is never invisible:
     [trace] nofall decay-shadow <name> count=N liveCount=M liveFlagged=<bool> (grace-boundary persistence draft, log-only)
 
 The gndclear capture line fires at every exempt/grace boundary that holds state in EITHER window
-(not only when the live window is non-empty) and carries the shadow's count: the replay harness
-sees every decay boundary, so replay-vs-jar flag agreement is assertable.
+(not only when the live window is non-empty) and carries the shadow's count; every full reset emits
+a gndreset line with both windows' pre-clear counts. The replay harness sees every boundary and
+every reset, replays exact semantics, and fails closed on mismatch: replay-vs-jar flag agreement is
+assertable and gated.
 
 mirroring the O3 shadow pattern (patch 3, reviewed shape). Every shadow statement sits behind
 TRACE (the MESHAC_TRACE env switch, unset by default): the shadow is OFF BY DEFAULT and
@@ -67,8 +69,9 @@ the swapped jar before any default-on talk.
 - ANY decay-shadow flag on ANY legit battery row kills the promotion (FP-free gate outranks).
 - GRACE-DECAY-FP-REVIEW bound stands: viable only at flagAt >= 3; if the battery moves flagAt
   below 3 the decay candidate is dead on arrival and this proposal is withdrawn.
-- Uncaptured-clear conservatism (teleport/setback/post-flag) is re-stated in the battery report;
-  a Stage-1 divergence explainable ONLY by an uncaptured clear is not evidence for Stage 2.
+- Full resets (teleport/soft-return/post-flag) are captured as gndreset receipts and replayed
+  exactly; the K4 comparison fails closed on any residual jar-vs-harness mismatch, so a divergence
+  manufactured by a missing reset is excluded by the gate, not argued away.
 
 ## Stage-1 evidence plan
 

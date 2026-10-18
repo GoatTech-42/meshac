@@ -78,6 +78,19 @@ public final class GroundReplayTest {
 		check(mk.find() && mk.group(1).equals("Bot") && mk.group(2).equals("2"), "gndclear with the shadow decayCount parses");
 		java.util.regex.Matcher mk2 = GroundReplay.CLEAR.matcher("[trace] gndclear Bot");
 		check(mk2.find() && mk2.group(2) == null, "pre-0025 gndclear (no decayCount) still parses");
+		java.util.regex.Matcher mr = GroundReplay.RESET.matcher("[trace] gndreset Bot cause=post-flag count=2 decayCount=4");
+		check(mr.find() && mr.group(1).equals("Bot") && mr.group(2).equals("post-flag") && mr.group(3).equals("2") && mr.group(4).equals("4"), "gndreset with both pre-clear counts parses");
+		// D5/D6: a HARD reset (gndreset) wipes under BOTH policies; a soft boundary (gndclear) decays only under the candidate
+		List<GroundReplay.Ev> d5 = List.of(
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.reset(),
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true));
+		eq(GroundReplay.score(d5, 5, 3, 2, true), 4, 4, 2, 0, 2, "D5 hard reset under decay: wiped - no flag, arm re-edges");
+		eq(GroundReplay.score(d5, 5, 3, 2), 4, 4, 2, 0, 2, "D5 hard reset under live: identical");
+		List<GroundReplay.Ev> d6 = List.of(
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true), GroundReplay.Ev.clear(),
+			GroundReplay.Ev.claim(true), GroundReplay.Ev.claim(true));
+		eq(GroundReplay.score(d6, 5, 3, 2, true), 4, 4, 3, 1, 2, "D6 soft boundary under decay: forgives one - the same stream FLAGS");
+		eq(GroundReplay.score(d6, 5, 3, 2), 4, 4, 2, 0, 2, "D6 soft boundary under live: full clear - sub-flag");
 		System.out.println(fails == 0 ? "GroundReplayTest ok" : fails + " failures");
 		if (fails > 0) System.exit(1);
 	}

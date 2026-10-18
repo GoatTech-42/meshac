@@ -35,12 +35,16 @@ session log.
 
 ## Cross-check (offline, Box)
 
-Run GroundReplay (clear vs decay tables) over every row's log. Every boundary that holds state in
-EITHER window now emits a gndclear line (with the shadow's decayCount), so the replay sees every
-decay boundary the jar saw - flag/no-flag agreement per row is assertable, and we assert it. The
-remaining documented gap: uncaptured clears (teleport/setback/post-flag) keep the harness shadow
-counting where the jar shadow has already cleared - that can move COUNTS, not flag presence, on
-rows without teleports it does not apply at all. Count equality is not required; flag agreement is.
+Run GroundReplay (clear vs decay tables) over every row's log. Capture is complete: every scored
+claim emits gndclaim with the jar's post-add live count; every soft boundary holding state in
+either window emits gndclear with the shadow's pre-decay count; every full reset
+(teleport/soft-return/post-flag) emits gndreset with both counts. The harness replays those exact
+semantics (soft = decay under the candidate, hard = wipe under both), so the earlier claim that
+uncaptured resets "move counts but not flag presence" is RETIRED - stale retained evidence COULD
+have manufactured a flag, and now no reset goes uncaptured. K4 is a real gate: it FAILS CLOSED
+(exit 1) on any per-receipt mismatch or a mixed counted/uncounted capture; a log with no receipts
+is labeled "K4 NOT RUN" and reads as presence-semantics only. Flag agreement per row is asserted
+under this gate.
 
 ## Stage-2 gate (unchanged from GRACE-DECAY-PROMOTION-DRAFT.md section 6)
 

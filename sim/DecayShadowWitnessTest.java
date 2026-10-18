@@ -21,6 +21,8 @@ public final class DecayShadowWitnessTest {
 				resets++;
 				check(l.contains("s.gndEvDecay.decay()") || l.contains("s.gndEvDecay.clear()"), "live-window reset site leaves the shadow unhandled: " + l.trim());
 			}
+			if (l.contains("s.gndEvDecay.clear()")) // every full reset of the shadow is captured for exact replay
+				check(l.contains("[trace] gndreset"), "full shadow reset without a gndreset capture line: " + l.trim());
 			if (l.contains("gndEvDecay.decay()")) {
 				decays++;
 				check(l.contains("[trace] gndclear"), "shadow decay outside the exempt/grace gndclear branch: " + l.trim());
@@ -38,6 +40,7 @@ public final class DecayShadowWitnessTest {
 		check(claims == 1, "shadow adds claims at exactly the live window's single claim site, found " + claims);
 		check(decays == 1, "shadow decays at exactly one site (the exempt/grace reset), found " + decays);
 		check(resets >= 4, "expected the live-window reset sites (scored branch excluded), found " + resets);
+		check(t.split("\\[trace] gndreset").length - 1 == 3, "gndreset captured at all 3 full-reset sites (blink-setback, soft-return, post-flag)");
 		check(t.contains("[trace] nofall decay-shadow {} count={} liveCount={} liveFlagged={}"), "shadow telemetry reports both windows (a simultaneous live+shadow flag is never invisible)");
 		check(t.contains("s.decayLogAt = nowMs"), "shadow telemetry is rate-limited");
 		check(t.contains("TRACE && (s.bufGround > 0 || s.gndEvDecay.unsupported() > 0)"), "gndclear capture fires at every boundary holding state in EITHER window (replay sees every decay boundary)");

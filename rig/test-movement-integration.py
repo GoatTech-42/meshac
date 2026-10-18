@@ -206,7 +206,7 @@ import net.minecraft.world.damagesource.DamageSource;
  * Fresh player per scenario (fresh Movement state + fresh Verdict heat). TRACE off: trace-only lines not exercised.
  * mode "classify" must be paired with env MESHAC_GROUND_TOL=classify (set by the fixture run); "plain" pairs with unset. */
 public final class MovementHarness {
- static int checks; static void ck(boolean b, String m) { checks++; if (!b) throw new AssertionError(m); }
+ static int checks, fails; static void ck(boolean b, String m) { checks++; if (!b) { fails++; System.out.println("HARNESS-FAIL: " + m); } } // collect per-scenario verdicts: one run observes ALL scenarios even when one fails (0122; assertions unchanged, fail-fast removed)
  static final java.nio.file.Path DIR = java.nio.file.Path.of(System.getProperty("meshac.test.configdir"));
  static final String VALID_LOW = "{\\"holdAt\\":1,\\"removeAt\\":6,\\"halfLifeSeconds\\":1000000,\\"requireClusters\\":2,\\"requireClustersTierA\\":2,\\"offenceHalfLifeDays\\":30,\\"kicksBeforeTempban\\":3,\\"offenceMemoryDays\\":30}";
 
@@ -307,6 +307,8 @@ public final class MovementHarness {
    send(p5c, 0, 70.64, 0, true);
    ck(since("nofall", m5c), "S5c(classify): outside the candidate strip the claim is plain unsupported - the 3rd claim flags");
   }
+  System.out.println("MovementHarness RESULT mode=" + (classify ? "classify" : "plain") + " (" + checks + " checks, " + fails + " failed)");
+  if (fails > 0) { System.out.println("MovementHarness FAIL mode=" + (classify ? "classify" : "plain")); return; }
   System.out.println("MovementHarness PASS mode=" + (classify ? "classify" : "plain") + " (" + checks + " checks)");
  }
 }
@@ -379,10 +381,10 @@ class MovementIntegration(unittest.TestCase):
             rc, jtail = self.run_logged(['javac','-J-Xmx256m','-cp',gj,'-d',str(out)]+sources, root/'javac.log', 300)
             self.assertEqual(rc, 0, 'javac failed, bounded tail:\n' + jtail)
             rc, htail = self.run_logged(['java','-Xmx256m',f'-Dmeshac.test.configdir={cfgdir}','-cp',f'{out}:{gj}','dev.meshac.MovementHarness','plain'], root/'harness-plain.log', 180)
-            self.assertEqual(rc, 0, f'plain harness rc={rc}, bounded tail:\n' + htail)
+            rc2, ctail = self.run_logged(['java','-Xmx256m',f'-Dmeshac.test.configdir={cfgdir}','-cp',f'{out}:{gj}','dev.meshac.MovementHarness','classify'], root/'harness-classify.log', 180, env_extra={'MESHAC_GROUND_TOL':'classify'})
+            self.assertEqual(rc, 0, f'plain harness rc={rc}, bounded tail:\n' + htail)   # all four asserts AFTER both modes ran: one Box run observes everything (0122)
             self.assertIn('MovementHarness PASS mode=plain', htail)
-            rc, ctail = self.run_logged(['java','-Xmx256m',f'-Dmeshac.test.configdir={cfgdir}','-cp',f'{out}:{gj}','dev.meshac.MovementHarness','classify'], root/'harness-classify.log', 180, env_extra={'MESHAC_GROUND_TOL':'classify'})
-            self.assertEqual(rc, 0, f'classify harness rc={rc}, bounded tail:\n' + ctail)
+            self.assertEqual(rc2, 0, f'classify harness rc={rc2}, bounded tail:\n' + ctail)
             self.assertIn('MovementHarness PASS mode=classify', ctail)
             print(htail.strip()); print(ctail.strip())
 

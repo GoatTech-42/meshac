@@ -50,30 +50,31 @@ S = {
    'legs': [('module', None), ('wait', 6), ('module', None)],
    'row': 'POSITIVE CONTROL: Aimbot attacking from 4.5 blocks must SIGNAL combat (reach > 3.2). Combat is LIVE on d124 (AttackMixin -> Combat.check -> Verdict.signal); row precondition: monitor mode on (log-only, real mon heat). The 10-17 no-caller claim was retracted in 0048',
    'falsifies': 'the reach check: silence on a jar with a live emit path means reach > 3.2 is unseen'},
- # --- Combat family (W3/W4, 10-17 v4 = 0052, reviewer 10:31pm): DRAFT-only rows, prefix nb-cbt-. W1 re-scoped 10-17 (0048): combat is LIVE
+ # --- Combat family (W3/W4, 10-17 v5 = 0054, reviewer 10:35pm): DRAFT-only rows, prefix nb-cbt-. W1 re-scoped 10-17 (0048): combat is LIVE
  # on d124 (AttackMixin -> Combat.check -> Verdict.signal); rows run under MONITOR MODE against the real SIGNAL
  # line (real mon heat). 10b rescinded. Every command runs /execute in minecraft:overworld (world is real, not
  # prose); <bot> and <run> are runner-substituted (the rig bot name; a per-run id so teardown never hits older
  # row entities or the wrong player). Nothing runs without reviewer GO + a rig slot. ---
  'nb-cbt-reach-cheat': {'tp': G['combat_cheat'], 'needs': 'cheat', 'expect': 'signal',
    'module': 'Reach (expand 1.0)', 'checks': ('combat',), 'yaw': -90,
-   'effect_check': 'attack-attempt receipt bound SEPARATELY from damage: (a) the per-attack [a15] trace line (Trace.ON) proves the packet reached handleAttack and shows the measured reach - meshac-internal but server-side; (b) /data get entity <zombie> Health is OPTIONAL secondary evidence only: vanilla reach validation may legitimately reject damage at 4.5 blocks. PREFLIGHT (interval coverage): in-range vanilla probes MUST produce [a15] receipts IMMEDIATELY BEFORE AND AFTER the experimental leg - bracketing receipts prove trace/budget coverage (Trace.ON, CombatLogBudget not suppressing, skip/thread guards passing) across the whole leg interval; a single prior trace proves coverage only at that instant. The bot client swing CORROBORATES but is NOT independent packet-arrival proof. If the leg [a15] is absent WITH both bracket receipts present, the attempt never arrived inside a proven-covered interval; any other absence pattern is absence-unknown = INCONCLUSIVE, never EVADE',
+   'effect_check': 'attack-attempt receipt bound SEPARATELY from damage: (a) the per-attack [a15] trace line (Trace.ON) proves the packet reached handleAttack and shows the measured reach - meshac-internal but server-side; (b) /data get entity <zombie> Health is OPTIONAL secondary evidence only: vanilla reach validation may legitimately reject damage at 4.5 blocks. PREFLIGHT (a NECESSARY screen, NOT sufficient coverage proof): in-range vanilla probes MUST produce [a15] receipts immediately before AND after the experimental leg. Bracketing cannot prove whole-interval coverage: the log budget can exhaust mid-leg and refill before the post-probe, and guards may depend on target/reach/thread. THEREFORE absence of the leg [a15] is ALWAYS absence-unknown = INCONCLUSIVE (never EVADE) unless BOTH a per-attempt independent arrival receipt AND an uninterrupted log-coverage proof for the whole leg interval exist - neither exists today, so every absence outcome is INCONCLUSIVE + a finding, never proof the attempt never arrived',
    'legs': [('module', None), ('click', '1', 24), ('module', None)],
    'row': 'Reach expand 1.0 attacking the penned zombie from 4.5 blocks: the 3.2 line (W2: unchanged) must SIGNAL combat. Runs against the LIVE d124 path under monitor mode (log-only, real mon heat). Coords absolute, commands /execute in minecraft:overworld (Box confirms the pen anchor before the run). DRAFT until the first receipt lands',
    'falsifies': 'the reach check vs a client-side hitbox expansion module'},
  'nb-cbt-los-cheat': {'tp': G['combat_legit'], 'needs': 'cheat', 'expect': 'signal',
    'module': 'KillAura (silent=0)', 'checks': ('combat',), 'yaw': -90,
-   'setup_rcon': ['/execute in minecraft:overworld run forceload query 157 158 157 162',
-                  '/execute in minecraft:overworld unless blocks 157 80 158 157 83 162 158 80 158 all run tellraw @a [{"text":"[nb] LOS ABORT: backup destination not empty/reserved"}]',
+   'setup_rcon': ['/execute in minecraft:overworld run forceload query 157 158',
+                  '/execute in minecraft:overworld run forceload query 157 162',
                   '/execute in minecraft:overworld run forceload add 157 158 157 162',
-                  '/execute in minecraft:overworld run clone 157 70 158 157 73 162 157 80 158',
+                  '/execute in minecraft:overworld if blocks 157 80 158 157 83 162 157 250 158 all run clone 157 70 158 157 73 162 157 80 158',
                   '/execute in minecraft:overworld run fill 157 70 158 157 73 162 minecraft:stone'],
    'teardown_rcon': ['/execute in minecraft:overworld run clone 157 80 158 157 83 162 157 70 158',
                      '/execute in minecraft:overworld run fill 157 80 158 157 83 162 minecraft:air',
                      '/execute in minecraft:overworld run forceload remove 157 158 157 162'],
+   'teardown_gate': 'run teardown_rcon ONLY if the setup backup-clone receipt succeeded (typed: clone success count = 20). On setup failure: preserve the backup volume untouched (no restore, no air fill), remove forceload only if this run added it, and file a finding. The air fill of the backup runs only after the restore clone succeeds.',
    'effect_check': '[a15] attempt receipt per the reach-row PREFLIGHT (primary, vanilla-rejection-proof) + /data get entity <zombie> Health (optional secondary: vanilla may reject)',
    'legs': [('module', None), ('wait', 8), ('module', None)],
-   'row': 'a full-height stone wall between the bot and the zombie, KillAura attacking through it: the LOS rule (W2: unchanged) must SIGNAL "hit through a block". The wall volume is CLONED to a backup (157 80 158) before the fill and RESTORED at teardown. The backup destination AND its comparison neighbor (158 80 158, same y/z volume) are RESERVED scratch volumes in the battery world; setup GUARDS the destination against the reserved-empty neighbor (unless-blocks, evaluated before any mutation - a mismatch aborts the run) so no prior world blocks are destroyed. Every clone/fill result is success-gated by the executor (a 0 result aborts the run as a finding). The teardown forceload remove runs ONLY for chunks newly forced by this run (the setup forceload query receipt = before-state, reported NOT previously forced). ABSOLUTE coords, /execute in minecraft:overworld; Box confirms both volumes before the run. A miss = INCONCLUSIVE + a finding, never EVADE. LIVE path under monitor mode. DRAFT until receipts',
+   'row': 'a full-height stone wall between the bot and the zombie, KillAura attacking through it: the LOS rule (W2: unchanged) must SIGNAL "hit through a block". Backup safety: the wall volume is cloned to a RESERVED scratch backup (157 80 158) and restored at teardown. The destination is proven empty by CONSTRUCTION, not announcement: the backup clone fires only as /execute if blocks <dest> <sky-air reference 157 250 158> all run clone - a nonempty destination means the clone never fires (abort-by-construction; PREMISE: a fresh flat battery world, so the y=250 reference is air by worldgen - an executor precondition, stated not proven here). Receipts are TYPED: backup clone success count 20 = backup exists, command failure = abort before any mutation; the wall fill fires ONLY after that receipt; no uniform numeric gate. forceload: the add range spans chunks (9,9) and (9,10); before-state = one single-pos query per chunk (forceload query 157 158 and 157 162 - the query command shape is paper-unsupported until verified on the rig before any executor run). Teardown is GATED (teardown_gate): restore only if the setup backup clone succeeded; on setup failure preserve the backup untouched - no restore, no clear; forceload remove runs last, only for chunks newly forced by this run, only after restore success. ABSOLUTE coords, /execute in minecraft:overworld; Box confirms all volumes before the run. A miss = INCONCLUSIVE + a finding, never EVADE. LIVE path under monitor mode. DRAFT until receipts',
    'falsifies': 'the LOS sampled-visibility rule (losSeen==0 && losBlocked>=2) vs a module that attacks regardless of view'},
  'nb-cbt-aim-cheat': {'tp': G['combat_legit'], 'needs': 'cheat', 'expect': 'signal',
    'module': 'KillAura (silent=2)', 'checks': ('combat',), 'yaw': 90,
@@ -155,6 +156,8 @@ S = {
  # empty placeholder = abort); per-command success receipts captured and gated (a 0-result
  # clone/fill aborts the run as a finding); LOS forceload removal only for newly-forced chunks
  # (before-state from the setup query receipt); no rig GO without the reviewer.
+ # Guard and clone receipts are TYPED (a gated clone success count or a command failure),
+ # never a uniform numeric success gate; the LOS restore is gated on the setup backup receipt.
  # Until then every row stays DRAFT and a run without receipts is INCONCLUSIVE material only.
  # ground-spoof zero-FP battery rows (reviewer GO conditions on patch 1, relayed via parent 10-17 7:44pm)
  'nb-gc01-sneakedge': {'tp': G['sneak_edge'], 'needs': 'vanilla', 'expect': 'zero', 'yaw': 0,

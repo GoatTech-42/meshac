@@ -121,8 +121,8 @@ for k in cbt:
           k + ': no retracted dead-path wording (0048)')
     for f in ('setup_rcon', 'teardown_rcon'):
         for c in S[k].get(f, []):
-            check(c.startswith('/execute in minecraft:overworld run ') or c.startswith('/execute in minecraft:overworld unless blocks '),
-                  k + '.' + f + ': every command is overworld-pinned (/execute ... run, or the unless-blocks guard)')
+            check(c.startswith(('/execute in minecraft:overworld run ', '/execute in minecraft:overworld unless blocks ', '/execute in minecraft:overworld if blocks ')),
+                  k + '.' + f + ': every command is overworld-pinned (/execute ... run, or an if/unless-blocks guard)')
             check('@p' not in c, k + '.' + f + ': no @p (RCON @p can hit the wrong nearest player)')
 for k in ('nb-cbt-reach-cheat', 'nb-cbt-los-cheat', 'nb-cbt-aim-cheat', 'nb-cbt-multi-cheat'):
     check(S[k]['expect'] == 'signal' and S[k]['checks'] == ('combat',) and 'module' in S[k], k + ' is a bound combat cheat row')
@@ -141,9 +141,9 @@ for k, tag in (('nb-cbt-multi-cheat', 'nbcbt_multi_<run>'), ('nb-cbt-crowd-legit
           k + ': every summon carries the row-unique + run-unique tag')
     check(S[k]['teardown_rcon'] == ['/execute in minecraft:overworld run kill @e[type=minecraft:zombie,tag=%s]' % tag],
           k + ': teardown kills only the row+run-owned tag (no untagged or cross-run selector)')
-check('/execute in minecraft:overworld run clone 157 70 158 157 73 162 157 80 158' in S['nb-cbt-los-cheat']['setup_rcon']
+check(any('clone 157 70 158 157 73 162 157 80 158' in c for c in S['nb-cbt-los-cheat']['setup_rcon'])
       and '/execute in minecraft:overworld run clone 157 80 158 157 83 162 157 70 158' in S['nb-cbt-los-cheat']['teardown_rcon'],
-      'los row clones the wall volume to a backup and RESTORES it (no prior blocks destroyed)')
+      'los row clones the wall volume to a backup (gated) and restores it')
 check(any('forceload add' in c for c in S['nb-cbt-los-cheat']['setup_rcon'])
       and any('forceload remove' in c for c in S['nb-cbt-los-cheat']['teardown_rcon']),
       'los row forceloads the wall + backup volumes and releases them')
@@ -168,22 +168,40 @@ los_setup = S['nb-cbt-los-cheat']['setup_rcon']
 qi = next(i for i, c in enumerate(los_setup) if 'forceload query' in c)
 ai = next(i for i, c in enumerate(los_setup) if 'forceload add' in c)
 check(qi < ai, 'los setup captures the forceload BEFORE-STATE (query) before adding')
-check(any('unless blocks 157 80 158 157 83 162 158 80 158 all' in c for c in los_setup),
-      'los setup guards the backup destination against the reserved-empty neighbor before any mutation')
-check('RESERVED' in S['nb-cbt-los-cheat']['row'] and 'GUARDS' in S['nb-cbt-los-cheat']['row'],
-      'los row: backup destination + neighbor are reserved scratch volumes, guarded pre-mutation')
-check('success-gated' in S['nb-cbt-los-cheat']['row'] and 'newly forced' in S['nb-cbt-los-cheat']['row'],
-      'los row: rollback is command-success gated; forceload remove only chunks newly forced by this run')
-check('IMMEDIATELY BEFORE AND AFTER' in S['nb-cbt-reach-cheat']['effect_check'],
-      'a15 preflight requires bracketing receipts (interval coverage), not a single prior trace')
-check('NOT independent packet-arrival proof' in S['nb-cbt-reach-cheat']['effect_check'],
-      'client swing labeled corroboration only, not packet-arrival proof')
+check(any('if blocks 157 80 158 157 83 162 157 250 158 all run clone' in c for c in los_setup),
+      'los backup clone fires only when the destination matches the sky-air reference (abort-by-construction, not announcement)')
+check(not any('tellraw' in c for c in los_setup), 'no announce-only guard remains in los setup')
+check([c for c in los_setup if 'forceload query' in c] ==
+      ['/execute in minecraft:overworld run forceload query 157 158', '/execute in minecraft:overworld run forceload query 157 162'],
+      'forceload before-state: one single-pos query per affected chunk (9,9) and (9,10); no range-form query')
+check('RESERVED' in S['nb-cbt-los-cheat']['row'] and 'abort-by-construction' in S['nb-cbt-los-cheat']['row']
+      and 'TYPED' in S['nb-cbt-los-cheat']['row'] and 'fresh flat battery world' in S['nb-cbt-los-cheat']['row'],
+      'los row: reserved volume, abort-by-construction guard, typed receipts, fresh-world premise stated')
+check('newly forced' in S['nb-cbt-los-cheat']['row'] and 'paper-unsupported' in S['nb-cbt-los-cheat']['row'],
+      'forceload: remove only newly forced chunks; query shape paper-unsupported until rig-verified')
+check('teardown_gate' in S['nb-cbt-los-cheat'], 'los row carries an explicit teardown gate')
+check('ONLY if the setup backup-clone receipt succeeded' in S['nb-cbt-los-cheat']['teardown_gate']
+      and 'preserve the backup' in S['nb-cbt-los-cheat']['teardown_gate'],
+      'teardown runs only on backup success; setup failure preserves the backup (no stale/empty restore)')
+check('only after the restore clone succeeds' in S['nb-cbt-los-cheat']['teardown_gate'],
+      'backup air-fill and forceload removal run only after restore success')
+ec_reach = S['nb-cbt-reach-cheat']['effect_check']
+check('immediately before AND after' in ec_reach and 'NECESSARY screen, NOT sufficient' in ec_reach,
+      'a15 bracketing labeled a necessary screen, not whole-interval proof')
+check('ALWAYS absence-unknown = INCONCLUSIVE' in ec_reach
+      and 'per-attempt independent arrival receipt' in ec_reach and 'uninterrupted log-coverage proof' in ec_reach
+      and 'neither exists today' in ec_reach,
+      'a15 absence is ALWAYS INCONCLUSIVE without a per-attempt arrival receipt AND uninterrupted coverage proof (neither exists today)')
+check('attempt never arrived inside a proven-covered interval' not in ec_reach,
+      'the 0052 false-certainty phrasing is gone')
 check('DISPOSABLE' in S['nb-cbt-crowd-legit']['row'] and 'snapshot' in S['nb-cbt-crowd-legit']['row'],
       'crowd row: dedicated disposable bot, else snapshot + restore before /clear')
 import pathlib as _pl
 _src = _pl.Path(__file__).with_name('newbounds_controls.py').read_text()
 check('try/finally teardown' in _src and 'placeholder substitution VALIDATED' in _src and 'success receipts' in _src,
       'executor contract pinned in the controls STATUS footer: try/finally, validated substitution, success receipts')
+check('receipts are TYPED' in _src and 'gated on the setup backup receipt' in _src,
+      'executor contract: typed receipts, never a uniform numeric gate; restore gated on the backup receipt')
 
 # negative controls (skipped inside a mutated run - no recursion)
 if not os.environ.get('MESHAC_TEST_MUTATE'):

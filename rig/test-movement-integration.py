@@ -303,6 +303,45 @@ public final class MovementHarness {
   send(p4b, 0, 70.75, 0, true); drain("S4b", m4b);
   ck(flagged(m4b, "step", "rose 0.75 on the ground", "hold"), "S4b: dy 0.75 near powder must signal step - detail rose 0.75 on the ground (StepAccumulator.java:30), severity 3 (Movement.java:343), heat 3 >= holdAt=1 so the verdict is HOLD by ladder design (Verdict.java:13/:50, VALID_LOW)");
 
+  // S6 sustained-fall ground spoof (rig round-2 82-block nofall class): a NoFall cheat claims ground on every
+  // packet of a long fall. The evidence is claim-count, not distance: the 3rd unsupported claim must flag.
+  net.minecraft.world.level.Level.reset(); ServerPlayer p6 = fresh(70); warmup(p6, 70);
+  net.minecraft.world.level.Level.support = false; int m6 = mark(); double y6 = 70;
+  send(p6, 0, y6 -= 2.0, 0, true); send(p6, 0, y6 -= 2.0, 0, true);
+  ck(!flagged(m6, "nofall"), "S6: 2 falling ground claims must not flag yet");
+  send(p6, 0, y6 -= 2.0, 0, true);
+  ck(flagged(m6, "nofall", "ground spoof"), "S6: the 3rd unsupported claim of a sustained fall MUST flag nofall (rig round-2 82-block miss class)");
+
+  // S7 high jump across a fake landing (rig round-2 human high jump): legal 0.42 takeoff on the vanilla gravity
+  // chain, ONE unsupported ground claim mid-flight, then a second 0.42 impulse. The fake landing must not
+  // re-anchor the rise: measured from the real takeoff the flight tops 1.75 > room 1.45 and MUST flag.
+  // adv(4100) first: the high-jump gate requires > 4000 ms since the last grace/exempt packet (Movement.java:278).
+  net.minecraft.world.level.Level.reset(); ServerPlayer p7 = fresh(70); warmup(p7, 70);
+  net.minecraft.world.level.Level.support = false; adv(4100); int m7 = mark();
+  send(p7, 0, 70.42, 0, false); send(p7, 0, 70.7532, 0, false); send(p7, 0, 71.001336, 0, false); // legal jump, gravity chain (dy 0.42, 0.3332, 0.248136)
+  send(p7, 0, 71.001336, 0, true);  // fake landing: unsupported ground claim mid-flight (1 window claim, under the nofall threshold)
+  send(p7, 0, 71.421336, 0, false); // second impulse dy 0.42: looks legal measured from the fake landing
+  send(p7, 0, 71.754536, 0, false); // rise from the REAL takeoff is 1.754536 > 1.45 here
+  ck(flagged(m7, "high", "jump rose"), "S7: a re-jump after a fake landing MUST flag high jump - an unsupported claim is not a landing (claimAir/lastClaimAir gates, Movement.java)");
+  ck(!flagged(m7, "nofall"), "S7: one unsupported claim stays under the 3-of-5 nofall window");
+  // S7c control: the IDENTICAL stream over a SUPPORTED landing is vanilla two-hop and must stay silent.
+  net.minecraft.world.level.Level.reset(); ServerPlayer p7c = fresh(70); warmup(p7c, 70);
+  adv(4100); int m7c = mark(); // support stays true
+  send(p7c, 0, 70.42, 0, false); send(p7c, 0, 70.7532, 0, false); send(p7c, 0, 71.001336, 0, false);
+  send(p7c, 0, 71.001336, 0, true);  // real landing (scripted support)
+  send(p7c, 0, 71.421336, 0, false); send(p7c, 0, 71.754536, 0, false);
+  ck(!since("[meshac] SIGNAL", m7c), "S7c: the same stream over a SUPPORTED landing must stay silent - a real landing re-anchors (rise 0.75 < room)");
+
+  // S8 powder-snow jump band (rig round-2 powder-snow jump): near powder only the ~0.63 struggle band is exempt.
+  net.minecraft.world.level.Level.reset(); ServerPlayer p8 = fresh(70); warmup(p8, 70);
+  net.minecraft.world.level.Level.powderFeet = true; int m8 = mark();
+  send(p8, 0, 71.10, 0, true);
+  ck(flagged(m8, "step", "rose 1.10 on the ground"), "S8a: dy 1.10 near powder is outside every exemption and MUST flag - observed detail rose 1.10 on the ground (StepAccumulator.java:30), same ladder as S4b");
+  net.minecraft.world.level.Level.reset(); ServerPlayer p8b = fresh(70); warmup(p8b, 70);
+  net.minecraft.world.level.Level.powderFeet = true; int m8b = mark();
+  send(p8b, 0, 70.63, 0, true);
+  ck(!since("[meshac] SIGNAL", m8b), "S8b: struggle dy 0.63 near powder must stay silent (FpGuards.powderJumpBand, Movement.java:293)");
+
   // S5 classify (U4): entry gate + eviction resistance. Both modes run the same packet streams.
   net.minecraft.world.level.Level.reset(); ServerPlayer p5 = fresh(70.625); warmup(p5, 70.625); // feet 0.125 above the scripted partial top (70.5): inside the 0.13+0.005 tolerance gap, nonzero so the gap arithmetic is real
   net.minecraft.world.level.Level.support = false; net.minecraft.world.level.Level.partialBelow = true; int m5 = mark();

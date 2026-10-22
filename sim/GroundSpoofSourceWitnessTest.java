@@ -144,6 +144,8 @@ public final class GroundSpoofSourceWitnessTest {
 
 		// 4. An unsupported ground claim is not a landing: the air-chain reset is guarded by !claimAir (CODE).
 		ck.accept(t.contains("} else if (!claimAir) {"), "air chains reset only when the ground claim is supported (rig round-2 human high jump fix)");
+		ck.accept(t.contains("if (!s.lastClaimAir) { s.sinceJump = 99; s.airY0 = s.ground ? sy : y; }"), "the packet AFTER a fake landing must not re-anchor the air chains either (lastClaimAir gate)");
+		ck.accept(occurrences(t, "s.lastClaimAir = claimAir;").size() == 1, "exactly one lastClaimAir assignment, on the accepted-packet tail");
 
 		// 5. Arming and damage sit behind the monitor gate (CODE).
 		int chEq = t.indexOf("if (ch[0].equals(\"", t.indexOf("if (hit != null) {"));

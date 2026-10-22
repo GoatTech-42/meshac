@@ -21,7 +21,7 @@ public final class Movement {
 
 	private static final class S { final ContextLogBudget.Caller ctxBudget = new ContextLogBudget.Caller(); int ownerEntity; Object ownerDimension; volatile boolean blinkHit; volatile long burstMark; final BlinkOrigin bo = new BlinkOrigin(); long iceAt; double prevDtS; long flyMedAt, gtLogAt; final CompareLogBudget.Caller spShadowLog = new CompareLogBudget.Caller(); double spShadow; boolean wasExempt; long lastPosAt, burstStart; int burstN; double burstGap; boolean lastMoving; double ax = Double.NaN, az; long tickEnds, teAtLastPos;  final BlinkClock clock = new BlinkClock(); final BounceTracker bounce = new BounceTracker(); final MediumExit exit = new MediumExit(); final StepAccumulator stepAcc = new StepAccumulator(); double lastH, lastFallH; int slipN;
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
-		boolean ground, cground, init, ownTp;
+		boolean ground, cground, init, ownTp, lastClaimAir;
 		String freezeCheck = ""; long glideAt; double glideH; final ContextLogBudget.Caller noclipBudget = new ContextLogBudget.Caller(); long noclipCtxAt; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; double spBal; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, slowTicks; final GroundEvidence gndEv = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); boolean graceSoft; final GroundEvidence gndShadow = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); long softLogAt; final GroundEvidence gndEvDecay = new GroundEvidence(GROUND_WINDOW, GROUND_FLAG_AT); long decayLogAt; long nfStrongAt; double fdStrongMax;
 	}
 
@@ -276,7 +276,7 @@ public final class Movement {
 				double room = 1.45 + (jb == null ? 0 : (jb.getAmplifier() + 1) * 0.6);
 				if (s.airY0 == 0) s.airY0 = y; // a fresh state has no takeoff height yet
 				if (dy > 0.05 && y - s.airY0 > room && s.grace == 0 && hit == null && System.currentTimeMillis() - s.exemptAt > 4000 && !s.bounce.bouncing(y, nowMs)) hit = String.format("high jump rose %.2f", y - s.airY0);
-			} else if (!claimAir) { if (!stuckNow) s.bufFly = 0; s.sinceJump = 99; s.airY0 = s.ground ? sy : y; } // a stuck or sliding packet skips the checks for itself only; an unsupported ground claim is not a landing: it must not reset the air chains (rig round-2 human high jump)
+			} else if (!claimAir) { if (!stuckNow) s.bufFly = 0; if (!s.lastClaimAir) { s.sinceJump = 99; s.airY0 = s.ground ? sy : y; } /* a fake landing left s.ground=true but was never a landing: the packet after it must not re-anchor the air chains either (rig round-2 human high jump) */ } // a stuck or sliding packet skips the checks for itself only; an unsupported ground claim is not a landing: neither it nor the packet after it may reset the air chains (rig round-2 human high jump)
 			boolean bouncePad = pl.level().getBlockState(pl.blockPosition().below()).is(net.minecraft.world.level.block.Blocks.SLIME_BLOCK)
 				|| pl.level().getBlockState(pl.blockPosition().below()).is(net.minecraft.tags.BlockTags.BEDS)
 				|| pl.level().getBlockState(pl.blockPosition().below(2)).is(net.minecraft.world.level.block.Blocks.SLIME_BLOCK)
@@ -350,6 +350,7 @@ public final class Movement {
 		}
 		if (s.bufSpeed == 0 && s.bufFly == 0 && s.bufJump == 0 && s.inBlock == 0) { s.goodX = x; s.goodY = y; s.goodZ = z; }
 		s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
+		s.lastClaimAir = claimAir;
 		return null;
 	}
 

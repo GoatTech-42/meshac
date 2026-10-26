@@ -18,7 +18,7 @@ public final class Movement {
 
 	private static final class S { volatile boolean blinkHit; long lastPosAt, burstStart; int burstN; double burstGap; boolean lastMoving; double ax = Double.NaN, az; long tickEnds, teAtLastPos;  double lastH; int slipN; 
 		double px, py, pz, cx, cy, cz, dy, goodX, goodY, goodZ, fallPeak = -1e9, fdMax; long nfAt;
-		boolean ground, cground, init, ownTp;
+		boolean ground, cground, init, ownTp, lastClaimAir;
 		long glideAt; double glideH; long lastNs, freezeUntil; final java.util.concurrent.ConcurrentLinkedQueue<Long> arrivals = new java.util.concurrent.ConcurrentLinkedQueue<>(); double balMs; int inBlock; boolean pending; long graceAt, ajAt, windAt, exemptAt; boolean boosted; double airY0; long kbAt; double kbX, kbY, kbZ; int sinceJump = 99, ajN, noKb, levT, bufLev, bufHop, hopClock, bufGround, grace, clean, bufSpeed, bufFly, bufJump, bufClimb, bufStatus, riseT, slowTicks; double rise;
 	}
 
@@ -135,6 +135,13 @@ public final class Movement {
 			s.bufClimb = dy > 0.21 ? s.bufClimb + 2 : Math.max(0, s.bufClimb - 1);
 			if (s.bufClimb >= 4) hit = String.format("ladder dy %.3f", dy);
 		} else s.bufClimb = 0;
+		// A claimed landing over air cannot reset the current flight or its next packet.
+		// Match the existing NoFall support strip, without changing its threshold or policy.
+		boolean claimAir = false;
+		if (ground && !exempt && s.grace <= 0) {
+			AABB b = pl.getBoundingBox().move(dx, dy, dz);
+			claimAir = pl.level().noCollision(pl, new AABB(b.minX, b.minY - 0.1, b.minZ, b.maxX, b.minY, b.maxZ));
+		}
 		if (s.grace > 0 || exempt) {
 			if (s.grace > 0) s.grace--;
 			s.airY0 = y; s.sinceJump = 99; s.exemptAt = System.currentTimeMillis();
@@ -175,7 +182,7 @@ public final class Movement {
 				double room = 1.45 + (jb == null ? 0 : (jb.getAmplifier() + 1) * 0.6);
 				if (s.airY0 == 0) s.airY0 = y; // a fresh state has no takeoff height yet
 				if (dy > 0.05 && y - s.airY0 > room && s.grace == 0 && hit == null && System.currentTimeMillis() - s.exemptAt > 4000) hit = String.format("high jump rose %.2f", y - s.airY0);
-			} else { s.bufFly = 0; s.sinceJump = 99; s.airY0 = s.ground ? sy : y; }
+			} else if (!claimAir) { s.bufFly = 0; if (!s.lastClaimAir) { s.sinceJump = 99; s.airY0 = s.ground ? sy : y; } }
 			// Historical mitigation: the step accumulator was disabled while a stair-tolerant fix was tested.
 			final boolean STEP_ACCUMULATOR_ENABLED = true; // stair-tolerant fix clean-control battery on the isolated rig before deployment
 			// Step: a hack can climb a block with several small rises that all claim ground. Add them up.
@@ -237,6 +244,7 @@ public final class Movement {
 		}
 		if (s.bufSpeed == 0 && s.bufFly == 0 && s.bufJump == 0 && s.inBlock == 0) { s.goodX = x; s.goodY = y; s.goodZ = z; }
 		s.px = sx; s.py = sy; s.pz = sz; s.cx = x; s.cy = y; s.cz = z; s.cground = ground;
+		s.lastClaimAir = claimAir;
 		return null;
 	}
 

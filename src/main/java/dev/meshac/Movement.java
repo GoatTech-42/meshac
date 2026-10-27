@@ -233,8 +233,8 @@ public final class Movement {
 		} else s.bufGround = 0;
 		if (hit != null) {
 			String[] ch = hit.split(" ", 2);
-			if (ch[0].equals("nofall")) { s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
 			Verdict.Step step = Verdict.signal(pl, ch[0], ch.length > 1 ? ch[1] : "", ch[0].equals("step") ? 3 : ch[0].equals("fly") ? 3 : ch[0].equals("microhop") ? 2 : 1); // a block climbed in a few ticks is never an accident
+			if (ch[0].equals("nofall") && step != Verdict.Step.LOG) { s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall flag peak={} y={}", r(s.fallPeak), r(y)); }
 			if (step == Verdict.Step.LOG) { s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; return null; } // soft mode: record, never correct
 			s.ownTp = true;
 			s.bufSpeed = s.bufFly = s.bufJump = s.bufGround = s.bufClimb = s.bufHop = 0; s.balMs = 0; s.grace = 2; s.graceAt = System.currentTimeMillis(); s.dy = 0;
@@ -259,6 +259,7 @@ public final class Movement {
 		// AntiKnockback: a hit pushes the player about half a block. Barely moving half a second after a hit, with open space behind, three times in a row, is not luck.
 		long nowMs = System.currentTimeMillis();
 		// NoFall hands the fall back: the hack kept the server's fall count at zero, so when the player really lands the drop we recorded is applied, unless vanilla already counted it.
+		if (!Config.get().enforce("nofall")) { s.nfAt = 0; s.fdMax = 0; } // a pending action cannot survive switching NoFall to log-only
 		if (s.nfAt != 0) {
 			AABB tb = pl.getBoundingBox();
 			boolean supported = !pl.level().noCollision(pl, new AABB(tb.minX, tb.minY - 0.1, tb.minZ, tb.maxX, tb.minY, tb.maxZ));
@@ -295,9 +296,9 @@ public final class Movement {
 		s.bufStatus = air ? s.bufStatus + 1 : 0;
 		if (s.bufStatus < 3) return null;
 		s.bufStatus = 0;
-		s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall status flag peak={} y={}", r(s.fallPeak), r(pl.getY()));
 		Verdict.Step step = Verdict.signal(pl, "nofall", "ground flag in mid-air");
 		if (step == Verdict.Step.LOG) return null; // soft mode
+		s.nfAt = System.currentTimeMillis(); if (TRACE) Meshac.LOG.info("[trace] nofall status flag peak={} y={}", r(s.fallPeak), r(pl.getY()));
 		if (step == Verdict.Step.HOLD) s.freezeUntil = System.currentTimeMillis() + 1500;
 		return new double[] {pl.getX(), pl.getY(), pl.getZ(), 0};
 	}

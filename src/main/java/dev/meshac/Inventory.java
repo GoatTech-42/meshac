@@ -35,6 +35,7 @@ public final class Inventory {
 
 	/** AutoSwitch: the held slot changes every tick. A free-spinning scroll wheel tops out well under 15 notches a second. */
 	public static void hotbar(ServerPlayer pl) {
+		if (pl.isCreative() || pl.isSpectator() || Config.get().exempt(pl)) return;
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		long now = System.currentTimeMillis();
 		if (now - s.hotStart > 1000) { s.hotStart = now; s.hot = 0; }

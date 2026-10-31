@@ -25,8 +25,7 @@ public final class Vehicle {
 		int n = RISING.merge(pl.getUUID(), 1, Integer::sum);
 		if (n < RISE_AT) return false;
 		RISING.remove(pl.getUUID());
-		Verdict.signal(pl, "boatfly", "boat climbing in open air", 1);
-		return true;
+		return Verdict.signal(pl, "boatfly", "boat climbing in open air", 1) != Verdict.Step.LOG;
 	}
 
 	public static void forget(UUID id) { RISING.remove(id); }

@@ -16,7 +16,7 @@ root=Path(__file__).resolve().parents[1]
 source=args.source or root/'src/main/java/dev/meshac/mixin/ServerGamePacketListenerImplMixin.java'
 text=source.read_text()
 actual=hashlib.sha256(source.read_bytes()).hexdigest()
-assert actual in {'e05a2c56784b37ea27f2994f28577f269fda3bf38c6505e3101ded3149160a05','ddebbc9f8f8e163cca4d0abd42f7805534e3207f03257571143b58a82c796de3'},('Mixin source drift: review and repin',actual)
+assert actual in {'e05a2c56784b37ea27f2994f28577f269fda3bf38c6505e3101ded3149160a05','4567cfafbcc8ece4feebcf155875522fe343bf5f4841190bb2cbed0249394aa8'},('Mixin source drift: review and repin',actual)
 print('SOURCE',source,actual,flush=True)
 if args.mutant:
  old='if (dev.meshac.Config.get().enforce("interact")) ci.cancel();' if args.mutant=='invert' else 'pl.level().getServer().execute(() -> dev.meshac.Verdict.signal(pl, "interact", "sign text filled in " + gap + " ms after the editor opened", 1));'
@@ -41,7 +41,7 @@ sources={
 'net/minecraft/server/level/ServerLevel.java':'package net.minecraft.server.level;public class ServerLevel {public net.minecraft.server.MinecraftServer getServer(){return new net.minecraft.server.MinecraftServer();}}',
 'net/minecraft/server/MinecraftServer.java':'package net.minecraft.server;public class MinecraftServer {public void execute(Runnable task){task.run();}}'
 }
-for packet in ['ServerboundMovePlayerPacket','ServerboundMoveVehiclePacket','ServerboundSetCarriedItemPacket','ServerboundUseItemOnPacket','ServerboundUseItemPacket','ServerboundChatCommandPacket','ServerboundClientTickEndPacket','ServerboundPlayerCommandPacket','ServerboundPlayerActionPacket','ServerboundContainerClickPacket']:
+for packet in ['ServerboundMovePlayerPacket','ServerboundMoveVehiclePacket','ServerboundSetCarriedItemPacket','ServerboundUseItemOnPacket','ServerboundUseItemPacket','ServerboundChatCommandPacket','ServerboundChatCommandSignedPacket','ServerboundClientTickEndPacket','ServerboundPlayerCommandPacket','ServerboundPlayerActionPacket','ServerboundContainerClickPacket']:
  sources['net/minecraft/network/protocol/game/'+packet+'.java']='package net.minecraft.network.protocol.game;public class '+packet+' {}'
 sources['net/minecraft/network/protocol/Packet.java']='package net.minecraft.network.protocol;public interface Packet {}'
 sources['net/minecraft/world/level/BlockGetter.java']='package net.minecraft.world.level;public interface BlockGetter {}'

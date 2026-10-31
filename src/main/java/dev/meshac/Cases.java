@@ -27,6 +27,8 @@ public final class Cases {
 			List<Case> loaded = G.fromJson(Files.readString(file()), new TypeToken<List<Case>>() {}.getType());
 			if (loaded == null) throw new IllegalArgumentException("case store must be an array, not null");
 			if (loaded.stream().anyMatch(java.util.Objects::isNull)) throw new IllegalArgumentException("case store must not contain null rows");
+			for (Case c : loaded) if (c.id == null || c.player == null || c.uuid == null || c.action == null || c.reason == null || c.by == null || c.evidence == null || c.evidence.stream().anyMatch(java.util.Objects::isNull))
+				throw new IllegalArgumentException("case store has a missing required field");
 			all = loaded;
 		} }
 		catch (Exception e) { Meshac.LOG.warn("[meshac] could not read cases: {}", e.toString()); }

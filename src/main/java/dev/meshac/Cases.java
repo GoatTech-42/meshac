@@ -33,7 +33,15 @@ public final class Cases {
 		} }
 		catch (Exception e) { Meshac.LOG.warn("[meshac] could not read cases: {}", e.toString()); }
 	}
-	private static void save() { try { Files.writeString(file(), G.toJson(all)); } catch (Exception e) { Meshac.LOG.warn("[meshac] could not save cases: {}", e.toString()); } }
+	private static void save() {
+		Path tmp = null;
+		try {
+			tmp = Files.createTempFile(file().getParent(), "meshac-cases-", ".tmp");
+			Files.writeString(tmp, G.toJson(all));
+			Files.move(tmp, file(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+		} catch (Exception e) { Meshac.LOG.warn("[meshac] could not save cases: {}", e.toString()); }
+		finally { if (tmp != null) try { Files.deleteIfExists(tmp); } catch (Exception e) { Meshac.LOG.warn("[meshac] could not remove case-store temporary file: {}", e.toString()); } }
+	}
 
 	public static synchronized Case add(String player, UUID uuid, String action, String reason, String by, long until, List<String> evidence) {
 		Case c = new Case();

@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse,subprocess,tempfile,resource,hashlib
 parser=argparse.ArgumentParser();parser.add_argument('--source',type=Path,default=Path(__file__).resolve().parents[1]/'src/main/java/dev/meshac/Cases.java');parser.add_argument('--gson',type=Path,required=True);parser.add_argument('--mutant',action='store_true');parser.add_argument('--row',action='store_true');parser.add_argument('--row-mutant',action='store_true');args=parser.parse_args()
 text=args.source.read_text()
-assert hashlib.sha256(text.encode()).hexdigest() in {'e53b5d795a3405e7c9a60bb1971a24b12b95e429c2875590bf24d96b2e0a2dc6','938546e10107b694db21cc15c366518b2c15037f5c0462651e66272e9c735bc6','d2bcfaf1844c1b06caa127bdea3b115996ac76e1dbf0f10fd86088ff1e7da254','e457f17f29b458030c8422a69ef516dfd9c6e74abde57ec12cdaa6c807b11a96'},'Cases source drift: review and repin'
+assert hashlib.sha256(text.encode()).hexdigest() in {'f812c4589d0e58a36d86225c7cf678a19163183970f20993fef14d5c1dd099a2','e53b5d795a3405e7c9a60bb1971a24b12b95e429c2875590bf24d96b2e0a2dc6','938546e10107b694db21cc15c366518b2c15037f5c0462651e66272e9c735bc6','d2bcfaf1844c1b06caa127bdea3b115996ac76e1dbf0f10fd86088ff1e7da254','e457f17f29b458030c8422a69ef516dfd9c6e74abde57ec12cdaa6c807b11a96'},'Cases source drift: review and repin'
 print('SOURCE',args.source,hashlib.sha256(text.encode()).hexdigest(),flush=True)
 if args.row_mutant:
  old='if (loaded.stream().anyMatch(java.util.Objects::isNull)) throw new IllegalArgumentException("case store must not contain null rows");'

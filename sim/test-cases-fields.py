@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse,subprocess,tempfile,resource,hashlib
 parser=argparse.ArgumentParser();parser.add_argument('--source',type=Path,default=Path(__file__).resolve().parents[1]/'src/main/java/dev/meshac/Cases.java');parser.add_argument('--gson',type=Path,required=True);parser.add_argument('--field-mutant',choices=['id','player','uuid','action','reason','by','evidence','evidence-entry']);args=parser.parse_args()
 text=args.source.read_text()
-assert hashlib.sha256(text.encode()).hexdigest() in {'938546e10107b694db21cc15c366518b2c15037f5c0462651e66272e9c735bc6','e53b5d795a3405e7c9a60bb1971a24b12b95e429c2875590bf24d96b2e0a2dc6'},'Cases source drift: review and repin'
+assert hashlib.sha256(text.encode()).hexdigest() in {'f812c4589d0e58a36d86225c7cf678a19163183970f20993fef14d5c1dd099a2','938546e10107b694db21cc15c366518b2c15037f5c0462651e66272e9c735bc6','e53b5d795a3405e7c9a60bb1971a24b12b95e429c2875590bf24d96b2e0a2dc6'},'Cases source drift: review and repin'
 if args.field_mutant:
  old='c.evidence == null || c.evidence.stream().anyMatch(java.util.Objects::isNull)' if args.field_mutant=='evidence' else ('c.evidence.stream().anyMatch(java.util.Objects::isNull)' if args.field_mutant=='evidence-entry' else 'c.'+args.field_mutant+' == null || ')
  assert text.count(old)==1

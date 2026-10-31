@@ -98,13 +98,15 @@ public final class Config {
 		try {
 			if (Files.exists(p)) {
 				var root = com.google.gson.JsonParser.parseString(Files.readString(p)).getAsJsonObject();
-				cur = g.fromJson(root, Config.class);
+				Config loaded = g.fromJson(root, Config.class);
+				if (loaded.preset == null) throw new IllegalArgumentException("preset must not be null");
+				cur = loaded;
 				// Add new defaults/help without changing existing or unknown owner settings.
 				var defaults = com.google.gson.JsonParser.parseString(documented(g, new Config())).getAsJsonObject();
 				for (var entry : defaults.entrySet()) if (!root.has(entry.getKey())) root.add(entry.getKey(), entry.getValue());
 				Files.writeString(p, g.toJson(root) + "\n");
 			}
 			else Files.writeString(p, documented(g, cur));
-		} catch (Exception e) { Meshac.LOG.warn("[meshac] could not read config, using defaults: {}", e.toString()); }
+		} catch (Exception e) { Meshac.LOG.warn("[meshac] could not load or update config, using current settings: {}", e.toString()); }
 	}
 }

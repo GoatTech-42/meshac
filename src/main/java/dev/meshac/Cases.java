@@ -26,6 +26,7 @@ public final class Cases {
 		try { if (Files.exists(file())) {
 			List<Case> loaded = G.fromJson(Files.readString(file()), new TypeToken<List<Case>>() {}.getType());
 			if (loaded == null) throw new IllegalArgumentException("case store must be an array, not null");
+			if (loaded.stream().anyMatch(java.util.Objects::isNull)) throw new IllegalArgumentException("case store must not contain null rows");
 			all = loaded;
 		} }
 		catch (Exception e) { Meshac.LOG.warn("[meshac] could not read cases: {}", e.toString()); }

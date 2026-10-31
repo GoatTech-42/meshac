@@ -105,7 +105,7 @@ Wurst AirPlace sends a block placement against thin air and vanilla accepts it. 
 
 ### FeedAura (caught, stopped)
 
-Wurst FeedAura picks a random animal every tick and feeds it, so it hits a new animal 50 ms after the last. A hand needs time to turn to the next animal. An interaction with a different entity less than 250 ms after the previous one is refused, and a second one inside three seconds is a signal. Before: all four cows fed (wheat 32 to 28), 0 signals. After: 5 signals, kicked, the player is out before the herd is fed. Control is clean. Rig, 26.1.2 only (the 1.21.11 jar has no entity-interact hook yet).
+Wurst FeedAura picks a random animal every tick and feeds it, so it hits a new animal 50 ms after the last. A hand needs time to turn to the next animal. An interaction with a different entity less than 250 ms after the previous one is refused, and a second one inside three seconds is a signal. Before: all four cows fed (wheat 32 to 28), 0 signals. After: 5 signals, kicked, the player is out before the herd is fed. Control is clean. Rig, 26.1.2 only. The 1.21.11 jar now routes non-attack entity interactions from its shared handleInteract hook to the same entity check (2026-10-31 source change, scripted-doubles qualification only; no 1.21.11 client or rig run, and unresolved targets are skipped rather than counted).
 
 ### AutoSign (packet level only)
 

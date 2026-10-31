@@ -29,7 +29,12 @@ public abstract class AttackMixin {
 			public void onInteraction(InteractionHand h, Vec3 v) {}
 			public void onAttack() { attack[0] = true; }
 		});
-		if (!attack[0]) return;
+		if (!attack[0]) {
+			// this packet also carries plain entity interactions on 1.21.x: route those to the entity-aura check the 26.x hook already runs
+			Entity entity = p.getTarget(player.level());
+			if (entity != null && dev.meshac.Interact.entity(player, entity.getId())) ci.cancel();
+			return;
+		}
 		Entity e = p.getTarget(player.level());
 		if (e == null) return;
 		String hit = Combat.check(player, e);

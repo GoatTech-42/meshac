@@ -13,7 +13,7 @@ parser.add_argument('--mutant',choices=['body-log','move-log','all-log','pending
 args=parser.parse_args()
 source=args.baseline or r/'src/main/java/dev/meshac/Movement.java'
 actual=hashlib.sha256(source.read_bytes()).hexdigest()
-expected='9b228604bad3802ef940664701eb2ef0caa653e740b8caf39ae8be60c3fcea56' if args.baseline else 'bc57cf5531bdc79ab7cce403bc23801349a96224fd3b764f9dec2ef148d7bf0b'
+expected='9b228604bad3802ef940664701eb2ef0caa653e740b8caf39ae8be60c3fcea56' if args.baseline else '925f2ac2b3e8dbdaa91996c58dd1fe09593f374a132f9666de924a3a2324480e'
 assert actual==expected,('Movement source drift: review and repin before running',actual,expected)
 text=source.read_text()
 ms,ns=text.count('System.currentTimeMillis()'),text.count('System.nanoTime()')

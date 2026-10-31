@@ -26,6 +26,16 @@ public class MovementArrivalTest {
   for(int i=0;i<50;i++){advance(50);check(p,ServerboundMovePlayerPacket.status(true));check(p,pos());}
   ck(Verdict.signals.stream().anyMatch(s->s.startsWith("timer ")),"status-only packets must not consume queued position timestamps");
   Movement.forget(p.getUUID());
+  // rotation packets must feed both look trackers exactly once with identical values: Mining.look unwired leaves the dig-aim tolerance frozen
+  Interact.calls=0;Mining.calls=0;p=new ServerPlayer("rotate");p.setPos(0,70,0);
+  advance(50);check(p,ServerboundMovePlayerPacket.rot(30f,45f,true));
+  ck(Interact.calls==1&&Mining.calls==1,"rotation reaches Interact and Mining exactly once each");
+  ck(Interact.yaw==30f&&Interact.pitch==45f&&Mining.yaw==30f&&Mining.pitch==45f,"both trackers receive the packet rotation unchanged");
+  advance(50);check(p,pos());
+  ck(Interact.calls==1&&Mining.calls==1,"position-only packet feeds no tracker");
+  advance(50);check(p,ServerboundMovePlayerPacket.status(true));
+  ck(Interact.calls==1&&Mining.calls==1,"status-only packet feeds no tracker");
+  Movement.forget(p.getUUID());
   System.out.println("PASS movement-arrival checks="+checks);
  }
 }

@@ -7,7 +7,7 @@ import hashlib,json,os,resource,subprocess,tempfile,sys
 from pathlib import Path
 r=Path(__file__).resolve().parents[1]
 source=r/'src/main/java/dev/meshac/Movement.java'
-expected="bc57cf5531bdc79ab7cce403bc23801349a96224fd3b764f9dec2ef148d7bf0b"
+expected="925f2ac2b3e8dbdaa91996c58dd1fe09593f374a132f9666de924a3a2324480e"
 actual=hashlib.sha256(source.read_bytes()).hexdigest()
 assert actual==expected,("Movement source drift: review and repin before running",actual,expected)
 text=source.read_text()

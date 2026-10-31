@@ -8,17 +8,21 @@ r=Path(__file__).resolve().parents[1]
 import argparse
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--source',type=Path)
-parser.add_argument('--mutant',choices=['poll-status','keep-exempt'])
+parser.add_argument('--mutant',choices=['poll-status','keep-exempt','drop-mining-look','mining-swapped-args'])
 args=parser.parse_args()
 source=args.source or r/'src/main/java/dev/meshac/Movement.java'
 text=source.read_text()
 actual=hashlib.sha256(source.read_bytes()).hexdigest()
-assert actual in {'6b76bf4eae6101688bd0f238a9f4433420de62dcbf0131885129a2809966d3fa','bc57cf5531bdc79ab7cce403bc23801349a96224fd3b764f9dec2ef148d7bf0b'},('Movement source drift: review and repin',actual)
-if args.mutant:
+assert actual in {'6b76bf4eae6101688bd0f238a9f4433420de62dcbf0131885129a2809966d3fa','bc57cf5531bdc79ab7cce403bc23801349a96224fd3b764f9dec2ef148d7bf0b','925f2ac2b3e8dbdaa91996c58dd1fe09593f374a132f9666de924a3a2324480e'},('Movement source drift: review and repin',actual)
+if args.mutant in ('poll-status','keep-exempt'):
  old='p.hasPosition() ? s.arrivals.poll() : null'
  assert text.count(old)==1
  new='s.arrivals.poll()' if args.mutant=='poll-status' else '(p.hasPosition() && !Config.get().exempt(pl)) ? s.arrivals.poll() : null'
  text=text.replace(old,new)
+elif args.mutant:
+ wire='Interact.look(pl, yaw, pitch); Mining.look(pl, yaw, pitch);'
+ assert text.count(wire)==1
+ text=text.replace(wire,'Interact.look(pl, yaw, pitch);' if args.mutant=='drop-mining-look' else 'Interact.look(pl, yaw, pitch); Mining.look(pl, pitch, yaw);')
 ms,ns=text.count('System.currentTimeMillis()'),text.count('System.nanoTime()')
 assert (ms,ns)==(18,2),(ms,ns)
 copy=text.replace('System.currentTimeMillis()','TestClock.ms').replace('System.nanoTime()','TestClock.ns')

@@ -55,7 +55,7 @@ public final class Movement {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
 		Long arrived = p.hasPosition() ? s.arrivals.poll() : null; // consume one stamp even while exempt
 		if (Config.get().exempt(pl)) return null;
-		if (p.hasRotation()) Interact.look(pl, p.getYRot(pl.getYRot()), p.getXRot(pl.getXRot()));
+		if (p.hasRotation()) { float yaw = p.getYRot(pl.getYRot()), pitch = p.getXRot(pl.getXRot()); Interact.look(pl, yaw, pitch); Mining.look(pl, yaw, pitch); } // the dig-aim tracker must see every rotation too; unwired, its recent-aim tolerance never updates
 		if (s.blinkHit) { s.blinkHit = false; if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly) Verdict.signal(pl, "blink", "held its movement packets back and released them in one burst", 1); }
 		if (!p.hasPosition()) return statusOnly(pl, p, s);
 		if (s.grace > 0 && System.currentTimeMillis() - s.graceAt > 1100) s.grace = 0; // grace is 20 ticks of real time; a player standing still sends few packets

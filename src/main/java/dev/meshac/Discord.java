@@ -24,6 +24,10 @@ public final class Discord {
 		if (url == null || url.isBlank()) return;
 		JsonObject o = new JsonObject();
 		o.addProperty("content", text.length() > 1900 ? text.substring(0, 1900) : text);
-		HTTP.sendAsync(HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(o.toString())).build(), HttpResponse.BodyHandlers.discarding());
+		try {
+			HTTP.sendAsync(HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(o.toString())).build(), HttpResponse.BodyHandlers.discarding());
+		} catch (RuntimeException e) {
+			Meshac.LOG.warn("[meshac] could not submit Discord webhook ({}); gameplay continues", e.getClass().getSimpleName());
+		}
 	}
 }

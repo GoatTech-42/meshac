@@ -53,6 +53,7 @@ public final class Movement {
 	/** Returns a setback position, or null if the packet is fine. */
 	public static double[] check(ServerPlayer pl, ServerboundMovePlayerPacket p) {
 		S s = STATE.computeIfAbsent(pl.getUUID(), k -> new S());
+		Long arrived = p.hasPosition() ? s.arrivals.poll() : null; // consume one stamp even while exempt
 		if (Config.get().exempt(pl)) return null;
 		if (p.hasRotation()) Interact.look(pl, p.getYRot(pl.getYRot()), p.getXRot(pl.getXRot()));
 		if (s.blinkHit) { s.blinkHit = false; if (!pl.isCreative() && !pl.isSpectator() && !pl.isPassenger() && !pl.isFallFlying() && !pl.getAbilities().mayfly) Verdict.signal(pl, "blink", "held its movement packets back and released them in one burst", 1); }
@@ -66,7 +67,6 @@ public final class Movement {
 			boolean supported = !pl.level().noCollision(pl, new AABB(fb.minX, fb.minY - 0.1, fb.minZ, fb.maxX, fb.minY, fb.maxZ));
 			if ((supported && s.nfAt == 0) || pl.isInWater() || pl.isInLava() || pl.onClimbable() || pl.isFallFlying() || pl.isPassenger() || y > s.fallPeak + 50) s.fallPeak = y; else s.fallPeak = Math.max(s.fallPeak, y);
 		}
-		Long arrived = s.arrivals.poll(); // pairs 1:1 with the stamp from arrive()
 		// The server position is the last accepted one (vanilla has already handled the previous packet).
 		// If it is neither where the previous packet started nor where it claimed, the server moved the player.
 		double sx = pl.getX(), sy = pl.getY(), sz = pl.getZ();

@@ -32,6 +32,7 @@ public final class Verdict {
 		long ms = System.currentTimeMillis();
 		Step step;
 		List<String> ev;
+		boolean tierA;
 		String why;
 		synchronized (h) {
 			Ladder.Step ls = h.lh.add(check, weight, ms, Config.get().ladderParams());
@@ -44,13 +45,14 @@ public final class Verdict {
 			String top = check; int best = -1;
 			for (var e : h.weight.entrySet()) if (e.getValue() > best) { best = e.getValue(); top = e.getKey(); }
 			why = top + " " + h.detail.get(top);
+			tierA = h.lh.confirmedTierA();
 			if (step == Step.REMOVE) { h.heat = 0; h.lh.reset(); h.weight.clear(); h.detail.clear(); }
 		}
 		if (Config.get().monitor() && !Config.get().isEgregious(check)) step = Step.LOG; // soft mode: everything logs; only egregiousChecks enforce
 		Meshac.LOG.warn("[meshac] SIGNAL {} {} {} heat={} -> {}", pl.getGameProfile().name(), check, detail, h.heat, step.name().toLowerCase());
 		alert(pl, check + " " + detail + " heat " + h.heat + " " + step.name().toLowerCase());
 		if (step == Step.HOLD && h.heat - weight < Config.get().holdAtI()) Discord.hold(pl.getGameProfile().name(), check, detail);
-		if (step == Step.REMOVE) remove(pl, why, ev);
+		if (step == Step.REMOVE) remove(pl, why, ev, tierA);
 		return step;
 	}
 
@@ -69,10 +71,9 @@ public final class Verdict {
 		return pl.getGameProfile().name() + ": heat " + (h == null ? "0.0" : String.format("%.1f", h.lh.now(System.currentTimeMillis(), cf.ladderParams()))) + ", offences " + String.format("%.2f", eff) + ", next removal: " + next + (cf.monitor() ? " (monitor mode, no removals)" : "");
 	}
 
-	private static void remove(ServerPlayer pl, String why, List<String> evidence) {
+	private static void remove(ServerPlayer pl, String why, List<String> evidence, boolean tierA) {
 		String reason = "Unusual " + why.split(" ")[0] + " (" + why + ")";
 		Config cf = Config.get();
-		H hh = HEAT.get(pl.getUUID()); boolean tierA = hh != null && hh.lh.confirmedTierA();
 		double eff = Cases.offences(pl.getUUID());
 		int rung = Ladder.rung(eff, cf.kicks(), tierA && cf.skipRungOnTierA());
 		String name = pl.getGameProfile().name();

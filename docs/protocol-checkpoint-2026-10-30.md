@@ -23,7 +23,13 @@ Both players disconnected normally. Server and both client processes exited zero
 
 Before each stream, actual server-thread observations established the generated name/UUID, survival mode, no flying ability, no pending teleport, grace zero, no relevant movement exemption, normal-friction support and clear path. A separate test-only read-only observer supplied those snapshots without changing the production jar. Client completion alone did not count: final positions were read from the server after the stream.
 
-The server used `monitorOnly=true`, empty `egregiousChecks`, and empty exemption/disabled lists. These checks logged only in this run. This is not a claim that monitor mode suppresses every correction path in the code: unconditional noclip paths still exist.
+The server used `monitorOnly=true`, empty `egregiousChecks`, and empty exemption/disabled lists. These checks logged only in this run. This is not a claim that monitor mode suppresses every correction path in that artifact: its two noclip paths returned corrections even when Verdict returned LOG.
+
+## Later source-only fix
+
+Commit `946f744e6a3dbd5d3ebef89173fbcf2eba681af5` makes those two Movement noclip paths return no correction when Verdict returns LOG. Scripted checks against real Movement source cover a player inside solid blocks, a two-block move through a wall, and an eleven-block move. Each still signals in LOG mode without returning a correction. SETBACK, HOLD and REMOVE still return the saved safe position, and a pending server teleport still skips the long-move rule.
+
+The checks use collision and Verdict doubles, not a native client or a server runtime. Baseline failures and causal mutations show the tests catch the changed behavior. The affected movement simulation checks also passed. This source fix was not built into the checkpoint jar, deployed, or tested through a native client. It does not qualify other correction paths or change the results above.
 
 ## Boundaries
 

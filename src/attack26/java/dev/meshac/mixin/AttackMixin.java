@@ -25,9 +25,7 @@ public abstract class AttackMixin {
 		if (e == null) return;
 		String hit = Combat.check(player, e);
 		if (hit == null) return;
-		String[] ch = hit.split(" ", 2);
-		Verdict.signal(player, "combat", hit, 2);
-		ci.cancel(); // the hit is denied
+		if (Verdict.signal(player, "combat", hit, 2) != Verdict.Step.LOG) ci.cancel();
 	}
 
 	@Inject(method = "handleInteract", at = @At("HEAD"), cancellable = true)

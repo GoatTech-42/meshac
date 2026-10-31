@@ -34,7 +34,6 @@ public abstract class AttackMixin {
 		if (e == null) return;
 		String hit = Combat.check(player, e);
 		if (hit == null) return;
-		Verdict.signal(player, "combat", hit, 2);
-		ci.cancel(); // the hit is denied
+		if (Verdict.signal(player, "combat", hit, 2) != Verdict.Step.LOG) ci.cancel();
 	}
 }

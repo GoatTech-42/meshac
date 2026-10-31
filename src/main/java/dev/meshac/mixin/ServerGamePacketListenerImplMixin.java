@@ -79,7 +79,7 @@ public abstract class ServerGamePacketListenerImplMixin {
 		long gap = Interact.signGap(player, lines);
 		Trace.t(player, "sign text" + (gap >= 0 ? " REFUSED gap=" + gap : "") + " lines=" + String.join("|", lines));
 		if (gap >= 0) {
-			ci.cancel();
+			if (dev.meshac.Config.get().enforce("interact")) ci.cancel();
 			net.minecraft.server.level.ServerPlayer pl = player;
 			pl.level().getServer().execute(() -> dev.meshac.Verdict.signal(pl, "interact", "sign text filled in " + gap + " ms after the editor opened", 1));
 		}

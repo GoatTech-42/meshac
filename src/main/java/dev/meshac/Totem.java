@@ -34,8 +34,7 @@ public final class Totem {
 		s[4] = arrivedAt;
 		int strikes = (int) ++s[3];
 		if (fastest > IMPOSSIBLE_MS && strikes < 2) return false;
-		Verdict.signal(pl, "inventory", "off hand filled " + fastest + " ms after " + (react && since <= gap || !pair ? "a totem popped" : "another slot was clicked") + (strikes > 1 ? ", " + strikes + " in a row" : ""), strikes >= 3 ? 3 : 2);
-		return true;
+		return Verdict.signal(pl, "inventory", "off hand filled " + fastest + " ms after " + (react && since <= gap || !pair ? "a totem popped" : "another slot was clicked") + (strikes > 1 ? ", " + strikes + " in a row" : ""), strikes >= 3 ? 3 : 2) != Verdict.Step.LOG;
 	}
 
 	private static long[] state(ServerPlayer pl) { return STATE.computeIfAbsent(pl.getUUID(), k -> new long[] { -1000000, 0, -1, 0, 0 }); }

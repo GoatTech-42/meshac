@@ -23,9 +23,12 @@ public final class Cases {
 	private static Path file() { return FabricLoader.getInstance().getConfigDir().resolve("meshac-cases.json"); }
 
 	public static synchronized void load() {
-		try { if (Files.exists(file())) all = G.fromJson(Files.readString(file()), new TypeToken<List<Case>>() {}.getType()); }
+		try { if (Files.exists(file())) {
+			List<Case> loaded = G.fromJson(Files.readString(file()), new TypeToken<List<Case>>() {}.getType());
+			if (loaded == null) throw new IllegalArgumentException("case store must be an array, not null");
+			all = loaded;
+		} }
 		catch (Exception e) { Meshac.LOG.warn("[meshac] could not read cases: {}", e.toString()); }
-		if (all == null) all = new ArrayList<>();
 	}
 	private static void save() { try { Files.writeString(file(), G.toJson(all)); } catch (Exception e) { Meshac.LOG.warn("[meshac] could not save cases: {}", e.toString()); } }
 

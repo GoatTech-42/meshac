@@ -7,6 +7,10 @@ A throwaway Minecraft server plus test clients, all on a Docker network with no 
 - `client/` runs a real Wurst client headless (see `REAL-CLIENTS.md`).
 - The server needs `white-list=false`. Test runs use a flat world so the player never spawns against a wall.
 
+## Current source-bound checkpoint
+
+The [2026-10-30 protocol checkpoint](../docs/protocol-checkpoint-2026-10-30.md) records one supported-walk control and one hover positive on a source-bound 26.1.2 artifact. This is scripted protocol evidence, not a new native-client qualification. The historical setup notes below are not current host-inventory or resource admission.
+
 ## Parallel bot rigs
 
 `botrig.sh up <id> <version> <jar>` starts `meshac-bot-<id>`, a server on its own copy of `smoke-<version>` (1 CPU, 1 GB, trace on), and `botrig.sh down <id>` removes it. Bot rigs are cheap (a few percent of one core when idle), so several can run at once for packet-level tests. `bots/thru2.sh` is an example: a mineflayer bot digs the block behind another block while a second rig runs the control.

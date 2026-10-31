@@ -1,0 +1,36 @@
+# Source-bound protocol checkpoint, 2026-10-30
+
+This checkpoint tests scripted protocol traffic on Minecraft 26.1.2. It is not a native hacked-client or physics qualification, and it did not change a live server.
+
+## Artifact
+
+- Source: `ddbfe9f7e4713c8bb027660ef67319b473d6ed68` on `port/airchain-main-20261026`.
+- Runtime jar SHA256: `6e1dcef83660cb372b48164e6939139a2c773586acab665030bec909ce625dea`.
+- Movement source SHA256: `9b228604bad3802ef940664701eb2ef0caa653e740b8caf39ae8be60c3fcea56`.
+- Build: Java 25, Minecraft 26.1.2, Fabric API 0.155.3+26.1.2, loader 0.19.5. Loom pinned to `1.18-20261010.111021-4`; Gradle 9.7.1. A clean offline rebuild produced identical runtime and sources jars.
+- Full version profile: `versions/26.1.properties`, including `mc_range`, `java_min`, `attack_src` and `packet_src`. The two dependency overrides alone do not provide the full build profile.
+
+## Actual result
+
+One disposable isolated server, two sequential generated players, one run each:
+
+| Stream | Client history | Server evidence | Result |
+|---|---|---|---|
+| Supported walk | 40 standing settle positions, then 20 positions moving 0.2 blocks each | Accepted final position `(4.5, -60, 0.5)`; no meshac signals or client corrections | Passed this scripted control |
+| Hover | Fresh player, 40 settle positions, then 16 positions held 0.42 blocks above the surface | `fly dy 0.000 expect -0.078 heat=3 -> log`; accepted final position `(0.5, -59.58, 0.5)`; no client corrections | Passed this scripted positive |
+
+Both players disconnected normally. Server and both client processes exited zero, and the server saved and stopped. The disposable processes and world were removed after evidence capture. Full logs, timestamped writes, observer snapshots, effective config, process samples and hashes were retained privately; a source path or this note is not a substitute for those receipts.
+
+Before each stream, actual server-thread observations established the generated name/UUID, survival mode, no flying ability, no pending teleport, grace zero, no relevant movement exemption, normal-friction support and clear path. A separate test-only read-only observer supplied those snapshots without changing the production jar. Client completion alone did not count: final positions were read from the server after the stream.
+
+The server used `monitorOnly=true`, empty `egregiousChecks`, and empty exemption/disabled lists. These checks logged only in this run. This is not a claim that monitor mode suppresses every correction path in the code: unconditional noclip paths still exist.
+
+## Boundaries
+
+- Mineflayer 4.39.0 injected positions, with automatic movement packets suppressed during the scripted phase. This does not reproduce a native hacked client's behavior or vanilla client physics.
+- The actual test used a bounded supported platform in a new world, four verified loaded chunks and `minecraft:respawn_radius=0`. It does not cover terrain, combat, other movement modes, lag, other versions or a full legitimate-play suite.
+- The final run's peak sampled combined resident memory was 707,526,656 bytes, about 675 MiB. Sampling is not a hard aggregate memory cap or a general capacity estimate.
+- Java's virtual address-space allowance was 1536 MiB, with a 256 MiB heap. A 1280 MiB virtual allowance had caused native allocation failures; the larger allowance did not raise the physical-memory stop thresholds. This is a test configuration, not a recommended production sizing rule.
+- No native-client test, production deployment, enforcement change or release follows from this checkpoint.
+
+The older real-client tables in `coverage.md` describe historical tested jars, not a fresh qualification of this artifact.

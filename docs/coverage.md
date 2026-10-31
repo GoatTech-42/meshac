@@ -2,6 +2,8 @@
 
 Updated as tests run. Misses stay in the table.
 
+The [2026-10-30 source-bound protocol checkpoint](protocol-checkpoint-2026-10-30.md) is separate from the historical real-client results below. It proves only one supported walk and one hover scripted stream on the named artifact, not a refreshed native-client matrix.
+
 ## Real hacked client
 
 Wurst v7.56 (official source, Minecraft 26.1.2) against the same test server twice: once with meshac, once without. Times are seconds after the hack was switched on. "Signal" is the first thing meshac noticed, "hold" is when it froze the player and put them back, "kick" is when it ended the session.

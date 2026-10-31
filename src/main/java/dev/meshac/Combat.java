@@ -165,5 +165,5 @@ public final class Combat {
 		return hit;
 	}
 
-	public static void forget(UUID id) { STATE.remove(id); TRACK.remove(id); }
+	public static void forget(UUID id) { STATE.remove(id); TRACK.remove(id); MULTI.remove(id); }
 }

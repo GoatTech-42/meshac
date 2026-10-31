@@ -40,3 +40,17 @@ The checks use collision and Verdict doubles, not a native client or a server ru
 - No native-client test, production deployment, enforcement change or release follows from this checkpoint.
 
 The older real-client tables in `coverage.md` describe historical tested jars, not a fresh qualification of this artifact.
+
+## Later persistence boundary: deployment held
+
+Cases atomic-save source checkpoint `cea93343f63134f3754f531641d067ceaa20eb97` has not been deployed and is not deployment-ready. Its finite synthetic tests establish normal replacement and preservation of prior bytes under a capped staged-write failure, plus temporary-file cleanup. They do not establish compatibility with prior file metadata or links. The Config atomic-save candidate is unpublished. Existing non-atomic write behavior has a known partial-write/truncation risk; that risk is not declared solved for a deployable runtime.
+
+Disposable Java 25 Linux-provider research showed that replacing a file with a temporary inode can change permissions and inode identity, sever the path from hardlink aliases, and replace a symlink rather than write its target. A real POSIX ACL on a synthetic file was invisible to Java's ACL view and user-xattr list; mode-only replacement lost that ACL even while the nine permission bits and fixture owner/group matched. Matching fixture ownership does not establish ownership of an existing installation's file. Group, full mode, ACLs/xattrs, ownership, links, creation time and inherited metadata remain a shared compatibility boundary for both writers. No mode-only fix, new-file default, symlink policy or provider adapter is selected by this research.
+
+The branch as a whole is not qualified for runtime rollout. No fsync, power-loss, directory-durability or metadata-fidelity claim follows from atomic byte-publication tests. Failed-save memory semantics have not changed. Further persistence work needs one reviewed compatibility contract for both writers, not separate attribute patches.
+
+## Later source-only fishing state qualification
+
+`sim/test-fish.py` pins Fish source SHA256 `84b1840e477d046d423831bf934e7f65b75424fa43fb3d080b20d38ecedf19dc`. It compiles that source with only a reversible clock substitution and focused nibble, player, server and Verdict doubles. Its 56 assertions cover the four-fast-bite threshold, consumed-bite behavior, slow-reel reset at exactly 100 ms, latency clamp at 0 and 300 ms, nonnegative displayed reaction, continued-nibble timing, ended/absent hooks, creative use, UUID isolation and explicit `forget` cleanup. Nine causal mutants are rejected by authored Java assertions.
+
+This is not a native fishing, nibble accessor/Mixin application, packet-hook ordering, real latency or server lifecycle-event qualification. Production fishing logic, thresholds and defaults are unchanged. The test does not establish spectator/exemption policy or infer a policy change from it.

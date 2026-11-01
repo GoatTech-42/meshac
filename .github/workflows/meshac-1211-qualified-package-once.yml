@@ -1,0 +1,158 @@
+name: meshac 1.21.11 bounded packaging with verified controls
+'on':
+  push:
+    branches:
+    - ci/meshac-1211-qualified-package-d944357c-once
+    paths:
+    - .github/workflows/meshac-1211-qualified-package-once.yml
+permissions: {}
+concurrency:
+  group: meshac-1211-qualified-package-d944357c-once
+  cancel-in-progress: false
+jobs:
+  package:
+    if: github.repository == 'GoatTech-42/meshac' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - name: Pinned packaging after exact control verification; no upload or launch
+      shell: bash
+      run: |
+        set -euo pipefail
+        root="$RUNNER_TEMP/meshac-package-final-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+        unit="meshac-package-final-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+        mkdir -p "$root/mnt"
+        cleanup() {
+         sudo systemctl stop "$unit.service" 2>/dev/null || true
+         sudo umount "$root/mnt" 2>/dev/null || true
+         if [ -n "${loop:-}" ]; then sudo losetup -d "$loop" 2>/dev/null || true; fi
+        }
+        trap cleanup EXIT
+        fallocate -l 3221225472 "$root/disk.img"
+        loop=$(sudo losetup --find --show "$root/disk.img")
+        sudo mkfs.ext4 -q -m 0 "$loop"
+        sudo mount -o nosuid,nodev "$loop" "$root/mnt"
+        sudo chown "$(id -u):$(id -g)" "$root/mnt"
+        cat > "$root/mnt/preflight.sh" <<'PREFLIGHT_ONLY'
+        #!/bin/bash
+        set -Eeuo pipefail
+        preflight_failure() {
+         rc=$?
+         trap - ERR
+         printf 'PREFLIGHT_ERROR exit=%s line=%s command=%q\n' "$rc" "${BASH_LINENO[0]}" "$BASH_COMMAND" >&2
+         for file in /proc/self/cgroup /sys/fs/cgroup/cgroup.controllers; do
+          printf 'DIAGNOSTIC %s\n' "$file" >&2
+          cat "$file" >&2 || true
+         done
+         if [ -n "${cg:-}" ]; then
+          for key in memory.max memory.swap.max cpu.max; do
+           printf 'DIAGNOSTIC %s/%s\n' "$cg" "$key" >&2
+           cat "/sys/fs/cgroup$cg/$key" >&2 || true
+          done
+         fi
+         findmnt -n -o TARGET,SOURCE,FSTYPE,OPTIONS --target "$BUILD_ROOT" >&2 || true
+         df -B1 --output=size,avail,target "$BUILD_ROOT" >&2 || true
+         exit "$rc"
+        }
+        trap preflight_failure ERR
+        cd "$BUILD_ROOT"
+        umask 077
+        cg=$(awk -F: '$1=="0" {print $3}' /proc/self/cgroup)
+        test -n "$cg"
+        test "$(cat /sys/fs/cgroup"$cg"/memory.max)" = 2147483648
+        test "$(cat /sys/fs/cgroup"$cg"/memory.swap.max)" = 0
+        read -r quota period < /sys/fs/cgroup"$cg"/cpu.max
+        test "$quota" != max; test "$quota" -le "$period"
+        cat > "$BUILD_ROOT/validate_mount.py" <<'MOUNT_PARSER'
+        import json
+        import sys
+
+
+        def validate_mount(payload, expected_target, expected_source):
+            rows = payload.get('filesystems')
+            if not isinstance(rows, list) or not rows:
+                raise ValueError('missing mount records')
+            for row in rows:
+                if not isinstance(row, dict):
+                    raise ValueError('invalid mount record')
+                if row.get('target') != expected_target:
+                    raise ValueError('mount target mismatch')
+                if row.get('source') != expected_source:
+                    raise ValueError('mount source mismatch')
+                if row.get('fstype') != 'ext4':
+                    raise ValueError('mount type mismatch')
+                if row.get('children'):
+                    raise ValueError('unexpected nested mount records')
+            return len(rows)
+
+
+        if __name__ == '__main__':
+            count = validate_mount(json.load(sys.stdin), sys.argv[1], sys.argv[2])
+            print('MOUNT_VERIFIED records=%d target=%s source=%s type=ext4' % (count, sys.argv[1], sys.argv[2]))
+        MOUNT_PARSER
+        findmnt --json --list --mountpoint "$BUILD_ROOT" --output TARGET,SOURCE,FSTYPE | python3 "$BUILD_ROOT/validate_mount.py" "$BUILD_ROOT" "$EXPECTED_LOOP"
+        test "$(df -B1 --output=size "$BUILD_ROOT" | tail -1 | tr -d ' ')" -le 3221225472
+        echo "CONTROLS CPU=$quota/$period MEMORY=2147483648 SWAP=0 DISK<=3221225472"
+        trap - ERR
+        export HOME="$BUILD_ROOT/home" TMPDIR="$BUILD_ROOT/tmp" GRADLE_USER_HOME="$BUILD_ROOT/gradle-home"
+        mkdir -p "$HOME" "$TMPDIR" "$GRADLE_USER_HOME"
+        unset JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS GRADLE_OPTS
+        curl -fL --retry 0 https://services.gradle.org/distributions/gradle-9.7.1-bin.zip -o gradle.zip
+        printf '%s  %s\n' acd53f1edaf02f1a8ff99879f8a34b302661a057d9b063ae9e35b552f804d20a gradle.zip | sha256sum -c -
+        curl -fL --retry 0 'https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.5%2B8/OpenJDK25U-jdk_x64_linux_hotspot_25.0.5_8.tar.gz' -o jdk.tar.gz
+        printf '%s  %s\n' 68982529869257d0ee6b824ec5aa270ff8b118bb438670da0b97ebdab178d7fb jdk.tar.gz | sha256sum -c -
+        unzip -q gradle.zip; tar -xzf jdk.tar.gz
+        export JAVA_HOME="$BUILD_ROOT/jdk-25.0.5+8" PATH="$BUILD_ROOT/jdk-25.0.5+8/bin:$PATH"
+        python3 - <<'PY'
+        import hashlib,pathlib,urllib.request
+        pins={'pom':'3730517fd2afa823bdcd8bbca89c900fcc6eb54a6980be82041ea8e54d0006dc','module':'09ea56808aac58971204ad1c18026a0c4492642c29f49076541bce03ed193961','jar':'ae89e31eae7044abe704f0b09d8ea3dfee7966480a7dfa0ab775d27bc6732bad'}
+        p=pathlib.Path('maven/net/fabricmc/fabric-loom/1.18-20261010.111021-4');p.mkdir(parents=True)
+        for ext,h in pins.items():
+         name='fabric-loom-1.18-20261010.111021-4.'+ext;b=urllib.request.urlopen('https://maven.fabricmc.net/net/fabricmc/fabric-loom/1.18-SNAPSHOT/'+name,timeout=30).read();assert hashlib.sha256(b).hexdigest()==h,name;(p/name).write_bytes(b)
+        PY
+        cat > pin.init.gradle <<'PIN'
+        settingsEvaluated { settings ->
+         settings.pluginManagement.repositories.exclusiveContent {
+          forRepository { maven { url = uri(System.getenv('BUILD_ROOT') + '/maven') } }
+          filter { includeModule('net.fabricmc', 'fabric-loom') }
+         }
+         settings.pluginManagement.resolutionStrategy.eachPlugin {
+          if (requested.id.id == 'net.fabricmc.fabric-loom-remap') { useModule('net.fabricmc:fabric-loom:1.18-20261010.111021-4') }
+         }
+        }
+        PIN
+        git clone --no-checkout --single-branch --branch port/airchain-main-20261026 https://github.com/GoatTech-42/meshac.git source
+        git -C source checkout --detach d944357c7b1edf20ac90b330cdbfd266ee1101c8
+        test "$(git -C source rev-parse HEAD)" = d944357c7b1edf20ac90b330cdbfd266ee1101c8
+        cd source
+        git ls-files -z | xargs -0 sha256sum > "$BUILD_ROOT/source-before.sha256"
+        props=()
+        while IFS= read -r line; do case "$line" in ''|'#'*) ;; *) props+=("-P$line");; esac; done < versions/1.21.11.properties
+        jvm='-Xmx384m -Xms64m -XX:MaxMetaspaceSize=192m -XX:CompressedClassSpaceSize=64m -XX:ReservedCodeCacheSize=64m -XX:ActiveProcessorCount=1'
+        jvm="$jvm -Djava.io.tmpdir=$TMPDIR"
+        export GRADLE_OPTS="$jvm"
+        "$BUILD_ROOT/gradle-9.7.1/bin/gradle" --no-daemon --max-workers=1 --no-parallel --console=plain --init-script "$BUILD_ROOT/pin.init.gradle" "-Dorg.gradle.jvmargs=$jvm" -Dorg.gradle.java.installations.auto-download=false -Dorg.gradle.java.installations.auto-detect=false "-Dorg.gradle.java.installations.paths=$JAVA_HOME" clean build "${props[@]}"
+        sha256sum -c "$BUILD_ROOT/source-before.sha256" >/dev/null
+        test -z "$(git status --porcelain)"
+        python3 - <<'PY'
+        import hashlib,json,pathlib,zipfile
+        jars=sorted(pathlib.Path('build/libs').glob('*.jar'));assert jars,'no jars'
+        for jar in jars:
+         with zipfile.ZipFile(jar) as z:
+          names=z.namelist(); refs=[n for n in names if 'refmap' in n and n.endswith('.json')];mix=[n for n in names if 'mixin' in n and n.endswith('.json') and n not in refs]
+          print(json.dumps({'jar':jar.name,'bytes':jar.stat().st_size,'sha256':hashlib.sha256(jar.read_bytes()).hexdigest(),'classes':sum(n.endswith('.class') for n in names),'refmaps':refs,'mixin_configs':mix}))
+          for n in refs+mix: print(n,z.read(n).decode())
+          for n in names:
+           if n.endswith(('.java','.class')):print('MEMBER',n,hashlib.sha256(z.read(n)).hexdigest())
+        PY
+        echo 'Packaging only. No launch/upload/release. Artifacts remain on disposable runner.'
+        PREFLIGHT_ONLY
+        chmod 700 "$root/mnt/preflight.sh"
+        sudo systemd-run --unit "$unit" --wait --pipe --collect \
+         --property=MemoryMax=2147483648 --property=MemorySwapMax=0 \
+         --property=CPUQuota=100% --property=TasksMax=128 --property=RuntimeMaxSec=780 \
+         --property=KillMode=control-group --property=ProtectSystem=strict \
+         --property="ReadWritePaths=$root/mnt" --property=InaccessiblePaths='/tmp /var/tmp' \
+         --property=NoNewPrivileges=yes --property=RestrictSUIDSGID=yes \
+         --uid="$(id -u)" --gid="$(id -g)" --setenv="BUILD_ROOT=$root/mnt" --setenv="EXPECTED_LOOP=$loop" \
+         /bin/bash "$root/mnt/preflight.sh"
